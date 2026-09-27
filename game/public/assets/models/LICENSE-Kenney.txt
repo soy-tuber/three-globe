@@ -1,0 +1,7 @@
+bus.glb — "van" from Kenney Car Kit (https://kenney.nl/assets/car-kit)
+Created by Kenney (www.kenney.nl), released under Creative Commons Zero (CC0 1.0 Universal):
+http://creativecommons.org/publicdomain/zero/1.0/
+
+The glTF binary with embedded texture was taken from the CC0 mirror
+https://github.com/Hidencod/tge-assets (packs/car-kit/van.glb).
+Kenney's Car Kit has no dedicated bus model; the van stands in as a microbus.
