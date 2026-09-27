@@ -1,0 +1,60 @@
+{
+  "generated": "2026-09-27T14:14:48.495Z",
+  "attribution": [
+    "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com",
+    "Terrain Tiles: Mapzen/AWS Open Data (SRTM, GMTED, ETOPO1 and others)",
+    "NASA Blue Marble (biome tint)"
+  ],
+  "regions": [
+    {
+      "id": "world",
+      "bbox": [
+        -180,
+        -90,
+        180,
+        90
+      ],
+      "albedo": {
+        "url": "assets/terrain/world/albedo.webp",
+        "width": 8192,
+        "height": 4096
+      },
+      "height": {
+        "url": "assets/terrain/world/height.hgt",
+        "width": 4096,
+        "height": 2048
+      },
+      "mask": {
+        "url": "assets/terrain/world/mask.png",
+        "width": 4096,
+        "height": 2048
+      },
+      "demSource": "AWS Terrain Tiles (Terrarium)"
+    },
+    {
+      "id": "japan",
+      "bbox": [
+        122,
+        24,
+        154,
+        46
+      ],
+      "albedo": {
+        "url": "assets/terrain/japan/albedo.webp",
+        "width": 4000,
+        "height": 2750
+      },
+      "height": {
+        "url": "assets/terrain/japan/height.hgt",
+        "width": 3200,
+        "height": 2200
+      },
+      "mask": {
+        "url": "assets/terrain/japan/mask.png",
+        "width": 3200,
+        "height": 2200
+      },
+      "demSource": "AWS Terrain Tiles (Terrarium)"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "globe-rush",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A Worldwide Rush–style transport tycoon on a 3D globe (Vite + TypeScript + three.js + three-globe)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "assets": "node scripts/build-assets.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.186.1",
+    "three-globe": "^2.45.2"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.9",
+    "@types/node": "^26.6.3",
+    "@types/three": "^0.186.0",
+    "geotiff": "^3.0.5",
+    "sharp": "^0.35.5",
+    "typescript": "~5.9",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}
