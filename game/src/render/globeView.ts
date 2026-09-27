@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import ThreeGlobe from 'three-globe';
 import type { City } from '../sim/model';
-import type { VehiclePose } from '../sim/vehicle';
+import type { PoseFn } from './vehicleLayer';
 import { CameraRig } from './cameraRig';
 import { CityLayer } from './cityLayer';
 import { RouteLayer, type RouteDrawing } from './routeLayer';
@@ -41,7 +41,6 @@ export class GlobeView {
     private readonly container: HTMLElement,
     regions: TerrainRegion[],
     cities: City[],
-    stopColors: Map<string, string>,
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -68,7 +67,7 @@ export class GlobeView {
     this.rig.surfaceAltitude = (lat, lng) => this.terrain.altitudeAt(lat, lng) * 100;
 
     this.routes = new RouteLayer(this.globe, this.terrain);
-    this.cities = new CityLayer(this.globe, this.terrain, cities, stopColors, this.overlay, this.renderer.domElement);
+    this.cities = new CityLayer(this.globe, this.terrain, cities, this.overlay, this.renderer.domElement);
     this.vehicles = new VehicleLayer(this.globe, this.terrain);
 
     new ResizeObserver(() => this.resize()).observe(container);
@@ -81,7 +80,7 @@ export class GlobeView {
 
   setExaggeration(v: number) {
     this.terrain.exaggeration = v;
-    this.routes.rebuild();
+    this.routes.invalidate();
     this.cities.refreshAltitudes();
   }
 
@@ -111,8 +110,8 @@ export class GlobeView {
     };
   }
 
-  updateVehicle(id: string, pose: VehiclePose, dt: number, time: number) {
-    this.vehicles.update(id, pose, this.rig.camera, this.height, dt, time);
+  updateVehicle(id: string, poseAt: PoseFn, dt: number, time: number) {
+    this.vehicles.update(id, poseAt, this.rig.camera, this.height, dt, time);
   }
 
   updateCamera(dt: number) {
@@ -141,7 +140,7 @@ export class GlobeView {
     this.hemiLight.intensity = 0.5 + 0.7 * day;
 
     this.cities.update(cam, this.width, this.height);
-    if ((this.frameCount++ & 31) === 0) this.routes.fixDrawOrder();
+    if ((this.frameCount++ & 15) === 0) this.routes.fixDrawOrder();
     this.globe.setPointOfView(cam);
     this.renderer.render(this.scene, cam);
   }

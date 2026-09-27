@@ -69,7 +69,7 @@ describe('height encoding', () => {
 });
 
 describe('road graph extraction', () => {
-  it('snaps shared vertices and stitches small gaps', () => {
+  it('snaps shared vertices, stitches small gaps and contracts chains', () => {
     const fc = {
       features: [
         { properties: { type: 'Major Highway', expressway: 1 }, geometry: { type: 'LineString', coordinates: [[139, 35], [139.1, 35]] } },
@@ -80,8 +80,14 @@ describe('road graph extraction', () => {
       ],
     };
     const g = buildRoadGraph(fc, [122, 24, 154, 46]);
-    expect(g.stats.nodes).toBe(5); // ferry skipped, shared vertex merged
+    // Ferry skipped; the 500 m gap stitched; degree-2 chains contracted → only the class change
+    // at 139.1 and the two dead ends remain as junctions.
     expect(g.stats.stitched).toBeGreaterThanOrEqual(1);
-    expect(g.edges.filter((_: number, i: number) => i % 3 === 2 && g.edges[i] === 0).length).toBe(1);
+    expect(g.stats.nodes).toBe(3);
+    expect(g.stats.edges).toBe(2);
+    const classes = [g.edges[2], g.edges[7]].sort();
+    expect(classes).toEqual([0, 2]);
+    // The contracted slow edge keeps its geometry (at most simplified away when collinear).
+    expect(g.points.length % 2).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-27T14:14:48.495Z",
+  "generated": "2026-09-27T15:25:01.030Z",
   "attribution": [
     "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com",
     "Terrain Tiles: Mapzen/AWS Open Data (SRTM, GMTED, ETOPO1 and others)",
@@ -53,6 +53,56 @@
         "url": "assets/terrain/japan/mask.png",
         "width": 3200,
         "height": 2200
+      },
+      "demSource": "AWS Terrain Tiles (Terrarium)"
+    },
+    {
+      "id": "europe",
+      "bbox": [
+        -11,
+        35,
+        40,
+        62
+      ],
+      "albedo": {
+        "url": "assets/terrain/europe/albedo.webp",
+        "width": 5100,
+        "height": 2700
+      },
+      "height": {
+        "url": "assets/terrain/europe/height.hgt",
+        "width": 2550,
+        "height": 1350
+      },
+      "mask": {
+        "url": "assets/terrain/europe/mask.png",
+        "width": 2550,
+        "height": 1350
+      },
+      "demSource": "AWS Terrain Tiles (Terrarium)"
+    },
+    {
+      "id": "north-america",
+      "bbox": [
+        -126,
+        24,
+        -66,
+        52
+      ],
+      "albedo": {
+        "url": "assets/terrain/north-america/albedo.webp",
+        "width": 4800,
+        "height": 2240
+      },
+      "height": {
+        "url": "assets/terrain/north-america/height.hgt",
+        "width": 2400,
+        "height": 1120
+      },
+      "mask": {
+        "url": "assets/terrain/north-america/mask.png",
+        "width": 2400,
+        "height": 1120
       },
       "demSource": "AWS Terrain Tiles (Terrarium)"
     }

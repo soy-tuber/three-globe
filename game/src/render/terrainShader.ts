@@ -47,7 +47,8 @@ const fragmentShader = /* glsl */ `
   uniform vec4 uBBox;
   uniform vec2 uHeightSize;
   uniform float uExag;
-  uniform vec4 uHole;
+  uniform vec4 uHoles[4];
+  uniform int uHoleCount;
   uniform vec3 uSunDir;
   uniform float uRealSun;
   uniform float uTime;
@@ -83,7 +84,11 @@ const fragmentShader = /* glsl */ `
   }
 
   void main() {
-    if (vGeo.x > uHole.x && vGeo.x < uHole.z && vGeo.y > uHole.y && vGeo.y < uHole.w) discard;
+    for (int i = 0; i < 4; i++) {
+      if (i >= uHoleCount) break;
+      vec4 h = uHoles[i];
+      if (vGeo.x > h.x && vGeo.x < h.z && vGeo.y > h.y && vGeo.y < h.w) discard;
+    }
 
     vec2 tuv = (vGeo - uBBox.xy) / (uBBox.zw - uBBox.xy);
     vec3 albedo = texture(uAlbedo, tuv).rgb;
@@ -167,10 +172,11 @@ export interface TerrainUniforms {
 export function createTerrainMaterial(
   region: TerrainRegion,
   shared: TerrainUniforms,
-  opts: { hole?: [number, number, number, number]; skirt?: boolean } = {},
+  opts: { holes?: [number, number, number, number][]; skirt?: boolean } = {},
 ): THREE.ShaderMaterial {
   const [w, s, e, n] = region.meta.bbox;
-  const hole = opts.hole ?? [0, 0, -1, -1];
+  const holes = (opts.holes ?? []).slice(0, 4);
+  const holeVecs = Array.from({ length: 4 }, (_, i) => new THREE.Vector4(...(holes[i] ?? [0, 0, -1, -1])));
   return new THREE.ShaderMaterial({
     side: opts.skirt ? THREE.DoubleSide : THREE.FrontSide,
     vertexShader,
@@ -182,7 +188,8 @@ export function createTerrainMaterial(
       uMask: { value: region.maskTex },
       uBBox: { value: new THREE.Vector4(w, s, e, n) },
       uHeightSize: { value: new THREE.Vector2(region.meta.height.width, region.meta.height.height) },
-      uHole: { value: new THREE.Vector4(...hole) },
+      uHoles: { value: holeVecs },
+      uHoleCount: { value: holes.length },
       ...shared,
     },
   });

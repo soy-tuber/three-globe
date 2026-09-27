@@ -1,0 +1,51 @@
+{
+  "regions": [
+    {
+      "id": "japan",
+      "name": "日本・東アジア",
+      "bbox": [
+        122,
+        24,
+        154,
+        46
+      ],
+      "road": "assets/data/road-japan.json",
+      "rail": "assets/data/rail-japan.json"
+    },
+    {
+      "id": "europe",
+      "name": "ヨーロッパ",
+      "bbox": [
+        -11,
+        35,
+        40,
+        62
+      ],
+      "road": "assets/data/road-europe.json",
+      "rail": "assets/data/rail-europe.json"
+    },
+    {
+      "id": "north-america",
+      "name": "北米",
+      "bbox": [
+        -126,
+        24,
+        -66,
+        52
+      ],
+      "road": "assets/data/road-north-america.json",
+      "rail": "assets/data/rail-north-america.json"
+    }
+  ],
+  "sea": {
+    "url": "assets/data/sea.bin",
+    "width": 3600,
+    "height": 1800,
+    "bbox": [
+      -180,
+      -90,
+      180,
+      90
+    ]
+  }
+}

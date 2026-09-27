@@ -25,7 +25,7 @@ export interface TerrainRegion {
   maskTex: THREE.Texture;
 }
 
-async function fetchBytes(url: string): Promise<Uint8Array> {
+export async function fetchBytes(url: string): Promise<Uint8Array> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const buf = new Uint8Array(await res.arrayBuffer());

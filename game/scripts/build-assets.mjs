@@ -11,7 +11,13 @@
 //                                  areas, roads, borders) over a hypsometric/bathymetric tint.
 //   terrain/<region>/height.hgt    gzip(Int16 metres, per-row delta coded)
 //   terrain/<region>/mask.png      R = land, G = night lights (urban areas), B = inland water
-//   data/roads-japan.json          routable road graph (Natural Earth 10m roads)
+//   data/networks.json             index of the files below
+//   data/road-<region>.json        routable road graphs (Natural Earth 10m roads)
+//   data/rail-<region>.json        routable rail graphs (Natural Earth 10m railroads)
+//   data/sea.bin                   gzip(bitset) global sea-navigation grid (Natural Earth ocean)
+//   data/cities-world.json         major world cities (Natural Earth populated places, Japanese names)
+//
+//   npm run assets -- --data-only        # skip terrain, rebuild data files only
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,7 +26,9 @@ import sharp from 'sharp';
 import { naturalEarth } from './lib/fetch.mjs';
 import { terrariumDem, gebcoDem, encodeHeights, blur } from './lib/dem.mjs';
 import { makeCanvas, fillPolygons, strokeLines, strokePolygonOutlines, readMask } from './lib/raster.mjs';
-import { buildRoadGraph } from './lib/roads.mjs';
+import { buildRoadGraph, buildRailGraph } from './lib/roads.mjs';
+import { selectWorldCities } from './lib/cities.mjs';
+import { buildSeaGrid } from './lib/sea.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = path.join(ROOT, 'public/assets');
@@ -33,6 +41,14 @@ const argVal = name => {
 };
 const GEBCO_DIR = argVal('--gebco');
 const ONLY = argVal('--only');
+const DATA_ONLY = args.includes('--data-only');
+
+/** Land-transport network regions (road + rail graphs). Air and sea routes are global. */
+const NETWORK_REGIONS = [
+  { id: 'japan', name: '日本・東アジア', bbox: [122, 24, 154, 46] },
+  { id: 'europe', name: 'ヨーロッパ', bbox: [-11, 35, 40, 62] },
+  { id: 'north-america', name: '北米', bbox: [-126, 24, -66, 52] },
+];
 
 const log = (...m) => console.log(`[assets ${new Date().toISOString().slice(11, 19)}]`, ...m);
 
@@ -52,6 +68,22 @@ const REGIONS = [
     albedo: [4000, 2750], // 0.008°/px (~0.9 km)
     height: [3200, 2200], // 0.01°/px
     terrariumZoom: 8,
+    roadDetail: 'regional',
+  },
+  {
+    id: 'europe',
+    bbox: [-11, 35, 40, 62],
+    albedo: [5100, 2700], // 0.01°/px
+    height: [2550, 1350], // 0.02°/px
+    terrariumZoom: 7,
+    roadDetail: 'regional',
+  },
+  {
+    id: 'north-america',
+    bbox: [-126, 24, -66, 52],
+    albedo: [4800, 2240], // 0.0125°/px
+    height: [2400, 1120], // 0.025°/px
+    terrariumZoom: 7,
     roadDetail: 'regional',
   },
 ];
@@ -126,9 +158,13 @@ async function loadVectors() {
     'ne_10m_roads',
     'ne_10m_admin_0_boundary_lines_land',
     'ne_10m_antarctic_ice_shelves_polys',
+    'ne_10m_railroads',
+    'ne_10m_populated_places',
+    'ne_10m_ocean',
+    'ne_110m_admin_0_countries',
   ];
   const loaded = await Promise.all(names.map(n => naturalEarth(n)));
-  return Object.fromEntries(names.map((n, i) => [n.replace('ne_10m_', ''), loaded[i]]));
+  return Object.fromEntries(names.map((n, i) => [n.replace(/^ne_10m_/, '').replace(/^ne_110m_/, '110_'), loaded[i]]));
 }
 
 async function loadDem(region, grid) {
@@ -361,15 +397,41 @@ async function buildRegion(region, v) {
   };
 }
 
+async function buildData(v) {
+  const dataDir = path.join(OUT, 'data');
+  fs.mkdirSync(dataDir, { recursive: true });
+  const networks = { regions: [], sea: null };
+
+  for (const region of NETWORK_REGIONS) {
+    const road = buildRoadGraph(v.roads, region.bbox);
+    const rail = buildRailGraph(v.railroads, region.bbox);
+    log(`${region.id}: road ${road.stats.nodes} nodes / ${road.stats.edges} edges; rail ${rail.stats.nodes} / ${rail.stats.edges}`);
+    const write = (kind, g) => {
+      const { stats: _s, ...json } = g;
+      const file = `${kind}-${region.id}.json`;
+      fs.writeFileSync(path.join(dataDir, file), JSON.stringify(json));
+      return `assets/data/${file}`;
+    };
+    networks.regions.push({ ...region, road: write('road', road), rail: write('rail', rail) });
+  }
+
+  log('sea navigation grid');
+  const sea = buildSeaGrid(v.ocean);
+  fs.writeFileSync(path.join(dataDir, 'sea.bin'), zlib.gzipSync(sea.bits, { level: 9 }));
+  networks.sea = { url: 'assets/data/sea.bin', width: sea.width, height: sea.height, bbox: [-180, -90, 180, 90] };
+  log(`  ${sea.width}×${sea.height}, ${sea.navigable} navigable cells`);
+  fs.writeFileSync(path.join(dataDir, 'networks.json'), JSON.stringify(networks, null, 2));
+
+  const cities = selectWorldCities(v.populated_places, v['110_admin_0_countries']);
+  fs.writeFileSync(path.join(dataDir, 'cities-world.json'), JSON.stringify(cities));
+  log(`world cities: ${cities.length}`);
+  for (const old of ['roads-japan.json']) fs.rmSync(path.join(dataDir, old), { force: true });
+}
+
 async function main() {
   const v = await loadVectors();
-  fs.mkdirSync(path.join(OUT, 'data'), { recursive: true });
-
-  log('road graph (Japan)');
-  const roads = buildRoadGraph(v.roads, [122, 24, 154, 46]);
-  log(`  ${roads.stats.nodes} nodes, ${roads.stats.edges} edges, ${roads.stats.stitched} stitched`);
-  const { stats: _stats, ...roadJson } = roads;
-  fs.writeFileSync(path.join(OUT, 'data', 'roads-japan.json'), JSON.stringify(roadJson));
+  await buildData(v);
+  if (DATA_ONLY) return log('done (data only)');
 
   const manifestFile = path.join(OUT, 'terrain', 'manifest.json');
   const prev = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, 'utf8')) : { regions: [] };

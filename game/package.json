@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "assets": "node scripts/build-assets.mjs"
+    "assets": "node scripts/build-assets.mjs",
+    "balance": "tsx scripts/balance.ts"
   },
   "license": "MIT",
   "dependencies": {
@@ -23,6 +24,7 @@
     "@types/three": "^0.186.0",
     "geotiff": "^3.0.5",
     "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
     "typescript": "~5.9",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"

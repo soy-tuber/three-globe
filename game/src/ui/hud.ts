@@ -1,35 +1,41 @@
-// Heads-up display. Reads simulation state; sends player intents back through callbacks.
+// Heads-up display shell: top bar, finance panel, view controls, toasts, tooltips.
+// Route management lives in routePanel.ts / builder.ts, goals in goals.ts.
 import { SPEEDS, formatJst, nowMs, type SpeedIndex } from '../sim/clock';
-import { CATEGORY_LABEL, operatingProfit, profit, sum, type DailyReport, type LedgerCategory } from '../sim/economy';
-import { VEHICLE_MODELS, ticketPrice, type City } from '../sim/model';
-import { departuresPerDay, freeFlowMinutes, stopDistanceKm, waitingAt, type RouteState } from '../sim/route';
+import { CATEGORY_LABEL, operatingProfit, sum, type DailyReport, type LedgerCategory } from '../sim/economy';
+import type { City } from '../sim/model';
+import { waitingAt } from '../sim/route';
 import type { Simulation } from '../sim/simulation';
-import { onboardCount, type VehicleState } from '../sim/vehicle';
-import { duration, int, km, yen } from './format';
+import { MODE_INFO } from '../sim/modes';
+import { int, yen } from './format';
 
 export interface HudCallbacks {
   setSpeed(i: SpeedIndex): void;
-  setFare(routeId: string, multiplier: number): void;
-  followVehicle(id: string): void;
   flyHome(): void;
+  flyWorld(): void;
   toggleRealSun(): boolean;
   setExaggeration(v: number): void;
-  buyVehicle(routeId: string): void;
+  showTutorial(): void;
 }
 
 const SPEED_LABELS = ['⏸', '▶', '▶▶', '▶▶▶', '⏩'];
 const SPEED_TITLES = ['一時停止 (Space)', '1倍速 (1)', '4倍速 (2)', '15倍速 (3)', '60倍速 (4)'];
 
-const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => {
+export const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => {
   const el = document.createElement(tag);
   if (cls) el.className = cls;
   if (html !== undefined) el.innerHTML = html;
   return el;
 };
 
+export function bindEls(root: HTMLElement): Record<string, HTMLElement> {
+  const els: Record<string, HTMLElement> = {};
+  root.querySelectorAll<HTMLElement>('[data-el]').forEach(el => (els[el.dataset.el!] = el));
+  return els;
+}
+
 export class Hud {
   readonly root: HTMLDivElement;
-  private readonly els: Record<string, HTMLElement> = {};
+  private readonly els: Record<string, HTMLElement>;
   private speedButtons: HTMLButtonElement[] = [];
   private tooltip: HTMLDivElement;
   private toasts: HTMLDivElement;
@@ -46,7 +52,6 @@ export class Hud {
     this.root = h('div', 'hud');
     parent.appendChild(this.root);
 
-    // ---- top bar
     const top = h('header', 'topbar');
     top.innerHTML = `
       <div class="brand">
@@ -54,51 +59,36 @@ export class Hud {
         <div><div class="company" data-el="company"></div><div class="sub">Globe Rush</div></div>
       </div>
       <div class="stat money"><div class="label">資金</div><div class="value" data-el="cash"></div><div class="delta" data-el="today"></div></div>
+      <div class="stat fleet"><div class="label">路線・車両</div><div class="value" data-el="fleet"></div><div class="delta muted" data-el="fleetSub"></div></div>
       <div class="stat clock"><div class="label" data-el="date"></div><div class="value time" data-el="time"></div></div>
       <div class="speed" data-el="speed"></div>`;
     this.root.appendChild(top);
 
-    // ---- route panel
-    const panel = h('aside', 'panel route-panel');
-    panel.innerHTML = `
-      <div class="panel-head"><span class="chip" data-el="routeChip"></span><div><div class="title" data-el="routeName"></div><div class="subtitle" data-el="routeSub"></div></div></div>
-      <div class="grid">
-        <div><div class="k">営業距離</div><div class="v" data-el="dist"></div></div>
-        <div><div class="k">所要時間</div><div class="v" data-el="dur"></div></div>
-        <div><div class="k">運賃</div><div class="v" data-el="fare"></div></div>
-        <div><div class="k">需要（片道/日）</div><div class="v" data-el="demand"></div></div>
-      </div>
-      <label class="slider"><span>運賃設定</span><input type="range" min="0.6" max="1.6" step="0.05" value="1" data-el="fareSlider"/><span class="slider-val" data-el="fareMult"></span></label>
-      <div class="stops" data-el="stops"></div>
-      <div class="section-title">運行中の車両</div>
-      <div class="vehicles" data-el="vehicles"></div>
-      <button class="btn buy" data-el="buy"></button>
-      <div class="totals" data-el="totals"></div>`;
-    this.root.appendChild(panel);
-
-    // ---- finance panel
     const fin = h('section', 'panel finance-panel');
     fin.innerHTML = `
-      <div class="section-title">営業損益 <span class="muted">（直近14日・車両購入を除く）</span></div>
-      <canvas class="chart" width="560" height="150" data-el="chart"></canvas>
+      <div class="section-title">営業損益 <span class="muted">（直近14日・車両売買と報酬を除く）</span></div>
+      <canvas class="chart" data-el="chart"></canvas>
       <div class="ledger" data-el="ledger"></div>`;
     this.root.appendChild(fin);
 
-    // ---- view controls
     const view = h('div', 'view-controls');
     view.innerHTML = `
-      <button class="icon-btn" data-el="home" title="日本全体を表示 (H)">⌂</button>
+      <button class="icon-btn" data-el="home" title="日本を表示 (H)">⌂</button>
+      <button class="icon-btn" data-el="world" title="地球全体を表示 (G)">🌐</button>
       <button class="icon-btn" data-el="sun" title="実時間の昼夜表示 (N)">☀</button>
+      <button class="icon-btn" data-el="tutorial" title="チュートリアル">?</button>
       <label class="exag" title="起伏の強調"><span>起伏</span><input type="range" min="1" max="25" step="1" value="6" data-el="exag"/></label>`;
     this.root.appendChild(view);
 
-    const help = h('div', 'help');
-    help.innerHTML = `ドラッグ: 移動 ・ ホイール: ズーム ・ 右ドラッグ/Shift: 回転・傾き ・ <kbd>Space</kbd> 停止 ・ <kbd>1</kbd>–<kbd>4</kbd> 速度 ・ <kbd>F</kbd> 追従`;
-    this.root.appendChild(help);
-
-    const credits = [...attribution, '3D models: Kenney (CC0)'];
+    this.root.appendChild(
+      h(
+        'div',
+        'help',
+        `ドラッグ: 移動 ・ ホイール: ズーム ・ 右ドラッグ/Shift: 回転・傾き ・ <kbd>Space</kbd> 停止 ・ <kbd>1</kbd>–<kbd>4</kbd> 速度 ・ <kbd>F</kbd> 追従 ・ <kbd>Esc</kbd> 取消`,
+      ),
+    );
     const credit = h('div', 'credit', 'データ: Natural Earth · Terrain Tiles · Kenney <span class="i">ⓘ</span>');
-    credit.title = credits.join('\n');
+    credit.title = [...attribution, '3D models: Kenney (CC0) + procedural'].join('\n');
     this.root.appendChild(credit);
 
     this.tooltip = h('div', 'tooltip');
@@ -106,10 +96,9 @@ export class Hud {
     this.floaters = h('div', 'floaters');
     this.root.append(this.tooltip, this.toasts, this.floaters);
 
-    this.root.querySelectorAll<HTMLElement>('[data-el]').forEach(el => (this.els[el.dataset.el!] = el));
+    this.els = bindEls(this.root);
     this.chart = this.els.chart as HTMLCanvasElement;
 
-    // speed buttons
     SPEEDS.forEach((_, i) => {
       const b = h('button', 'speed-btn', SPEED_LABELS[i]);
       b.title = SPEED_TITLES[i];
@@ -117,25 +106,11 @@ export class Hud {
       this.els.speed.appendChild(b);
       this.speedButtons.push(b);
     });
-
-    const route = this.primaryRoute();
-    (this.els.fareSlider as HTMLInputElement).value = String(route.fare.multiplier);
-    this.els.fareSlider.addEventListener('input', e => {
-      cb.setFare(route.id, +(e.target as HTMLInputElement).value);
-      this.update(-1);
-    });
     this.els.exag.addEventListener('input', e => cb.setExaggeration(+(e.target as HTMLInputElement).value));
     this.els.home.addEventListener('click', () => cb.flyHome());
-    this.els.sun.addEventListener('click', () => this.els.sun.classList.toggle('active', cb.toggleRealSun()));
-    this.els.buy.addEventListener('click', () => cb.buyVehicle(route.id));
-    this.els.vehicles.addEventListener('click', e => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-follow]');
-      if (btn) cb.followVehicle(btn.dataset.follow!);
-    });
-  }
-
-  private primaryRoute(): RouteState {
-    return this.sim.routes.values().next().value!;
+    this.els.world.addEventListener('click', () => cb.flyWorld());
+    this.els.tutorial.addEventListener('click', () => cb.showTutorial());
+    this.els.sun.addEventListener('click', () => this.setRealSun(cb.toggleRealSun()));
   }
 
   setSpeed(i: SpeedIndex) {
@@ -152,12 +127,12 @@ export class Hud {
 
   // ------------------------------------------------------------------ transient UI
 
-  toast(html: string, kind: 'info' | 'money' | 'warn' = 'info') {
+  toast(html: string, kind: 'info' | 'money' | 'warn' | 'goal' = 'info', ms = 4200) {
     const t = h('div', `toast ${kind}`, html);
     this.toasts.prepend(t);
     while (this.toasts.children.length > 4) this.toasts.lastElementChild!.remove();
-    setTimeout(() => t.classList.add('out'), 4200);
-    setTimeout(() => t.remove(), 4800);
+    setTimeout(() => t.classList.add('out'), ms);
+    setTimeout(() => t.remove(), ms + 600);
   }
 
   floatText(x: number, y: number, text: string, kind: 'money' | 'info' = 'money') {
@@ -168,7 +143,7 @@ export class Hud {
     setTimeout(() => f.remove(), 2000);
   }
 
-  showCityTooltip(city: City | null, x: number, y: number) {
+  showCityTooltip(city: City | null, x: number, y: number, note = '') {
     if (!city) {
       this.tooltip.classList.remove('shown');
       return;
@@ -176,121 +151,35 @@ export class Hud {
     let extra = '';
     for (const r of this.sim.routes.values()) {
       const i = r.stops.indexOf(city.id);
-      if (i >= 0) extra += `<div class="row"><span>${r.name} 待ち客</span><b>${int(waitingAt(r, i))}人</b></div>`;
+      if (i >= 0)
+        extra += `<div class="row"><span>${MODE_INFO[r.mode].icon} ${r.name} 待ち</span><b>${int(waitingAt(r, i))}人</b></div>`;
     }
     this.tooltip.innerHTML = `
       <div class="tt-title">${city.name}<span>${city.pref}</span></div>
-      <div class="row"><span>人口</span><b>${int(city.population)}人</b></div>${extra}`;
+      <div class="row"><span>人口</span><b>${int(city.population)}人</b></div>${extra}${note ? `<div class="tt-note">${note}</div>` : ''}`;
     this.tooltip.style.transform = `translate(${x + 14}px, ${y + 14}px)`;
     this.tooltip.classList.add('shown');
   }
 
   // ------------------------------------------------------------------ periodic refresh
 
-  update(speed: SpeedIndex | -1) {
+  update(speed: SpeedIndex) {
     const sim = this.sim;
     const c = sim.company;
-    if (speed >= 0) this.setSpeed(speed as SpeedIndex);
+    this.setSpeed(speed);
 
     const t = formatJst(nowMs(sim.clock));
     this.els.company.textContent = c.name;
     this.els.cash.textContent = yen(c.cash);
     this.els.cash.classList.toggle('negative', c.cash < 0);
-    const todayProfit = profit(c.today);
-    this.els.today.textContent = `本日 ${yen(todayProfit, { sign: true, compact: true })}`;
-    this.els.today.className = `delta ${todayProfit >= 0 ? 'up' : 'down'}`;
+    const today = operatingProfit(c.today);
+    this.els.today.textContent = `本日 ${yen(today, { sign: true, compact: true })}`;
+    this.els.today.className = `delta ${today >= 0 ? 'up' : 'down'}`;
+    this.els.fleet.textContent = `${sim.routes.size} 路線 · ${sim.vehicles.size} 台`;
+    this.els.fleetSub.textContent = `累計 ${int(c.totals.passengers)} 人`;
     this.els.date.textContent = `${t.date}（${t.weekday}）`;
     this.els.time.textContent = t.time;
-
-    const r = this.primaryRoute();
-    const first = sim.cities.get(r.stops[0])!;
-    const last = sim.cities.get(r.stops[r.stops.length - 1])!;
-    const total = stopDistanceKm(r, 0, r.stops.length - 1);
-    const expressKm = r.legs.reduce((a, l) => a + l.expresswayKm, 0);
-    this.els.routeChip.style.background = r.color;
-    this.els.routeName.textContent = r.name;
-    this.els.routeSub.textContent = `${first.name} ⇄ ${last.name}・高速バス`;
-    this.els.dist.innerHTML = `${km(total)}<small>高速 ${Math.round((expressKm / total) * 100)}%</small>`;
-    const model = VEHICLE_MODELS['microbus-28'];
-    this.els.dur.textContent = duration(freeFlowMinutes(r, model.maxSpeedKmh));
-    const fare = ticketPrice(total, r.fare);
-    this.els.fare.textContent = yen(fare);
-    this.els.fareMult.textContent = `×${r.fare.multiplier.toFixed(2)}`;
-    const dAB = sim.expectedDailyDemand(r, 0, r.stops.length - 1);
-    const dBA = sim.expectedDailyDemand(r, r.stops.length - 1, 0);
-    this.els.demand.innerHTML = `${int(dAB)}<small>⇄ ${int(dBA)} 人</small>`;
-
-    this.els.stops.innerHTML = r.stops
-      .map((id, i) => {
-        const city = sim.cities.get(id)!;
-        const w = waitingAt(r, i);
-        const deps = departuresPerDay(r, i === 0 ? 1 : -1, sim.clock.minutes);
-        return `<div class="stop"><span class="dot" style="--c:${r.color}"></span><b>${city.name}</b><span class="muted">待ち ${int(w)}人・発車 ${deps}便/日</span></div>`;
-      })
-      .join('');
-
-    const vehicles = [...sim.vehicles.values()].filter(v => v.routeId === r.id);
-    this.syncVehicleCards(vehicles, r);
-    this.els.buy.innerHTML = `＋ ${model.name}を購入 <span>${yen(model.purchasePrice, { compact: true })}</span>`;
-    (this.els.buy as HTMLButtonElement).disabled = c.cash < model.purchasePrice;
-
-    this.els.totals.innerHTML = `
-      <div><span>累計乗客</span><b>${int(r.stats.passengers)}人</b></div>
-      <div><span>累計運賃収入</span><b>${yen(r.stats.revenue, { compact: true })}</b></div>
-      <div><span>取りこぼし</span><b>${int(r.stats.lost)}人</b></div>`;
-
     this.updateFinance();
-  }
-
-  /** Vehicle cards are keyed and patched in place so their buttons stay clickable. */
-  private readonly cards = new Map<string, Record<string, HTMLElement>>();
-
-  private syncVehicleCards(vehicles: VehicleState[], r: RouteState) {
-    for (const v of vehicles) {
-      let card = this.cards.get(v.id);
-      if (!card) {
-        const el = h('div', 'vehicle');
-        el.innerHTML = `
-          <div class="vh-head"><b data-f="name"></b><button class="mini" data-follow="${v.id}" title="追従 (F)">追従</button></div>
-          <div class="vh-status" data-f="status"></div>
-          <div class="progress"><span data-f="progress"></span></div>
-          <div class="vh-row"><span>乗客</span><div class="bar"><span data-f="load"></span></div><b data-f="pax"></b></div>
-          <div class="vh-row"><span>走行距離</span><b data-f="odo"></b><span>前回運賃</span><b data-f="rev"></b></div>`;
-        card = { el };
-        el.querySelectorAll<HTMLElement>('[data-f]').forEach(x => (card![x.dataset.f!] = x));
-        this.els.vehicles.appendChild(el);
-        this.cards.set(v.id, card);
-      }
-      this.fillVehicleCard(card, v, r);
-    }
-  }
-
-  private fillVehicleCard(card: Record<string, HTMLElement>, v: VehicleState, r: RouteState) {
-    const sim = this.sim;
-    const model = VEHICLE_MODELS[v.modelId];
-    const n = onboardCount(v);
-    const from = sim.cities.get(r.stops[v.stopIndex])!;
-    const eta = sim.etaMinutes(v.id);
-    let status: string, progress: number;
-    if (v.status === 'dwell') {
-      const to = sim.cities.get(r.stops[v.stopIndex + v.dir])!;
-      status = `${from.name}で乗車中 → ${to.name}行き・発車まで ${duration(eta)}`;
-      progress = 0;
-    } else {
-      const next = sim.cities.get(r.stops[v.stopIndex + v.dir])!;
-      const leg = r.legs[v.dir === 1 ? v.stopIndex : v.stopIndex - 1];
-      progress = v.legKm / leg.lengthKm;
-      status = `${next.name}へ走行中・${Math.round(v.speedKmh)} km/h・到着まで ${duration(eta)}`;
-    }
-    const set = (k: string, text: string) => card[k].textContent !== text && (card[k].textContent = text);
-    set('name', v.name);
-    set('status', status);
-    set('pax', `${n}/${model.capacity}`);
-    set('odo', `${int(v.odometerKm)} km`);
-    set('rev', yen(v.tripRevenue, { compact: true }));
-    card.progress.style.width = `${(progress * 100).toFixed(1)}%`;
-    card.progress.style.background = r.color;
-    card.load.style.width = `${((n / model.capacity) * 100).toFixed(0)}%`;
   }
 
   private updateFinance() {

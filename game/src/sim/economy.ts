@@ -1,11 +1,14 @@
 // Company finances: cash plus a categorised daily ledger.
 
-export type LedgerCategory = 'fare' | 'fuel' | 'toll' | 'crew' | 'fixed' | 'purchase';
+export type LedgerCategory = 'fare' | 'reward' | 'sale' | 'fuel' | 'toll' | 'fee' | 'crew' | 'fixed' | 'purchase';
 
 export const CATEGORY_LABEL: Record<LedgerCategory, string> = {
   fare: '運賃収入',
+  reward: '目標報酬',
+  sale: '車両売却',
   fuel: '燃料・整備',
-  toll: '高速料金',
+  toll: '通行料・線路使用料',
+  fee: '着陸料・入港料',
   crew: '乗務員人件費',
   fixed: '固定費',
   purchase: '車両購入',
@@ -59,9 +62,9 @@ export function profit(r: DailyReport): number {
   return sum(r.income) - sum(r.expense);
 }
 
-/** Profit from operations only — excludes capital spending such as vehicle purchases. */
+/** Profit from operations only — excludes capital items (purchases, sales) and goal rewards. */
 export function operatingProfit(r: DailyReport): number {
-  return profit(r) + (r.expense.purchase ?? 0);
+  return profit(r) + (r.expense.purchase ?? 0) - (r.income.sale ?? 0) - (r.income.reward ?? 0);
 }
 
 /** Close the books for the day and open a new report. */

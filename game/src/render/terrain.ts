@@ -5,8 +5,10 @@ import { sampleRegion, type TerrainRegion } from './terrainData';
 import { METRES_TO_UNITS, createTerrainMaterial, type TerrainUniforms } from './terrainShader';
 
 const GLOBE_RADIUS = 100;
-/** Degrees between patch mesh vertices. */
-const PATCH_STEP_DEG = 0.03;
+/** Degrees between patch mesh vertices (finer for Japan, where the game starts). */
+const patchStep = (id: string) => (id === 'japan' ? 0.03 : 0.05);
+/** Patches are drawn only below this camera altitude (world units); from orbit the globe suffices. */
+const PATCH_LOD_ALTITUDE = 70;
 /** Degrees between global sphere vertices (three-globe globeCurvatureResolution). */
 const GLOBE_STEP_DEG = 0.3;
 
@@ -17,10 +19,10 @@ export function polarToCartesian(lat: number, lng: number, r: number, out = new 
   return out.set(r * Math.sin(phi) * Math.cos(theta), r * Math.cos(phi), r * Math.sin(phi) * Math.sin(theta));
 }
 
-function buildPatchGeometry(bbox: [number, number, number, number]): THREE.BufferGeometry {
+function buildPatchGeometry(bbox: [number, number, number, number], step: number): THREE.BufferGeometry {
   const [w, s, e, n] = bbox;
-  const nx = Math.round((e - w) / PATCH_STEP_DEG);
-  const ny = Math.round((n - s) / PATCH_STEP_DEG);
+  const nx = Math.round((e - w) / step);
+  const ny = Math.round((n - s) / step);
   // Interior grid plus a one-vertex skirt ring around it.
   const cols = nx + 3;
   const rows = ny + 3;
@@ -80,20 +82,22 @@ export class Terrain {
     this.patches = regions.filter(r => r !== world);
   }
 
+  private globeMaterial: THREE.ShaderMaterial | null = null;
+
   attach(globe: ThreeGlobe) {
-    // three-globe's globe layer supplies the sphere; we supply the material.
-    // Only one hole is supported by the shader; patches don't overlap by construction.
-    // The hole is inset slightly so the patch overlaps the globe instead of leaving a hairline gap.
-    const b = this.patches[0]?.meta.bbox;
+    // three-globe's globe layer supplies the sphere; we supply the material. Each patch cuts a hole
+    // in the globe (inset slightly so the patch overlaps instead of leaving a hairline gap).
+    // Patches must not overlap each other; the shader supports up to 4.
     const inset = 0.05;
-    const hole: [number, number, number, number] | undefined = b && [b[0] + inset, b[1] + inset, b[2] - inset, b[3] - inset];
-    globe
-      .globeCurvatureResolution(GLOBE_STEP_DEG)
-      .globeMaterial(createTerrainMaterial(this.world, this.uniforms, { hole }));
+    const holes = this.patches.map(
+      p => [p.meta.bbox[0] + inset, p.meta.bbox[1] + inset, p.meta.bbox[2] - inset, p.meta.bbox[3] - inset] as [number, number, number, number],
+    );
+    this.globeMaterial = createTerrainMaterial(this.world, this.uniforms, { holes });
+    globe.globeCurvatureResolution(GLOBE_STEP_DEG).globeMaterial(this.globeMaterial);
 
     for (const region of this.patches) {
       const mesh = new THREE.Mesh(
-        buildPatchGeometry(region.meta.bbox),
+        buildPatchGeometry(region.meta.bbox, patchStep(region.meta.id)),
         createTerrainMaterial(region, this.uniforms, { skirt: true }),
       );
       mesh.name = `terrain-patch-${region.meta.id}`;
@@ -114,7 +118,7 @@ export class Terrain {
   heightAt(lat: number, lng: number): number {
     for (const r of this.patches) {
       const [w, s, e, n] = r.meta.bbox;
-      if (lng >= w && lng <= e && lat >= s && lat <= n) return this.meshHeight(r, lat, lng, PATCH_STEP_DEG, w, s);
+      if (lng >= w && lng <= e && lat >= s && lat <= n) return this.meshHeight(r, lat, lng, patchStep(r.meta.id), w, s);
     }
     return this.meshHeight(this.world, lat, lng, GLOBE_STEP_DEG, -180, -90);
   }
@@ -141,6 +145,10 @@ export class Terrain {
   }
 
   update(timeSec: number, sunDir: THREE.Vector3, realSun: boolean, dt: number, cameraAltitude: number) {
+    // LOD: from orbit, skip the patches and let the globe draw everything.
+    const near = cameraAltitude < PATCH_LOD_ALTITUDE;
+    for (const m of this.patchMeshes) m.visible = near;
+    if (this.globeMaterial) this.globeMaterial.uniforms.uHoleCount.value = near ? this.patchMeshes.length : 0;
     this.uniforms.uTime.value = timeSec;
     const space = Math.min(1, Math.max(0, (cameraAltitude - 15) / 45));
     this.uniforms.uHazeDensity.value = (0.3 / Math.max(5, cameraAltitude * 10)) * (1 - space);

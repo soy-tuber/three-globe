@@ -1,23 +1,32 @@
-// Passenger demand: a gravity model for the size of the market between two cities,
-// and a logit-style share for how much of it chooses our service.
-import { referenceFare } from './model';
+// Passenger demand.
+//
+// 1. Market size between two cities: a gravity model on population and great-circle distance.
+// 2. Our share: a logit choice between each of our services and an "outside option" (competitors,
+//    cars, not travelling) on generalised cost = fare + value of time × (ride + access + waiting).
+//    Several of our routes serving the same pair compete with each other, so duplicating a route
+//    doesn't duplicate demand.
+import { MODE_INFO, referenceFareFor, type Mode } from './modes';
 
 export interface DemandParams {
-  /** gravity constant — calibrated so Tokyo⇄Osaka ≈ 8,000 highway-bus trips/day each way */
+  /** gravity constant — calibrated so Tokyo⇄Osaka ≈ 10,000 intercity trips/day each way */
   gravity: number;
   popExponent: number;
   distExponent: number;
-  /** trips shorter than this are mostly taken by local transit, not intercity buses */
+  /** beyond this distance the market decays more slowly (long-haul travel has few substitutes) */
+  longHaulKm: number;
+  longHaulExponent: number;
+  /** trips shorter than this are mostly local transit */
   minDistanceKm: number;
-  /** maximum share we can capture with a perfect product */
-  maxShare: number;
-  /** fare sensitivity: share halves roughly every (1/sensitivity) of relative over-pricing */
-  fareSensitivity: number;
-  /** how many daily departures (per direction) it takes to be "a real option" */
-  frequencyScale: number;
-  /** share multiplier with almost no departures; frequency lifts it toward 1 */
-  frequencyFloor: number;
-  /** passengers give up after waiting this long */
+  /** value of travel time, ¥/hour */
+  valueOfTime: number;
+  /** logit scale on relative generalised cost */
+  costSensitivity: number;
+  /** weight of the outside option (competitors etc.) */
+  outsideWeight: number;
+  /** schedule delay: waiting ≈ maxWait · exp(−departuresPerDay / scale) hours */
+  maxWaitHours: number;
+  waitScale: number;
+  /** passengers give up after waiting this long at a stop (minutes) — see patienceMinutes */
   maxWaitMin: number;
 }
 
@@ -25,17 +34,20 @@ export const DEFAULT_DEMAND: DemandParams = {
   gravity: 0.065,
   popExponent: 0.6,
   distExponent: 1.1,
+  longHaulKm: 1500,
+  longHaulExponent: 0.5,
   minDistanceKm: 40,
-  maxShare: 0.05,
-  fareSensitivity: 4.5,
-  frequencyScale: 4,
-  frequencyFloor: 0.6,
+  valueOfTime: 2_500,
+  costSensitivity: 4,
+  outsideWeight: 2.6,
+  maxWaitHours: 3,
+  waitScale: 5,
   maxWaitMin: 240,
 };
 
 /**
- * Relative intensity of intercity-bus passengers arriving at a stop for each local hour.
- * Morning and evening peaks plus a late-evening night-bus bump. Mean = 1.
+ * Relative intensity of passengers arriving at a stop for each local hour.
+ * Morning and evening peaks plus a late-evening bump. Mean = 1.
  */
 const HOURLY_RAW = [
   0.25, 0.1, 0.05, 0.05, 0.1, 0.4, 1.3, 1.9, 1.7, 1.3, 1.1, 1.0, 1.0, 1.0, 1.1, 1.2, 1.4, 1.7, 1.8, 1.5, 1.2, 1.1, 1.3, 0.7,
@@ -50,21 +62,63 @@ export function hourlyFactor(hour: number): number {
   return HOURLY_PROFILE[h0] * (1 - t) + HOURLY_PROFILE[h1] * t;
 }
 
-/** Total intercity-bus market between two cities, trips per day in one direction. */
+/** Total intercity market between two cities, trips per day in one direction. */
 export function marketTripsPerDay(popA: number, popB: number, distanceKm: number, p = DEFAULT_DEMAND): number {
   const d = Math.max(distanceKm, p.minDistanceKm);
-  return (p.gravity * popA ** p.popExponent * popB ** p.popExponent) / d ** p.distExponent;
+  const pops = p.gravity * popA ** p.popExponent * popB ** p.popExponent;
+  if (d <= p.longHaulKm) return pops / d ** p.distExponent;
+  return (pops / p.longHaulKm ** p.distExponent) * (p.longHaulKm / d) ** p.longHaulExponent;
+}
+
+export function waitHours(departuresPerDay: number, p = DEFAULT_DEMAND): number {
+  return p.maxWaitHours * Math.exp(-departuresPerDay / p.waitScale);
+}
+
+export interface ServiceOffer {
+  mode: Mode;
+  fare: number;
+  /** in-vehicle time including intermediate stops, hours */
+  rideHours: number;
+  departuresPerDay: number;
+}
+
+export function generalizedCost(o: ServiceOffer, p = DEFAULT_DEMAND): number {
+  const info = MODE_INFO[o.mode];
+  return o.fare + p.valueOfTime * (o.rideHours * info.votFactor + info.accessHours + waitHours(o.departuresPerDay, p));
 }
 
 /**
- * Share of the market captured by our service.
- * @param fare our ticket price
- * @param distanceKm trip length
- * @param departuresPerDay our departures per day in this direction
+ * How long passengers keep waiting at a stop before giving up (minutes): at least `maxWaitMin`,
+ * and long enough to catch the next scheduled departure on infrequent (e.g. long-haul) services.
  */
-export function captureShare(fare: number, distanceKm: number, departuresPerDay: number, p = DEFAULT_DEMAND): number {
-  const rel = fare / referenceFare(distanceKm);
-  const price = 1 / (1 + Math.exp(p.fareSensitivity * (rel - 1)));
-  const frequency = p.frequencyFloor + (1 - p.frequencyFloor) * (1 - Math.exp(-departuresPerDay / p.frequencyScale));
-  return p.maxShare * 2 * price * frequency;
+export function patienceMinutes(departuresPerDay: number, p = DEFAULT_DEMAND): number {
+  return departuresPerDay > 0 ? Math.max(p.maxWaitMin, (1.25 * 24 * 60) / departuresPerDay) : p.maxWaitMin;
+}
+
+/** Typical door-to-door speed of the market's modes (for the outside option), km/h. */
+const MARKET_SPEED: Record<Mode, number> = { bus: 70, rail: 150, air: 650, ship: 30 };
+
+/** Generalised cost of the best alternative on the market for a trip of great-circle length d. */
+export function outsideCost(greatCircleKm: number, p = DEFAULT_DEMAND): number {
+  let best = Infinity;
+  for (const mode of ['bus', 'rail', 'air'] as Mode[]) {
+    if (greatCircleKm < MODE_INFO[mode].minDistanceKm) continue;
+    if (mode !== 'air' && greatCircleKm > 2500) continue;
+    const km = mode === 'air' ? greatCircleKm : greatCircleKm * 1.25;
+    const c = referenceFareFor(mode, km) + p.valueOfTime * (km / MARKET_SPEED[mode] + MODE_INFO[mode].accessHours + 1);
+    best = Math.min(best, c);
+  }
+  return best;
+}
+
+/**
+ * Shares of the market captured by each offer (logit against the outside option).
+ * Returned array matches `offers`.
+ */
+export function captureShares(offers: ServiceOffer[], greatCircleKm: number, p = DEFAULT_DEMAND): number[] {
+  const ref = outsideCost(greatCircleKm, p);
+  const k = p.costSensitivity;
+  const u = offers.map(o => Math.exp(-k * (generalizedCost(o, p) / ref - 1) + MODE_INFO[o.mode].asc));
+  const denom = p.outsideWeight + u.reduce((a, b) => a + b, 0);
+  return u.map(x => x / denom);
 }

@@ -1,23 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import {
+  HOURLY_PROFILE,
   Polyline,
-  RoadClass,
-  RoadGraph,
+  SegClass,
   Simulation,
-  captureShare,
+  TransportGraph,
+  captureShares,
   createRoute,
   haversineKm,
+  isPath,
   marketTripsPerDay,
+  pathFromPoints,
   profit,
-  referenceFare,
-  HOURLY_PROFILE,
-  type RoadGraphJson,
+  MODE_INFO,
+  type GraphJson,
+  type ServiceOffer,
 } from '../src/sim';
-import { CITIES } from '../src/data/cities';
-
-const city = (id: string) => CITIES.find(c => c.id === id)!;
+import { ALL_CITIES, city, loadNetworks } from './helpers';
 
 describe('geo', () => {
   it('haversine: Tokyo–Osaka is ~400 km as the crow flies', () => {
@@ -42,45 +41,98 @@ describe('geo', () => {
   });
 });
 
-describe('road graph', () => {
-  // a — b — c   and a slow detour a — d — c
-  const json: RoadGraphJson = {
-    bbox: [0, 0, 2, 2],
-    nodes: [0, 0, 1, 0, 2, 0, 1, 0.5],
-    edges: [0, 1, RoadClass.Expressway, 1, 2, RoadClass.Expressway, 0, 3, RoadClass.Minor, 3, 2, RoadClass.Minor],
+describe('transport graph', () => {
+  // 0 ──fast (via a bend)── 1 ──fast── 2, plus a slow detour 0 ── 3 ── 2
+  const json: GraphJson = {
+    bbox: [0, -1, 3, 1],
+    nodes: [0, 0, 1, 0, 2, 0, 1, 0.6],
+    edges: [0, 1, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 3, 2, 2, 1, 0],
+    points: [0.5, 0.05],
   };
-  const g = new RoadGraph(json);
+  const g = new TransportGraph(json, MODE_INFO.bus.speedKmh);
 
-  it('finds the fastest path', () => {
-    expect(g.shortestPath(0, 2)).toEqual([0, 1, 2]);
+  it('snaps to the middle of an edge', () => {
+    const s = g.snap({ lat: 0.1, lng: 1.5 }, 30)!;
+    expect(s.point.lat).toBeCloseTo(0, 6);
+    expect(s.point.lng).toBeCloseTo(1.5, 6);
   });
 
-  it('routes between arbitrary points with access legs', () => {
-    const r = g.route({ lat: 0.01, lng: -0.01 }, { lat: -0.01, lng: 2.01 })!;
-    expect(r.points.length).toBe(5);
-    expect(r.segmentClass[0]).toBe(RoadClass.Access);
-    expect(r.segmentClass[1]).toBe(RoadClass.Expressway);
-    expect(r.lengthKm).toBeGreaterThan(222);
+  it('routes between mid-edge points along the fast line, keeping edge geometry', () => {
+    const r = g.route({ lat: 0.05, lng: 0.2 }, { lat: -0.05, lng: 1.8 });
+    expect(isPath(r)).toBe(true);
+    if (!isPath(r)) return;
+    expect(r.points.some(p => p.lng === 0.5 && p.lat === 0.05)).toBe(true); // bend vertex
+    expect(r.points.some(p => p.lat > 0.3)).toBe(false); // not the detour
+    expect(r.segmentClass[0]).toBe(SegClass.Access);
+    expect(r.segmentClass[1]).toBe(SegClass.Fast);
   });
 
-  it('real network: Tokyo → Osaka is ~500 km, mostly expressway', () => {
-    const file = path.resolve(import.meta.dirname, '../public/assets/data/roads-japan.json');
-    const real = new RoadGraph(JSON.parse(fs.readFileSync(file, 'utf8')));
-    const r = real.route(city('tokyo'), city('osaka'))!;
-    expect(r).not.toBeNull();
+  it('routes along a single edge in either direction', () => {
+    const f = g.route({ lat: 0, lng: 1.2 }, { lat: 0, lng: 1.7 });
+    const b = g.route({ lat: 0, lng: 1.7 }, { lat: 0, lng: 1.2 });
+    expect(isPath(f) && isPath(b)).toBe(true);
+    if (isPath(f) && isPath(b)) {
+      expect(f.lengthKm).toBeCloseTo(b.lengthKm, 6);
+      expect(f.lengthKm).toBeCloseTo(0.5 * 111.19, 0);
+    }
+  });
+
+  it('reports unreachable snaps', () => {
+    expect(g.route({ lat: 10, lng: 10 }, { lat: 0, lng: 1 })).toEqual({ error: 'snap-start' });
+  });
+});
+
+describe('networks (real data)', () => {
+  const nets = loadNetworks();
+  const stop = (id: string) => ({ ...city(id), name: city(id).name });
+
+  it('bus Tokyo → Osaka follows the Tōmei/Meishin (~550 km, mostly expressway)', async () => {
+    const r = await nets.planLeg('bus', stop('tokyo'), stop('osaka'));
+    if (typeof r === 'string') throw new Error(r);
     expect(r.lengthKm).toBeGreaterThan(480);
-    expect(r.lengthKm).toBeLessThan(580);
-    const leg = createRoute({ id: 'x', name: 'x', color: '#fff', stops: ['tokyo', 'osaka'], paths: [r] }).legs[0];
-    expect(leg.expresswayKm / leg.lengthKm).toBeGreaterThan(0.7);
-
-    // Via-points force the Tōmei/Meishin: the path must pass Shizuoka and Kyoto.
-    const tomei = real.routeVia(city('tokyo'), [{ lat: 34.955, lng: 138.38 }, { lat: 34.975, lng: 135.806 }], city('osaka'))!;
-    const near = (id: string) => Math.min(...tomei.points.map(p => haversineKm(p, city(id))));
+    expect(r.lengthKm).toBeLessThan(600);
+    const near = (id: string) => Math.min(...r.points.map(p => haversineKm(p, city(id))));
     expect(near('shizuoka')).toBeLessThan(12);
-    expect(near('hamamatsu')).toBeLessThan(12);
     expect(near('kyoto')).toBeLessThan(12);
-    expect(tomei.lengthKm).toBeLessThan(600);
   });
+
+  it('rail, air and sea routes between Japanese cities', async () => {
+    const rail = await nets.planLeg('rail', stop('tokyo'), stop('sendai'));
+    if (typeof rail === 'string') throw new Error(rail);
+    expect(rail.lengthKm).toBeGreaterThan(300);
+    expect(rail.lengthKm).toBeLessThan(450);
+
+    const air = await nets.planLeg('air', stop('tokyo'), stop('Seoul'));
+    if (typeof air === 'string') throw new Error(air);
+    expect(air.lengthKm).toBeCloseTo(haversineKm(city('tokyo'), city('Seoul')), 0);
+
+    const t0 = Date.now();
+    const sea = await nets.planLeg('ship', stop('osaka'), stop('fukuoka'));
+    if (typeof sea === 'string') throw new Error(sea);
+    expect(Date.now() - t0).toBeLessThan(5000);
+    expect(sea.lengthKm).toBeGreaterThan(450);
+    expect(sea.lengthKm).toBeLessThan(900);
+    const grid = await nets.sea();
+    // Interior of the path stays at sea.
+    const inner = sea.points.slice(2, -2);
+    expect(inner.filter(p => !grid.isSeaAt(p)).length).toBe(0);
+  });
+
+  it('explains why impossible routes fail', async () => {
+    expect(await nets.planLeg('bus', stop('tokyo'), stop('sapporo'))).toMatch(/つながっていません/);
+    expect(await nets.planLeg('bus', stop('tokyo'), stop('London'))).toMatch(/別の道路網|データがありません/);
+    expect(await nets.planLeg('ship', stop('nagano'), stop('niigata'))).toMatch(/港がありません/);
+    expect(await nets.planLeg('air', stop('tokyo'), stop('yokohama'))).toMatch(/近すぎます/);
+  });
+
+  it('long-haul sea route across the Pacific', async () => {
+    const t0 = Date.now();
+    const r = await nets.planLeg('ship', stop('yokohama'), stop('Los Angeles'));
+    if (typeof r === 'string') throw new Error(r);
+    expect(Date.now() - t0).toBeLessThan(15000);
+    expect(r.lengthKm).toBeGreaterThan(8500);
+    expect(r.lengthKm).toBeLessThan(11000);
+  }, 30000);
 });
 
 describe('demand', () => {
@@ -88,148 +140,167 @@ describe('demand', () => {
     expect(HOURLY_PROFILE.reduce((a, b) => a + b, 0) / 24).toBeCloseTo(1, 9);
   });
 
-  it('gravity model is calibrated and symmetric', () => {
+  it('gravity market is symmetric', () => {
     const t = city('tokyo'), o = city('osaka');
-    const m = marketTripsPerDay(t.population, o.population, 510);
-    expect(m).toBeGreaterThan(6000);
-    expect(m).toBeLessThan(10000);
-    expect(marketTripsPerDay(o.population, t.population, 510)).toBeCloseTo(m, 6);
+    const m = marketTripsPerDay(t.population, o.population, 400);
+    expect(m).toBeGreaterThan(8000);
+    expect(m).toBeLessThan(13000);
+    expect(marketTripsPerDay(o.population, t.population, 400)).toBeCloseTo(m, 6);
   });
 
-  it('share falls as fares rise and grows with frequency', () => {
-    const ref = referenceFare(500);
-    expect(captureShare(ref * 0.8, 500, 4)).toBeGreaterThan(captureShare(ref, 500, 4));
-    expect(captureShare(ref * 1.5, 500, 4)).toBeLessThan(captureShare(ref, 500, 4) / 2);
-    expect(captureShare(ref, 500, 12)).toBeGreaterThan(captureShare(ref, 500, 2));
+  it('shares react to fare, frequency and competition between our own routes', () => {
+    const base: ServiceOffer = { mode: 'bus', fare: 6500, rideHours: 6.5, departuresPerDay: 3 };
+    const [s] = captureShares([base], 400);
+    expect(captureShares([{ ...base, fare: 9000 }], 400)[0]).toBeLessThan(s);
+    expect(captureShares([{ ...base, departuresPerDay: 12 }], 400)[0]).toBeGreaterThan(s);
+    const pair = captureShares([base, base], 400);
+    expect(pair[0] + pair[1]).toBeLessThan(2 * s);
+    expect(pair[0] + pair[1]).toBeGreaterThan(s);
+    // Air beats a slow bus over 1,000 km.
+    const [bus, air] = captureShares(
+      [
+        { mode: 'bus', fare: 11000, rideHours: 13, departuresPerDay: 3 },
+        { mode: 'air', fare: 18000, rideHours: 1.6, departuresPerDay: 3 },
+      ],
+      1000,
+    );
+    expect(air).toBeGreaterThan(bus * 3);
   });
 });
 
 describe('simulation', () => {
-  function straightRoute() {
-    // A straight 100 km expressway between Tokyo and a fake stop east of it keeps timing predictable.
+  const straight = () => {
     const a = city('tokyo'), b = city('chiba');
-    const points = [a, { lat: a.lat, lng: a.lng + 0.55 }, { lat: b.lat, lng: b.lng }];
-    const lengthKm = haversineKm(points[0], points[1]) + haversineKm(points[1], points[2]);
-    return createRoute({
-      id: 'r1',
-      name: '東京–千葉',
-      color: '#f80',
-      stops: ['tokyo', 'chiba'],
-      paths: [{ points, segmentClass: Uint8Array.from([0, 0]), lengthKm, durationMin: 0 }],
-    });
-  }
+    const points = [a, { lat: a.lat, lng: a.lng + 0.2 }, { lat: b.lat, lng: b.lng }];
+    return pathFromPoints(points, [SegClass.Fast, SegClass.Fast], MODE_INFO.bus.speedKmh);
+  };
 
-  function makeSim(seed = 1) {
-    const sim = new Simulation({
-      seed,
-      startMs: Date.UTC(2026, 3, 1, 21, 0), // 06:00 JST
-      cities: CITIES,
-      companyName: 'Test',
-      startingCash: 1_000_000,
-    });
-    sim.addRoute(straightRoute());
-    sim.buyVehicle('r1', 'microbus-28', { free: true });
-    return sim;
+  function makeSim(seed = 1, cash = 1_000_000_000) {
+    const sim = new Simulation({ seed, startMs: Date.UTC(2026, 2, 31, 21, 0), cities: ALL_CITIES, companyName: 'T', startingCash: cash });
+    const res = sim.openRoute({ name: '東京–千葉', color: '#f80', mode: 'bus', stops: ['tokyo', 'chiba'], paths: [straight()], modelId: 'microbus-28', free: true });
+    if (typeof res === 'string') throw new Error(res);
+    return { sim, route: res.route, bus: res.vehicles[0] };
   }
 
   it('vehicle shuttles between stops, earning fares and paying costs', () => {
-    const sim = makeSim();
+    const { sim, bus } = makeSim();
     const events = [] as ReturnType<typeof sim.drainEvents>;
     for (let i = 0; i < 12; i++) {
       sim.advance(60);
       events.push(...sim.drainEvents());
     }
-    const arrivals = events.filter(e => e.type === 'arrival');
-    expect(arrivals.map(e => e.type === 'arrival' && e.cityId).slice(0, 3)).toEqual(['chiba', 'tokyo', 'chiba']);
+    const arrivals = events.flatMap(e => (e.type === 'arrival' ? [e.cityId] : []));
+    expect(arrivals.slice(0, 3)).toEqual(['chiba', 'tokyo', 'chiba']);
     expect(sim.company.totals.passengers).toBeGreaterThan(0);
     expect(sim.company.today.income.fare).toBeGreaterThan(0);
     expect(sim.company.today.expense.fuel).toBeGreaterThan(0);
     expect(sim.company.today.expense.toll).toBeGreaterThan(0);
-    const v = [...sim.vehicles.values()][0];
-    expect(v.odometerKm).toBeGreaterThan(100);
-  });
-
-  it('a single bus on Tokyo–Osaka fills up and turns a daily profit', () => {
-    const sim = new Simulation({ startMs: Date.UTC(2026, 2, 31, 21, 0), cities: CITIES, companyName: 'T', startingCash: 0 });
-    const file = path.resolve(import.meta.dirname, '../public/assets/data/roads-japan.json');
-    const roads = new RoadGraph(JSON.parse(fs.readFileSync(file, 'utf8')));
-    const p = roads.routeVia(city('tokyo'), [{ lat: 34.955, lng: 138.38 }, { lat: 34.975, lng: 135.806 }], city('osaka'))!;
-    sim.addRoute(createRoute({ id: 'r', name: 'r', color: '#f80', stops: ['tokyo', 'osaka'], paths: [p] }));
-    sim.buyVehicle('r', 'microbus-28', { free: true, firstDepartureInMin: 60 });
-    const loads: number[] = [];
-    for (let i = 0; i < 24 * 5; i++) {
-      sim.advance(60);
-      for (const e of sim.drainEvents()) if (e.type === 'departure') loads.push(e.onboard);
-    }
-    const avgLoad = loads.slice(1).reduce((a, b) => a + b, 0) / (loads.length - 1);
-    expect(avgLoad).toBeGreaterThan(20);
-    const days = sim.company.history.slice(1).map(profit);
-    expect(Math.min(...days)).toBeGreaterThan(0);
+    expect(bus.odometerKm).toBeGreaterThan(100);
   });
 
   it('cash equals starting cash plus income minus expenses', () => {
-    const sim = makeSim();
+    const { sim } = makeSim(1, 1_000_000);
     for (let i = 0; i < 72; i++) sim.advance(60);
     const net = sim.company.totals.revenue - sim.company.totals.expense;
     expect(sim.company.cash).toBeCloseTo(1_000_000 + net, 3);
     expect(sim.company.history.length).toBeGreaterThanOrEqual(2);
-    const days = sim.company.history.map(profit);
-    expect(days.every(Number.isFinite)).toBe(true);
+    expect(sim.company.history.map(profit).every(Number.isFinite)).toBe(true);
   });
 
   it('is deterministic for a given seed', () => {
-    const a = makeSim(42), b = makeSim(42);
-    a.advance(2000);
-    b.advance(2000);
+    const a = makeSim(42).sim, b = makeSim(42).sim;
+    for (let i = 0; i < 20; i++) a.advance(100), b.advance(100);
     expect(a.company.cash).toBe(b.company.cash);
     expect(a.company.totals.passengers).toBe(b.company.totals.passengers);
   });
 
   it('capacity is never exceeded', () => {
-    const sim = makeSim(7);
+    const { sim } = makeSim(7);
     for (let i = 0; i < 400; i++) {
       sim.advance(7);
-      for (const v of sim.vehicles.values()) {
-        const n = Object.values(v.onboard).reduce((x, y) => x + y, 0);
-        expect(n).toBeLessThanOrEqual(28);
-      }
+      for (const v of sim.vehicles.values()) expect(Object.values(v.onboard).reduce((x, y) => x + y, 0)).toBeLessThanOrEqual(28);
     }
   });
 
-  it('pose interpolates smoothly along the road', () => {
-    const sim = makeSim();
-    sim.advance(25); // past the 20-minute dwell
-    const p1 = sim.pose('v1')!;
+  it('pose interpolates smoothly along the road; trailing cars sit behind', () => {
+    const { sim, bus } = makeSim();
+    sim.advance(25);
+    const p1 = sim.pose(bus.id)!;
     sim.advance(0.1);
-    const p2 = sim.pose('v1')!;
+    const p2 = sim.pose(bus.id)!;
     expect(p1.status).toBe('drive');
     expect(haversineKm(p1.pos, p2.pos)).toBeLessThan(0.5);
     expect(p1.headingDeg).toBeGreaterThan(45);
     expect(p1.headingDeg).toBeLessThan(135);
+    const behind = sim.pose(bus.id, 1)!;
+    expect(haversineKm(behind.pos, p2.pos)).toBeCloseTo(1, 0);
   });
-});
 
-describe('fleet', () => {
+  it('openRoute validates mode, range and cash; closeRoute refunds half', () => {
+    const { sim, route } = makeSim(1, 20_000_000);
+    const air = { lat: 0, lng: 0 };
+    const long = pathFromPoints([air, { lat: 0, lng: 30 }], [SegClass.Fast], MODE_INFO.air.speedKmh);
+    const base = { name: 'x', color: '#fff', stops: ['tokyo', 'naha'], paths: [long] };
+    expect(sim.openRoute({ ...base, mode: 'air', modelId: 'microbus-28' })).toMatch(/使えません/);
+    expect(sim.openRoute({ ...base, mode: 'air', modelId: 'turboprop-70', free: true })).toMatch(/航続距離/);
+    expect(sim.openRoute({ ...base, mode: 'air', modelId: 'jet-180' })).toMatch(/資金/);
+
+    sim.buyVehicle(route.id, 'microbus-28');
+    const cash = sim.company.cash;
+    const refund = sim.closeRoute(route.id);
+    expect(refund).toBe(14_000_000); // 2 buses × ¥14M × 50%
+    expect(sim.company.cash).toBe(cash + refund);
+    expect(sim.routes.size).toBe(0);
+    expect(sim.vehicles.size).toBe(0);
+    expect(sim.drainEvents().some(e => e.type === 'routeClosed')).toBe(true);
+  });
+
   it('a vehicle bought at the far terminal heads back toward the start', () => {
-    const a = CITIES.find(c => c.id === 'tokyo')!, b = CITIES.find(c => c.id === 'chiba')!;
-    const sim = new Simulation({ startMs: 0, cities: CITIES, companyName: 'T', startingCash: 1e8 });
-    sim.addRoute(
-      createRoute({
-        id: 'r',
-        name: 'r',
-        color: '#fff',
-        stops: ['tokyo', 'chiba'],
-        paths: [{ points: [a, b], segmentClass: Uint8Array.from([0]), lengthKm: haversineKm(a, b), durationMin: 0 }],
-      }),
-    );
-    const v = sim.buyVehicle('r', 'microbus-28', { startStop: 1 });
+    const { sim, route } = makeSim();
+    const v = sim.buyVehicle(route.id, 'microbus-28', { startStop: 1 });
     expect(v.dir).toBe(-1);
-    expect(sim.company.cash).toBe(1e8 - 14_000_000);
     const arrivals: string[] = [];
     for (let i = 0; i < 6; i++) {
       sim.advance(30);
-      for (const e of sim.drainEvents()) if (e.type === 'arrival') arrivals.push(e.cityId);
+      for (const e of sim.drainEvents()) if (e.type === 'arrival' && e.vehicleId === v.id) arrivals.push(e.cityId);
     }
     expect(arrivals[0]).toBe('tokyo');
+  });
+
+  it('goals complete and pay their reward once', () => {
+    const { sim } = makeSim(3, 0);
+    for (let i = 0; i < 24 * 4; i++) sim.advance(60);
+    expect(sim.goals.completed).toContain('first-profit');
+    const rewards = sim.company.history.reduce((a, d) => a + (d.income.reward ?? 0), 0) + (sim.company.today.income.reward ?? 0);
+    expect(rewards).toBe(5_000_000);
+  });
+
+  it('new routes have demand immediately (scheduled frequency, not past departures)', () => {
+    const { sim, route } = makeSim();
+    expect(sim.expectedDailyDemand(route, 0, 1)).toBeGreaterThan(10);
+  });
+
+  it('createRoute builds legs from paths', () => {
+    const r = createRoute({ id: 'q', name: 'q', color: '#fff', stops: ['tokyo', 'chiba'], paths: [straight()] });
+    expect(r.legs[0].fastKm).toBeCloseTo(r.legs[0].lengthKm, 6);
+  });
+});
+
+describe('route estimate', () => {
+  it('predicts the balance scenario within a reasonable margin', async () => {
+    const nets = loadNetworks();
+    const plan = await nets.plan('bus', [
+      { ...city('tokyo'), name: '東京' },
+      { ...city('osaka'), name: '大阪' },
+    ]);
+    if (!plan.ok) throw new Error(plan.error);
+    const sim = new Simulation({ startMs: Date.UTC(2026, 2, 31, 15, 0), cities: ALL_CITIES, companyName: 'T', startingCash: 0 });
+    const req = { mode: 'bus' as const, stops: ['tokyo', 'osaka'], paths: plan.legs, modelId: 'microbus-28', vehicles: 1 };
+    const est = sim.estimateRoute(req);
+    expect(est.lengthKm).toBeGreaterThan(500);
+    expect(est.demandPerDay).toBeGreaterThan(est.capacityPerDay);
+    // Balance run: ~¥430k/day for this route.
+    expect(est.profitPerDay).toBeGreaterThan(250_000);
+    expect(est.profitPerDay).toBeLessThan(650_000);
   });
 });

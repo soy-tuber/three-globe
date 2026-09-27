@@ -44,6 +44,8 @@ export class CameraRig {
   surfaceAltitude: (lat: number, lng: number) => number = () => 0;
   /** when set, the camera target tracks this each frame */
   follow: (() => { lat: number; lng: number } | null) | null = null;
+  /** called on any direct camera manipulation */
+  onInteract: () => void = () => {};
 
   private flight: Flight | null = null;
   private pointers = new Map<number, { x: number; y: number; button: number }>();
@@ -82,6 +84,7 @@ export class CameraRig {
   private cancelAutomation() {
     this.flight = null;
     this.follow = null;
+    this.onInteract();
   }
 
   // ------------------------------------------------------------------ input
@@ -163,6 +166,7 @@ export class CameraRig {
         const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
         // Zooming keeps following a vehicle; panning does not.
         this.flight = null;
+        this.onInteract();
         this.zoom(Math.exp(delta * 0.0014));
       },
       { passive: false },
