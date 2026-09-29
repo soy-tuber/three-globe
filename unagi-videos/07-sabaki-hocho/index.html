@@ -826,7 +826,10 @@ const pick = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.14, 8, 24), iron); ring.rotation.x = Math.PI / 2; ring.position.y = 9.2; pick.add(ring);
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.84, 5.2, 18), new THREE.MeshStandardMaterial({ color: '#b99466', roughness: 0.6 }));
   grip.position.y = 11.9; pick.add(grip);
-  const headW = toWorld(new THREE.Vector3(-28.1, eelYc(-28.1), -sag(-28.1)));
+  // 「目の部分にささず、背と腹の境目にさします」（辻調理師専門学校「鰻の裁き方（関東式）」）: behind the eye,
+  // toward the back of the head, in front of the base of the head where the knife goes in (x = X0)
+  const PICK_X = -25.2;
+  const headW = toWorld(new THREE.Vector3(PICK_X, eelYc(PICK_X), -sag(PICK_X)));
   pick.position.set(headW.x, 0.6, headW.z); pick.rotation.z = 0.06;
   scene.add(pick);
 }
