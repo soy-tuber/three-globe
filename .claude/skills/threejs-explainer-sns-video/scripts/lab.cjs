@@ -1,5 +1,7 @@
 // Shared Playwright harness: opens the page with CDN/font requests served locally and collects console errors.
-// Env: PAGE_URL (default http://localhost:8765/index.html), THREE_VERSION (default 0.183.2), CHROMIUM (default /opt/pw-browsers/chromium)
+// Env: PAGE_URL (default http://localhost:8765/index.html), THREE_VERSION (default 0.183.2),
+//      CHROMIUM (browser path; defaults to /opt/pw-browsers/chromium when it exists, else Playwright's own),
+//      GPU=0 forces software rendering (SwiftShader). With a real GPU, leave GPU unset.
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
@@ -18,10 +20,13 @@ function cached(url) {
   return f;
 }
 exports.open = async ({ width = 1440, height = 900, query = '', dpr = 1 } = {}) => {
-  const browser = await chromium.launch({
-    executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
-  });
+  const cloudChromium = '/opt/pw-browsers/chromium';
+  const executablePath = process.env.CHROMIUM || (fs.existsSync(cloudChromium) ? cloudChromium : undefined);
+  const software = process.env.GPU === '0' || (!process.env.GPU && executablePath === cloudChromium);
+  const args = ['--autoplay-policy=no-user-gesture-required', '--ignore-gpu-blocklist'];
+  if (software) args.push('--use-angle=swiftshader', '--enable-unsafe-swiftshader');
+  else args.push('--enable-gpu', '--enable-gpu-rasterization');
+  const browser = await chromium.launch({ executablePath, args });
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: dpr, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
   const logs = [];
