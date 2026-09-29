@@ -775,43 +775,47 @@ organs.renderOrder = 7;
 eel.add(organs);
 
 // =====================================================================================
-// Knife (鰻裂き包丁): a short pointed blade, edge facing the direction of travel (the tail).
-// In the room it lies nearly flat: the tip goes in at the back toward the belly, the handle comes
-// toward the craftsman and is raised a little. Local frame: tip at the origin, edge along +Y at
-// X = 0 (facing +X), spine at X = -BLADE_W, thickness along Z. The angle to the backbone plane is a
-// turn about the knife's length; the handle is what you drag.
+// Knife (鰻裂き包丁, Edo type): a straight spine and a straight edge; the point is at the end of the
+// spine and the front of the edge rises to it in a sharpened oblique line (剣先). The edge faces the
+// direction of travel (the tail). In the room the knife lies nearly flat: the point goes in at the
+// back toward the belly, the handle comes toward the craftsman and is raised a little.
+// Local frame: length along +Y, straight edge at X = 0 (facing +X), spine at X = -BLADE_W, the point
+// at (-BLADE_W, 0), thickness along Z. The angle to the backbone plane is a turn about the knife's
+// length; the handle is what you drag.
 // =====================================================================================
-const BLADE_LEN = 13, BLADE_W = 3.0, KNIFE_TILT = 12 * DEG, KNIFE_RAISE = 8 * DEG;
+const BLADE_LEN = 13, BLADE_W = 3.0, TIP_L = 2.0, KNIFE_TILT = 12 * DEG, KNIFE_RAISE = 8 * DEG;
+const bladeEdgeX = Y => (Y < TIP_L ? -BLADE_W * (1 - Y / TIP_L) : 0);   // the edge line, oblique at the point
 const knifeYaw = new THREE.Group(); rig.add(knifeYaw);
 const knifeTilt = new THREE.Group(); knifeYaw.add(knifeTilt);
 knifeTilt.rotation.set(KNIFE_RAISE, 0, KNIFE_TILT);
 const bladeTex = canvasTex(512, 64, (x, w, h) => {
   x.fillStyle = '#b9bec5'; x.fillRect(0, 0, w, h);
-  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(235,240,246,0.9)'); g.addColorStop(0.2, 'rgba(235,240,246,0.55)'); g.addColorStop(0.24, 'rgba(90,96,104,0.35)'); g.addColorStop(0.3, 'rgba(0,0,0,0)');
+  const g = x.createLinearGradient(0, h, 0, 0); g.addColorStop(0, 'rgba(235,240,246,0.9)'); g.addColorStop(0.2, 'rgba(235,240,246,0.55)'); g.addColorStop(0.24, 'rgba(90,96,104,0.35)'); g.addColorStop(0.3, 'rgba(0,0,0,0)');
   x.fillStyle = g; x.fillRect(0, 0, w, h);
   for (let i = 0; i < 260; i++) { x.strokeStyle = `rgba(${rnd() > 0.5 ? '255,255,255' : '40,44,50'},${0.03 + rnd() * 0.05})`; x.lineWidth = 0.6; const y0 = rnd() * h; x.beginPath(); x.moveTo(rnd() * w, y0); x.lineTo(rnd() * w, y0 + (rnd() - 0.5) * 2); x.stroke(); }
 });
 {
-  const width = Y => BLADE_W * Math.pow(smooth01(Y / 4.4), 0.75);
+  const tipTaper = Y => 0.35 + 0.65 * smooth01(Y / TIP_L);   // thinner toward the point
   const thick = w => 0.012 + 0.23 * Math.pow(w, 1.25);
   const steel = new THREE.MeshStandardMaterial({ map: bladeTex, color: '#d9dde2', metalness: 0.85, roughness: 0.42, envMapIntensity: 0.45 });
-  for (const s of [1, -1]) knifeTilt.add(new THREE.Mesh(gridGeo(70, 8, (u, v) => { const Y = u * BLADE_LEN; return [-v * width(Y), Y, (s * thick(v)) / 2]; }, s < 0), steel));
-  knifeTilt.add(new THREE.Mesh(gridGeo(70, 1, (u, v) => { const Y = u * BLADE_LEN; return [-width(Y), Y, lerp(thick(1) / 2, -thick(1) / 2, v)]; }), steel));
+  for (const s of [1, -1]) knifeTilt.add(new THREE.Mesh(gridGeo(70, 8, (u, v) => { const Y = u * BLADE_LEN; return [lerp(bladeEdgeX(Y), -BLADE_W, v), Y, (s * thick(v) * tipTaper(Y)) / 2]; }, s < 0), steel));
+  knifeTilt.add(new THREE.Mesh(gridGeo(70, 1, (u, v) => { const Y = u * BLADE_LEN; return [-BLADE_W, Y, (lerp(1, -1, v) * thick(1) * tipTaper(Y)) / 2]; }), steel));   // the straight spine
   const collar = new THREE.Mesh(new RoundedBoxGeometry(3.3, 1.2, 1.6, 2, 0.3), new THREE.MeshStandardMaterial({ color: '#2b2d31', metalness: 0.6, roughness: 0.4 }));
-  collar.position.set(-1.5, BLADE_LEN + 0.55, 0); knifeTilt.add(collar);
+  collar.position.set(-1.9, BLADE_LEN + 0.55, 0); knifeTilt.add(collar);
   const handle = new THREE.Mesh(new RoundedBoxGeometry(2.3, 11.5, 1.75, 3, 0.6), new THREE.MeshStandardMaterial({ color: '#cfae80', roughness: 0.62 }));
-  handle.position.set(-1.45, BLADE_LEN + 6.9, 0); knifeTilt.add(handle);
+  handle.position.set(-1.9, BLADE_LEN + 6.9, 0); knifeTilt.add(handle);
 }
 const knifePick = new THREE.Mesh(new THREE.BoxGeometry(6, 15, 5), new THREE.MeshBasicMaterial({ visible: false }));
-knifePick.position.set(-1.45, BLADE_LEN + 6.4, 0); knifeTilt.add(knifePick);
+knifePick.position.set(-1.9, BLADE_LEN + 6.4, 0); knifeTilt.add(knifePick);
 // pressure at the edge: blue-white points along the part of the edge in the body
 const PRESS_N = 18;
 const pressDots = Array.from({ length: PRESS_N }, (_, i) => {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#bfe0ff', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-  s.position.set(0.05, 0.15 + (i / (PRESS_N - 1)) * 2.9, 0); s.renderOrder = 12; knifeTilt.add(s); return s;
+  const Y = 0.15 + (i / (PRESS_N - 1)) * 2.9;   // along the cutting edge (the oblique front, then the straight edge)
+  s.position.set(bladeEdgeX(Y) + 0.05, Y, 0); s.renderOrder = 12; knifeTilt.add(s); return s;
 });
 const pressTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#dcefff', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-pressTip.position.set(0.05, 1.0, 0); pressTip.renderOrder = 12; knifeTilt.add(pressTip);
+pressTip.position.set(bladeEdgeX(TIP_L * 0.55) + 0.05, TIP_L * 0.55, 0); pressTip.renderOrder = 12; knifeTilt.add(pressTip);
 parts.knife = { obj: knifeYaw, from: new THREE.Vector3(), off: new THREE.Vector3(8, 10, 14) };   // local: left 8, toward the craftsman 10, up 14
 
 // eel pick (目打ち): iron spike through the head into the board
@@ -1458,8 +1462,8 @@ const labelLayer = $('labels'), svg = $('leaders');
 const handAnchor = () => handTargets[1].clone().add(hand.position).add(tmpV.set(-1.5, 0.8, 0.6));
 const LABELS = [
   { id: 'eel', text: '鰻（体は半透明の模式図）', cls: 'key', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(2, eelYc(2) + 0.5 * eelR(2), eelS(2) + 0.15 - sag(2)) },
-  { id: 'knife', text: '鰻裂き包丁', cls: 'key', pri: 97, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 9, 0)).clone() },
-  { id: 'press', text: '刃先の圧力', cls: 'press', pri: 98, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(0.1, 0.9, 0)).clone(), show: () => S.away < 0.5 },
+  { id: 'knife', text: '鰻裂き包丁', cls: 'key', pri: 97, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.9, BLADE_LEN + 9, 0)).clone() },
+  { id: 'press', text: '刃先の圧力', cls: 'press', pri: 98, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(bladeEdgeX(TIP_L * 0.55) + 0.1, TIP_L * 0.55, 0)).clone(), show: () => S.away < 0.5 },
   { id: 'bone', text: '背骨', cls: '', pri: 90, mode: 'normal', anchor: () => { const x = 8; return new THREE.Vector3(x, boneY(x), -sag(x) * boneSagK.value).add(boneLift); } },
   { id: 'path', text: '刃の進む道', cls: 'amber', pri: 88, mode: 'normal', anchor: () => { const x = X0 + S.x + Math.min(10, (L_CUT - S.x) * 0.5); return new THREE.Vector3(x, eelTop(x) + 0.1, R_BONE + 0.2 - sag(x)); }, show: () => preview.visible },
   { id: 'pick', text: '目打ち', cls: '', pri: 86, mode: 'normal', w: true, anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
@@ -1474,7 +1478,7 @@ const LABELS = [
   { id: 'xribs', text: '腹骨', cls: '', pri: 88, mode: 'x', anchor: () => new THREE.Vector3(-12, boneY(-12) - 0.7, -0.6 - sag(-12) * boneSagK.value).add(boneLift) },
   { id: 'xfins', text: '背ビレ・尻ビレ', cls: '', pri: 87, mode: 'x', anchor: () => new THREE.Vector3(22, eelTop(22) + 0.3, -sag(22)).add(finOwn.uLift.value) },
   { id: 'xorgan', text: '内臓の位置', cls: '', pri: 86, mode: 'x', w: true, anchor: () => toWorld(new THREE.Vector3(-8, 3.85, 0.1 - sag(-8))).add(organOwn.uLift.value) },
-  { id: 'xknife', text: '鰻裂き包丁', cls: '', pri: 85, mode: 'x', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 8, 0)).clone() },
+  { id: 'xknife', text: '鰻裂き包丁', cls: '', pri: 85, mode: 'x', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.9, BLADE_LEN + 8, 0)).clone() },
   { id: 'xpick', text: '目打ち', cls: '', pri: 83, mode: 'x', w: true, anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
   { id: 'xboard', text: 'まな板', cls: '', pri: 80, mode: 'x', w: true, anchor: () => boardGroup.localToWorld(tmpV.set(-30, 3, 13)).clone() },
   { id: 'xglove', text: '切創防止の手袋', cls: '', pri: 84, mode: 'x', anchor: handAnchor },

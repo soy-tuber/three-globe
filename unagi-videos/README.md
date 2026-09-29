@@ -102,7 +102,7 @@ cd unagi-videos && python3 -m http.server 8000
 | 04 | 60fps（p99 16.8ms） | 0.91ms | 59.7fps（p99 16.8ms） | 60fps | 0 |
 | 05 | 60fps（p99 16.8ms） | 1.20ms | 59.9fps（p99 16.8ms） | 60fps | 0 |
 | 06 | 60fps（p99 16.8ms） | 0.96ms | 59.8fps（p99 16.8ms） | 60fps | 0 |
-| 07 | 60fps（p99 16.8ms） | 1.16ms | 59.9fps（p99 16.8ms） | 60fps | 0 |
+| 07 | 60fps（p99 16.8ms） | 1.11ms | 59.9fps（p99 16.8ms） | 60fps | 0 |
 | 08 | 60fps（p99 16.8ms） | 1.13ms | 59.8fps（p99 16.8ms） | 60fps | 0 |
 | 09 | 60fps（p99 16.8ms） | 1.24ms | 60fps（p99 16.8ms） | 60fps | 0 |
 | 10 | 60fps（p99 16.8ms） | 0.90ms | 60fps（p99 16.8ms） | 60fps | 0 |
