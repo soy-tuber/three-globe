@@ -1,0 +1,2017 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>炭火で焼くと、なぜ皮はパリッと中はふっくらするのか</title>
+<meta name="description" content="炭火の熱が赤外線（熱放射）として鰻に届き、串の高さで皮と身の焼け方が変わる仕組みを体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #060506;
+    --ink: #f2f1ee;
+    --sub: #c4c2bd;
+    --muted: #8d8b86;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --panel: rgba(12, 11, 12, 0.56);
+    --ray: #ff6b3d;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+
+  /* ---------------------------------------------------------------- title */
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.15vw, 60px); letter-spacing: 0.03em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  #title.small .big-br { display: none; }
+
+  /* ---------------------------------------------------------------- panels */
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(22, 20, 21, 0.64), rgba(10, 9, 10, 0.54)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter-block { margin-top: 2px; }
+  .meter { position: relative; height: 10px; margin: 36px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 176, 74, 0.25), var(--amber)); box-shadow: 0 0 16px rgba(255, 176, 74, 0.5); }
+  .meter.hot .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.3), var(--err)); box-shadow: 0 0 18px rgba(255, 84, 72, 0.6); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th.err { border-left-color: rgba(255, 128, 118, 0.95); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .th-label.l { right: 5px; }
+  .meter .th-label.r { left: 5px; color: #ffb3ab; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.err { color: #ffd6d2; border-color: var(--err); box-shadow: 0 0 12px rgba(255, 84, 72, 0.4); }
+  #tsval.on { color: #fff; }
+  #tsval.err { color: #ffb3ab; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps.aborted li.active { border-color: rgba(255, 84, 72, 0.7); background: rgba(255, 84, 72, 0.1); }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 580px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(540px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 5, 6, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 7, 8, 0.86); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.5em; font-weight: 500; color: var(--sub); margin-top: 3px; letter-spacing: 0.03em; }
+
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 7, 8, 0.72); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.ray { border-color: rgba(255, 107, 61, 0.85); color: #ffe1d6; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.dim { font-family: var(--mono); font-size: 14px; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.45); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+
+  /* ---------------------------------------------------------------- phone */
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 18.5px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 12.5px; letter-spacing: 0.02em; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 40px; right: 12px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="炭火の焼き台と串に打った鰻の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>炭火で焼くと、<br class="big-br" />なぜ皮はパリッと中はふっくらするのか</h1>
+  <p class="lead">炭火の熱は、炎ではなく、主に赤く焼けた炭から出る赤外線（熱放射）として鰻に届きます。焼き手は串の高さを変えて、その強さを操っています。串を動かして、焼き色がつく瞬間を見てください。</p>
+</header>
+<div id="imageTag">身の中の温度の分布は模型による計算のイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">お手本</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">串の高さ（炭の表面から）</span><span class="big-num" id="hval">28.0<span class="unit">cm</span></span></div>
+  <div class="row"><span class="k">鰻が受ける熱の量（模型の値）</span><span class="mid-num" id="qval">13.2 kW/m²</span></div>
+  <div class="sep"></div>
+  <div class="meter-block">
+    <div class="row"><span class="k">皮の表面温度（模型の値）</span><span class="tag" id="stateTag">焼き色 まだ</span></div>
+    <div class="meter" id="meter">
+      <div class="fill"></div>
+      <div class="th" id="thBrown"><span class="th-label l">焼き色がつき始めるライン</span></div>
+      <div class="th err" id="thChar"><span class="th-label r">焦げ始めるライン</span></div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+    <div class="row"><span class="k">表面</span><span class="big-num" id="tsval">0<span class="unit">℃</span></span></div>
+    <div class="row"><span class="k">身の中心</span><span class="mid-num" id="tcval">22 ℃</span></div>
+  </div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">炭からの距離と、受ける熱の量</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">炭から離れるほど、届く熱は弱まります</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">焼きの工程</span><span class="k" id="speedTag">早回し表示（約110倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>乾かす</b><small>皮の表面の水分を飛ばす</small></li>
+    <li><span class="n">②</span><b>色づく</b><small>焼き色がつき香りが出る</small></li>
+    <li><span class="n">③</span><b>脂が落ちる</b><small>脂が炭に落ちて煙が立つ</small></li>
+    <li><span class="n">④</span><b>返す</b><small>身の側を焼く</small></li>
+    <li><span class="n">⑤</span><b>タレ</b><small>タレをくぐらせる</small></li>
+    <li><span class="n">⑥</span><b>仕上げ</b><small>もう一度焼いて照りを出す</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">串を炭に近づけてください</span><span id="counter">経過 0分00秒</span></div>
+  <p id="realnote">この模型では、1枚を焼き上げるまでに十数分かかります</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">温度の記録を開く</button>
+    <div class="plot-body">
+      <div class="k">温度の記録（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--amber)"></i>皮の表面</span><span><i style="background: #e8edf5"></i>身の中心</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">お手本</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="grill">焼き台</button>
+    <button class="btn sm" data-cam="section">鰻の断面</button>
+    <button class="btn sm" data-cam="griller">焼き手の目線</button>
+  </div>
+  <label class="slider"><span>炭に近い</span><input type="range" id="range" min="4" max="32" step="0.1" value="28" aria-label="串の高さ" /><span>遠い</span></label>
+</section>
+
+<div id="notes">温度と時間は原理を示すための模型の値です。身の中の温度の分布は模型による計算のイメージです。焼きの進み方は目で見える速さに変えた模式表示です。</div>
+<div id="hint">串を上下にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>炭火は、熱のうち赤外線（熱放射）で伝わる割合が高い熱源です。白炭の炭火から100mm上で測った実験では、伝わる熱の約75%が熱放射でした。赤外線は食品の表面から吸収されて熱に変わり、届く深さは波長によって違います。寒天のゲルや魚のすり身を使った実験では深くても表面から3mm程度で、それより内側へは熱伝導で伝わります。<span class="src"><a href="https://www.jstage.jst.go.jp/article/jhej1987/55/9/55_9_707/_article/-char/ja/" target="_blank" rel="noopener">日本家政学会誌 55巻9号「炭焼き加熱特性の解析（第1報）」</a>　<a href="https://www.jstage.jst.go.jp/article/jhej1987/53/4/53_4_323/_article/-char/ja/" target="_blank" rel="noopener">日本家政学会誌 53巻4号「放射加熱における赤外線波長の食品表面への浸透性」</a></span></li>
+    <li>メイラード反応は、還元糖とアミノ酸・たんぱく質の間で起こる反応で、食品の褐変（褐色に色づくこと）や香りの生成に関わります。加熱した食品ではこの反応でできる物質が多くなり、パンや肉の焼き色や香りに関係しています。<span class="src"><a href="https://www.jstage.jst.go.jp/article/jisdh/26/1/26_7/_pdf" target="_blank" rel="noopener">日本食生活学会誌 26巻1号「食品におけるメイラード反応」</a></span></li>
+    <li>備長炭などの白炭は、炭化の終わりに窯口を広げて空気を送り込み、炭を真っ赤に燃やす「ねらし」を行い（このとき窯の中は1000度を超えます）、炭を窯の外にかき出して「素灰（すばい）」をかけて消火して作ります。火が付きにくいものの、一度火がつくと安定した火力で長時間燃え続けます。<span class="src"><a href="https://www.pref.wakayama.lg.jp/prefg/070600/tokusanshinrinbutsu/bintyoutan.html" target="_blank" rel="noopener">和歌山県「特用林産物（紀州備長炭）」</a></span></li>
+    <li>うなぎ料理は、下処理から串打ち、関東の蒸し焼きや関西の地焼きに代表される焼きの技法まで、一連の工程に長い修業期間が必要で、調理人には熟練した技術と体力が不可欠とされています。<span class="src"><a href="https://j-net21.smrj.go.jp/startup/guide/restaurant/food20.html" target="_blank" rel="noopener">中小企業基盤整備機構 J-Net21「うなぎ料理店」</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// =====================================================================================
+// Physics (1 unit = 1 cm). Model values chosen to show the principle, not a real grill.
+// =====================================================================================
+const SIGMA = 5.670374e-8;                 // Stefan–Boltzmann constant
+const BED_X = 60, BED_Z = 30;              // coal bed, treated as a uniform radiating rectangle
+const EEL_L = 30, EEL_W = 8, EEL_T = 1.2;  // opened eel
+const H_MIN = 4, H_MAX = 32;               // skewer height above the coal surface
+const T_COAL = 1073, EPS = 0.9, COVER = 0.52; // coal surface 800 °C; COVER = glowing share of the bed (model)
+const ABSORB = 0.9, HC = 14;               // skin absorptivity, convective loss coefficient (W/m²K)
+const G_SKIN = 300, K_CRUST = 0.2, CRUST_CAP = 0.001; // skin conductance (W/m²K), dry-crust conductivity (W/mK)
+const K_FLESH = 0.40, RHOC = 3.6e6, WATER = 700;     // flesh conductivity, heat capacity (J/m³K), water (kg/m³)
+const NN = 25, THICK = EEL_T / 100, H_TOP = 10, T_AIR = 22, L_VAP = 2.257e6;
+const T_BROWN = 150, T_CHAR = 220, T_CAP = 330, T_SCALE = 300;
+const FAST = 110;                          // time-lapse factor while the grilling process runs
+const PHASES = [
+  { label: '乾かす', dur: 60 },
+  { label: '色づく', dur: 150 },
+  { label: '脂が落ちる', dur: 120 },
+  { label: '返す', dur: 180 },
+  { label: 'タレ', dur: 60 },
+  { label: '仕上げ', dur: 120 },
+];
+const PH_START = PHASES.map((_, i) => PHASES.slice(0, i).reduce((a, p) => a + p.dur, 0));
+const PROC_TOTAL = PHASES.reduce((a, p) => a + p.dur, 0); // 690 s ≈ 11.5 min (model value)
+const DX = THICK / (NN - 1), NODE_WATER = WATER * DX, NODE_CAP = RHOC * DX;
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+const hash = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+/** View factor from a small patch to a parallel rectangle whose corner lies straight below it (exact). */
+function viewCorner(A, B, h) {
+  const a = Math.hypot(A, h), b = Math.hypot(B, h);
+  return (1 / (2 * Math.PI)) * ((A / a) * Math.atan(B / a) + (B / b) * Math.atan(A / b));
+}
+/** Patch at (x, z) over the whole coal bed: superpose the four corner rectangles. */
+function viewPoint(x, z, h) {
+  const x1 = BED_X / 2 - x, x2 = BED_X / 2 + x, z1 = BED_Z / 2 - z, z2 = BED_Z / 2 + z;
+  return viewCorner(x1, z1, h) + viewCorner(x1, z2, h) + viewCorner(x2, z1, h) + viewCorner(x2, z2, h);
+}
+/** Mean view factor of the eel's underside (9 × 3 patches) to the coal bed. */
+function viewFactor(h) {
+  let s = 0;
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 3; j++) s += viewPoint(-EEL_L / 2 + ((i + 0.5) * EEL_L) / 9, -EEL_W / 2 + ((j + 0.5) * EEL_W) / 3, Math.max(0.05, h));
+  return s / 27;
+}
+const Q_COEF = EPS * SIGMA * Math.pow(T_COAL, 4) * COVER;   // q = εσT⁴ · F(h)   (W/m²)
+const Q_STEP = 0.01, Q_TABLE = Float32Array.from({ length: Math.ceil(40 / Q_STEP) + 2 }, (_, i) => Q_COEF * viewFactor(i * Q_STEP));
+function fluxAt(h) {
+  const x = clamp(h, 0, 40) / Q_STEP, i = Math.floor(x), f = x - i;
+  return Q_TABLE[i] * (1 - f) + Q_TABLE[Math.min(Q_TABLE.length - 1, i + 1)] * f;
+}
+const Q_MAX = fluxAt(H_MIN);
+
+/** Skin-surface balance: absorbed radiation = convection + re-radiation + conduction to the evaporation front (100 °C)
+ *  through the skin and the dry crust in series. The skin itself holds almost no heat, so it answers at once. */
+function surfaceTemp(q, crust) {
+  const G = 1 / (1 / G_SKIN + Math.min(CRUST_CAP, crust) / K_CRUST);
+  const qa = ABSORB * q, Ta4 = Math.pow(T_AIR + 273.15, 4);
+  let lo = 0, hi = 800;
+  for (let i = 0; i < 40; i++) {
+    const m = (lo + hi) / 2;
+    const f = HC * (m - T_AIR) + EPS * SIGMA * (Math.pow(m + 273.15, 4) - Ta4) + G * (m - 100) - qa;
+    if (f > 0) hi = m; else lo = m;
+  }
+  return { Ts: Math.min(T_CAP, (lo + hi) / 2), G };
+}
+// Height at which fresh skin starts to brown (for the graph and the labels).
+const H_BROWN = (() => { let lo = H_MIN, hi = 40; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (surfaceTemp(fluxAt(m), 0).Ts > T_BROWN) lo = m; else hi = m; } return lo; })();
+
+/** Idealised height plan during the process (model seconds): the griller lifts the eel as the crust grows. Used by お手本 and the demo. */
+const PLAN = [[0, 18.0], [60, 18.6], [210, 21.4], [330, 22.4], [342, 17.2], [390, 17.4], [480, 20.0], [510, 20.0], [524, 30.0], [556, 30.0], [570, 23.0], [690, 23.6]];
+function planHeight(tp) {
+  if (tp <= PLAN[0][0]) return PLAN[0][1];
+  for (let i = 1; i < PLAN.length; i++) if (tp < PLAN[i][0]) { const [a, h0] = PLAN[i - 1], [b, h1] = PLAN[i]; return lerp(h0, h1, smooth01((tp - a) / (b - a))); }
+  return PLAN[PLAN.length - 1][1];
+}
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#0b0706', 0.0026);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.5, 4000);
+camera.position.set(-62, 64, 92);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.minPolarAngle = 0.2;
+controls.maxPolarAngle = 1.62;
+controls.target.set(0, 10, 0);
+
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.5, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAspect: { value: 1.78 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uAspect; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      float v = 1.0 - smoothstep(0.25, 1.15, length(q));
+      c.rgb *= mix(0.72, 1.0, v);
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+
+// Environment for reflections: warm glow from below, a dim cool window above.
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#0a0808');
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(3.0, 1.1, 0.4), side: THREE.DoubleSide }));
+  glow.rotation.x = -Math.PI / 2; glow.position.y = -1.3; env.add(glow);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.34, 0.36, 0.42), side: THREE.DoubleSide }));
+  win.rotation.x = Math.PI / 2; win.position.set(-1.2, 3, 1.5); env.add(win);
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.28, 0.24), side: THREE.DoubleSide }));
+  side.position.set(0, 0.6, -4); env.add(side);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.75;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 11;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.28, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const ironTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#2a2828'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { const v = 20 + rnd() * 40; x.fillStyle = `rgba(${v},${v - 2},${v - 4},${0.08 + rnd() * 0.12})`; x.fillRect(rnd() * w, rnd() * h, 2 + rnd() * 10, 2 + rnd() * 10); }
+  x.strokeStyle = 'rgba(160,150,140,0.06)';
+  for (let i = 0; i < 220; i++) { x.lineWidth = 0.5 + rnd(); const x0 = rnd() * w, y0 = rnd() * h; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + (rnd() - 0.5) * 80, y0 + (rnd() - 0.5) * 12); x.stroke(); }
+}, { repeat: [2, 1] });
+// Binchotan: dense grey sticks under a thin film of white ash, with fine lengthwise fissures that glow.
+// (u runs around the stick, v along it.)
+const coalTex = canvasTex(256, 512, (x, w, h) => {
+  x.fillStyle = '#7d7872'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { const v = 95 + rnd() * 90; x.fillStyle = `rgba(${v},${v - 3},${v - 7},${0.1 + rnd() * 0.18})`; x.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 6 + rnd() * 40); }
+  for (let i = 0; i < 60; i++) { const g = x.createLinearGradient(0, 0, 18, 0); const a = 0.06 + rnd() * 0.12; g.addColorStop(0, 'rgba(225,221,214,0)'); g.addColorStop(0.5, `rgba(225,221,214,${a})`); g.addColorStop(1, 'rgba(225,221,214,0)'); x.save(); x.translate(rnd() * w, 0); x.fillStyle = g; x.fillRect(0, 0, 18, h); x.restore(); }
+  for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(28,26,25,${0.12 + rnd() * 0.2})`; x.fillRect(rnd() * w, rnd() * h, 1, 10 + rnd() * 50); }
+});
+const crackTex = canvasTex(256, 512, (x, w, h) => {
+  x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+  x.strokeStyle = '#fff'; x.lineCap = 'round';
+  for (let i = 0; i < 46; i++) {
+    let px = rnd() * w, py = rnd() * h; x.lineWidth = 0.6 + rnd() * 1.6; x.globalAlpha = 0.45 + rnd() * 0.55;
+    x.beginPath(); x.moveTo(px, py);
+    for (let k = 0; k < 8; k++) { px += (rnd() - 0.5) * 7; py += 10 + rnd() * 22; x.lineTo(px, py); }
+    x.stroke();
+  }
+  x.globalAlpha = 1;
+  // ash-thin patches where the ember shows through
+  for (let i = 0; i < 26; i++) { const g = x.createRadialGradient(0, 0, 0, 0, 0, 1); x.save(); x.translate(rnd() * w, rnd() * h); x.scale(6 + rnd() * 12, 16 + rnd() * 40); g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(0, 0, 1, 0, 7); x.fill(); x.restore(); }
+}, { color: false });
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#18130f'; x.fillRect(0, 0, w, h);
+  const n = 8, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const v = 44 + rnd() * 10;
+    x.fillStyle = `rgb(${v + 6},${v + 2},${v - 4})`; x.fillRect(i * s + 3, j * s + 3, s - 6, s - 6);
+    const g = x.createLinearGradient(i * s, j * s, i * s + s, j * s + s); g.addColorStop(0, 'rgba(255,255,255,0.05)'); g.addColorStop(1, 'rgba(0,0,0,0.08)');
+    x.fillStyle = g; x.fillRect(i * s + 3, j * s + 3, s - 6, s - 6);
+  }
+}, { repeat: [10, 4] });
+const steelTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#9ea2a6'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.03; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [6, 3] });
+const bedTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 180; i++) {
+    const cx = rnd() * w, cy = rnd() * h, r = 8 + rnd() * 40;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(255,${120 + rnd() * 80},${30 + rnd() * 30},${0.5 + rnd() * 0.5})`); g.addColorStop(1, 'rgba(255,80,20,0)');
+    x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+});
+const ashTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#6b6865'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const v = 80 + rnd() * 90; x.fillStyle = `rgba(${v},${v},${v - 3},0.4)`; x.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); }
+});
+
+// =====================================================================================
+// Room: dark kitchen wall, stainless counter, distant warm lights
+// =====================================================================================
+{
+  const g = new THREE.SphereGeometry(2400, 32, 16);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `varying vec3 vP;
+      void main(){
+        float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 low = vec3(0.040, 0.026, 0.020), high = vec3(0.006, 0.006, 0.010);
+        gl_FragColor = vec4(mix(low, high, smoothstep(0.42, 0.8, h)), 1.0);
+      }`,
+  });
+  scene.add(new THREE.Mesh(g, m));
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(900, 360), new THREE.MeshStandardMaterial({ map: tileTex, color: '#8c7d70', roughness: 0.55, metalness: 0.05, envMapIntensity: 0.4 }));
+  wall.position.set(0, 120, -150); scene.add(wall);
+  const counter = new THREE.Mesh(new THREE.BoxGeometry(900, 4, 260), new THREE.MeshStandardMaterial({ map: steelTex, color: '#242528', metalness: 0.7, roughness: 0.55, envMapIntensity: 0.2 }));
+  counter.position.set(0, -18.2, -10); scene.add(counter);
+  const bokehMat = new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.6, 1.05, 0.62), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  for (let i = 0; i < 22; i++) {
+    const s = new THREE.Sprite(bokehMat.clone());
+    s.position.set((rnd() - 0.5) * 900, 30 + rnd() * 220, -420 - rnd() * 500);
+    const sc = 14 + rnd() * 30; s.scale.set(sc, sc, 1);
+    s.material.opacity = 0.06 + rnd() * 0.16;
+    scene.add(s);
+  }
+}
+
+scene.add(new THREE.HemisphereLight('#3b3a48', '#170d07', 0.34));
+const keyLight = new THREE.DirectionalLight('#dfe6ff', 0.32);
+keyLight.position.set(-80, 160, 120);
+scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight('#7f93c8', 0.55);
+rimLight.position.set(60, 80, -160);
+scene.add(rimLight);
+// A warm work light above the griller's hands.
+const workLight = new THREE.SpotLight('#fff0df', 8500, 0, 0.55, 1.0, 2);
+workLight.position.set(-24, 120, 70);
+workLight.target.position.set(0, 18, 0);
+scene.add(workLight, workLight.target);
+const coalLights = [-21, 0, 21].map(x => { const l = new THREE.PointLight('#ff5a1e', 0, 75, 2); l.position.set(x, -2.2, 0); return l; });
+const flameLight = new THREE.PointLight('#ff7a2a', 0, 90, 2);
+flameLight.position.set(0, 4, 0);
+scene.add(flameLight);
+const flashLight = new THREE.PointLight('#ffffff', 0, 60, 2);
+scene.add(flashLight);
+
+// =====================================================================================
+// Grill: fire chamber (coal bed), grate, ash tray, skewer rails
+// =====================================================================================
+const parts = {}; // exploded-view targets
+const ironMat = new THREE.MeshStandardMaterial({ color: '#2b2929', map: ironTex, roughness: 0.62, metalness: 0.55, envMapIntensity: 0.7 });
+const ironDark = new THREE.MeshStandardMaterial({ color: '#171616', roughness: 0.7, metalness: 0.45, envMapIntensity: 0.5 });
+const BOX_X = 74, BOX_Z = 40, WALL = 1.6, BOX_Y0 = -16, BOX_Y1 = 4;
+
+const chamber = new THREE.Group();   // 炭床: fire chamber walls + coals
+scene.add(chamber);
+{
+  const hgt = BOX_Y1 - (BOX_Y0 + 5);
+  const mk = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, 0.35), ironMat); m.position.set(x, y, z); chamber.add(m); return m; };
+  const yc = (BOX_Y1 + BOX_Y0 + 5) / 2;
+  mk(BOX_X, hgt, WALL, 0, yc, BOX_Z / 2 - WALL / 2);
+  mk(BOX_X, hgt, WALL, 0, yc, -BOX_Z / 2 + WALL / 2);
+  mk(WALL, hgt, BOX_Z, BOX_X / 2 - WALL / 2, yc, 0);
+  mk(WALL, hgt, BOX_Z, -BOX_X / 2 + WALL / 2, yc, 0);
+  // top lips
+  const lipMat = new THREE.MeshStandardMaterial({ color: '#3a3736', roughness: 0.45, metalness: 0.7, envMapIntensity: 0.9 });
+  for (const s of [1, -1]) {
+    const lip = new THREE.Mesh(new RoundedBoxGeometry(BOX_X + 1.2, 0.8, 2.6, 2, 0.3), lipMat);
+    lip.position.set(0, BOX_Y1 + 0.2, s * (BOX_Z / 2 - 0.7)); chamber.add(lip);
+  }
+}
+const lower = new THREE.Group();     // lower body that holds the ash drawer
+scene.add(lower);
+{
+  const body = new THREE.Mesh(new RoundedBoxGeometry(BOX_X, 5, BOX_Z, 3, 0.35), ironDark);
+  body.position.set(0, BOX_Y0 + 2.5, 0); lower.add(body);
+  for (const [x, z] of [[-33, -17], [33, -17], [-33, 17], [33, 17]]) {
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 2, 12), ironDark);
+    foot.position.set(x, BOX_Y0 - 1, z); lower.add(foot);
+  }
+}
+
+// Coals: binchotan sticks with white ash and glowing cracks (one merged mesh, flicker per stick).
+const COALS = [];
+{
+  const geos = [], capGeos = [];
+  const rows = [
+    { z: -10.5, y: -3.3, n: 9 }, { z: -3.5, y: -3.4, n: 9 }, { z: 3.5, y: -3.4, n: 9 }, { z: 10.5, y: -3.3, n: 9 },
+    { z: -7, y: -1.2, n: 8 }, { z: 0, y: -1.1, n: 8 }, { z: 7, y: -1.2, n: 8 },
+  ];
+  let id = 0;
+  for (const r of rows) {
+    for (let i = 0; i < r.n; i++) {
+      const len = 6.5 + rnd() * 4.5, rad = 1.05 + rnd() * 0.4;
+      const g = new THREE.CylinderGeometry(rad * (0.92 + rnd() * 0.1), rad, len, 11, 4, true);
+      // irregular surface
+      const p = g.attributes.position;
+      for (let k = 0; k < p.count; k++) {
+        const x = p.getX(k), y = p.getY(k), z = p.getZ(k);
+        const n = 1 + 0.06 * Math.sin(y * 2.1 + id) * Math.cos(Math.atan2(z, x) * 3 + id * 1.7) + (rnd() - 0.5) * 0.04;
+        p.setXYZ(k, x * n, y, z * n);
+      }
+      g.rotateX(Math.PI / 2);
+      const stickRotY = (r.n === 8 ? Math.PI / 2 : 0) + (rnd() - 0.5) * 0.45;
+      g.rotateY(stickRotY);
+      const px = -BED_X / 2 + ((i + 0.5) * BED_X) / r.n + (rnd() - 0.5) * 2.5, pz = r.z + (rnd() - 0.5) * 2;
+      const py = r.y + (rnd() - 0.5) * 0.5;
+      g.translate(px, py, pz);
+      const phase = new Float32Array(p.count).fill(rnd());
+      g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+      geos.push(g);
+      for (const end of [1, -1]) {
+        const cap = new THREE.CircleGeometry(rad * 0.97, 11);
+        cap.rotateX(end > 0 ? -Math.PI / 2 : Math.PI / 2); cap.translate(0, (end * len) / 2, 0);
+        cap.rotateX(Math.PI / 2); cap.rotateY(stickRotY); cap.translate(px, py, pz);
+        capGeos.push(cap);
+      }
+      COALS.push({ x: px, y: py + rad * 0.8, z: pz, len, rad });
+      id++;
+    }
+  }
+  var coalGeo = mergeGeometries(geos);
+  coalGeo.computeVertexNormals();
+  var coalCapGeo = mergeGeometries(capGeos);
+}
+const coalUniforms = { uTime: { value: 0 }, uHeat: { value: 1 }, uCrack: { value: crackTex } };
+const coalMat = new THREE.MeshStandardMaterial({ map: coalTex, color: '#a19c96', roughness: 0.74, metalness: 0.2, emissive: '#ff4a14', emissiveIntensity: 1, envMapIntensity: 0.5 });
+coalMat.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, coalUniforms);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nattribute float aPhase; varying float vPhase; varying vec3 vWN; varying vec3 vWP;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPhase = aPhase; vWN = normalize(mat3(modelMatrix) * normal); vWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', '#include <common>\nuniform float uTime; uniform float uHeat; uniform sampler2D uCrack; varying float vPhase; varying vec3 vWN; varying vec3 vWP;')
+    .replace('#include <emissivemap_fragment>', `
+      float crack = texture2D(uCrack, vMapUv + vec2(vPhase * 3.1, vPhase * 1.7)).r;
+      float down = 1.0 - smoothstep(-0.8, 0.3, vWN.y);            // faces toward the other coals glow
+      float deep = 1.0 - smoothstep(-5.5, -1.0, vWP.y);           // the lower layer glows more
+      float flick = 0.78 + 0.22 * sin(uTime * (1.3 + vPhase) + vPhase * 40.0) * sin(uTime * 0.71 + vPhase * 17.0);
+      float glow = (crack * 1.25 + down * 0.8 + deep * 0.55) * flick * uHeat;
+      totalEmissiveRadiance = mix(vec3(0.85, 0.16, 0.03), vec3(1.0, 0.42, 0.1), clamp(crack, 0.0, 1.0)) * glow * 1.25;
+      diffuseColor.rgb *= 1.0 - 0.6 * clamp(crack * 0.8 + down, 0.0, 1.0);
+    `);
+};
+const coalMesh = new THREE.Mesh(coalGeo, coalMat);
+chamber.add(coalMesh, ...coalLights);
+const coalEndTex = canvasTex(128, 128, (x, w, h) => {
+  x.fillStyle = '#1c1918'; x.fillRect(0, 0, w, h);
+  x.strokeStyle = '#fff'; x.lineCap = 'round';
+  for (let i = 0; i < 9; i++) { const a = rnd() * Math.PI * 2; x.globalAlpha = 0.5 + rnd() * 0.5; x.lineWidth = 1 + rnd() * 1.5; x.beginPath(); x.moveTo(w / 2, h / 2); x.lineTo(w / 2 + Math.cos(a) * w * 0.48, h / 2 + Math.sin(a) * h * 0.48); x.stroke(); }
+}, { color: false });
+const coalEnds = new THREE.Mesh(coalCapGeo, new THREE.MeshStandardMaterial({ color: '#2a2624', roughness: 0.9, emissive: '#ff4410', emissiveMap: coalEndTex, emissiveIntensity: 1.4 }));
+chamber.add(coalEnds);
+// The glowing bed seen through the gaps between the sticks.
+const bedMat = new THREE.MeshBasicMaterial({ map: bedTex, color: new THREE.Color(1.1, 0.4, 0.13), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+const bed = new THREE.Mesh(new THREE.PlaneGeometry(BED_X + 2, BED_Z + 2), bedMat);
+bed.rotation.x = -Math.PI / 2; bed.position.y = -5.4;
+chamber.add(bed);
+const bedFloor = new THREE.Mesh(new THREE.PlaneGeometry(BOX_X - 3, BOX_Z - 3), new THREE.MeshStandardMaterial({ color: '#000000', emissive: '#ff3a0c', emissiveIntensity: 0.3, roughness: 1 }));
+bedFloor.rotation.x = -Math.PI / 2; bedFloor.position.y = -5.8;
+chamber.add(bedFloor);
+const heatHaze = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.0, 0.36, 0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.2 }));
+heatHaze.scale.set(92, 26, 1); heatHaze.position.set(0, 3, 0);
+chamber.add(heatHaze);
+parts.chamber = { obj: chamber, from: chamber.position.clone(), off: new THREE.Vector3(0, 12, 0) };
+
+// Grate (ロストル): bars under the coals.
+const grate = new THREE.Group();
+scene.add(grate);
+{
+  const barMat = new THREE.MeshStandardMaterial({ color: '#3b3533', roughness: 0.55, metalness: 0.7, emissive: '#ff4a14', emissiveIntensity: 0.07 });
+  for (let i = 0; i < 24; i++) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, BOX_Z - 4), barMat);
+    bar.position.set(-BED_X / 2 - 1 + (i * (BED_X + 2)) / 23, -6.7, 0); grate.add(bar);
+  }
+  for (const z of [-15.5, 15.5]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(BED_X + 4, 1.2, 1.2), barMat); rail.position.set(0, -7.2, z); grate.add(rail); }
+}
+parts.grate = { obj: grate, from: grate.position.clone(), off: new THREE.Vector3(0, 2.5, 0) };
+
+// Ash tray (灰受け): a drawer in the lower body.
+const ashTray = new THREE.Group();
+scene.add(ashTray);
+{
+  const pan = new THREE.Mesh(new RoundedBoxGeometry(BOX_X - 5, 3, BOX_Z - 4, 2, 0.3), new THREE.MeshStandardMaterial({ color: '#34302e', roughness: 0.6, metalness: 0.6 }));
+  pan.position.set(0, -12.2, 1); ashTray.add(pan);
+  const ash = new THREE.Mesh(new THREE.PlaneGeometry(BOX_X - 7, BOX_Z - 6), new THREE.MeshStandardMaterial({ map: ashTex, color: '#8a8683', roughness: 1 }));
+  ash.rotation.x = -Math.PI / 2; ash.position.set(0, -10.65, 1); ashTray.add(ash);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.35, 8, 20, Math.PI), new THREE.MeshStandardMaterial({ color: '#8b8580', metalness: 0.9, roughness: 0.35 }));
+  handle.position.set(0, -12.4, 20.2); handle.rotation.set(Math.PI / 2, 0, 0); ashTray.add(handle);
+}
+parts.ashTray = { obj: ashTray, from: ashTray.position.clone(), off: new THREE.Vector3(0, -2, 26) };
+
+// Skewer rails (焼き網の受け): bars along the front and back edges, at the skewer height.
+const rails = new THREE.Group();
+scene.add(rails);
+const railMat = new THREE.MeshStandardMaterial({ color: '#8d8984', map: steelTex, roughness: 0.4, metalness: 0.9, envMapIntensity: 1.0 });
+for (const s of [1, -1]) {
+  const bar = new THREE.Mesh(new RoundedBoxGeometry(BOX_X - 4, 0.9, 1.1, 2, 0.28), railMat);
+  bar.position.set(0, BOX_Y1 + 1.35, s * 19.0); rails.add(bar);
+  for (const x of [-34, -11.3, 11.3, 34]) {
+    const lug = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 1.0), railMat);
+    lug.position.set(x, BOX_Y1 + 0.75, s * 19.0); rails.add(lug);
+  }
+}
+parts.rails = { obj: rails, from: rails.position.clone(), off: new THREE.Vector3(0, 24, 0) };
+
+// =====================================================================================
+// The eel: an opened fillet with skin below, flesh above; cut ends show the section
+// =====================================================================================
+const eelRoot = new THREE.Group();   // follows the skewer height
+scene.add(eelRoot);
+const eelFlip = new THREE.Group();   // turns over for 返す
+eelRoot.add(eelFlip);
+
+/** Section outline (z, y) of the fillet: flat slab, gently domed flesh, rounded edges. */
+function sectionOutline(M = 64) {
+  const pts = [];
+  const hw = EEL_W / 2;
+  for (let i = 0; i < M; i++) {
+    const th = (i / M) * Math.PI * 2;
+    const c = Math.cos(th), s = Math.sin(th);
+    const z = hw * Math.sign(c) * Math.pow(Math.abs(c), 2 / 5);
+    const u = 1 - (z / hw) ** 2;
+    const top = 0.6 * (0.8 + 0.2 * Math.pow(Math.max(0, u), 0.6));
+    const bot = 0.6 * (0.86 + 0.14 * Math.pow(Math.max(0, u), 0.8));
+    const y = (s >= 0 ? top : bot) * Math.sign(s) * Math.pow(Math.abs(s), 2 / 5);
+    pts.push([z, y]);
+  }
+  return pts;
+}
+const OUTLINE = sectionOutline();
+const eelYTop = z => { const u = 1 - (z / (EEL_W / 2)) ** 2; return 0.6 * (0.8 + 0.2 * Math.pow(Math.max(0, u), 0.6)); };
+const eelYBot = z => { const u = 1 - (z / (EEL_W / 2)) ** 2; return -0.6 * (0.86 + 0.14 * Math.pow(Math.max(0, u), 0.8)); };
+function eelBodyGeometry() {
+  const NX = 64, M = OUTLINE.length;
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= NX; i++) {
+    const x = -EEL_L / 2 + (i / NX) * EEL_L;
+    const wob = 0.12 * Math.sin(x * 0.23 + 0.6);
+    for (let j = 0; j < M; j++) { const [z, y] = OUTLINE[j]; pos.push(x, y + wob, z); uv.push(i / NX, j / M); }
+  }
+  for (let i = 0; i < NX; i++) for (let j = 0; j < M; j++) {
+    const a = i * M + j, b = i * M + ((j + 1) % M), c = (i + 1) * M + j, d = (i + 1) * M + ((j + 1) % M);
+    idx.push(a, c, b, b, c, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+function eelCapGeometry(end) {
+  const shape = new THREE.Shape(OUTLINE.map(([z, y]) => new THREE.Vector2(z, y)));
+  const g = new THREE.ShapeGeometry(shape, 1);
+  const x = (end * EEL_L) / 2, wob = 0.12 * Math.sin(x * 0.23 + 0.6);
+  // (sx, sy, 0) → (x, sy + wob, ∓sx): the cap faces ±x
+  g.rotateY(end > 0 ? Math.PI / 2 : -Math.PI / 2);
+  g.translate(x, wob, 0);
+  return g;
+}
+
+// Temperature and dryness across the thickness, node 0 = skin side, sampled by the section shader.
+const profileData = new Uint8Array(NN * 4);
+const profileTex = new THREE.DataTexture(profileData, NN, 1, THREE.RGBAFormat);
+profileTex.magFilter = THREE.LinearFilter; profileTex.minFilter = THREE.LinearFilter;
+profileTex.needsUpdate = true;
+
+const eelUniforms = {
+  uBs: { value: 0 }, uBf: { value: 0 }, uGlaze: { value: 0 }, uChar: { value: 0 }, uCook: { value: 0 },
+  uHeat: { value: 0 }, uSide: { value: 0 }, uFlash: { value: 0 }, uTime: { value: 0 }, uProfile: { value: profileTex },
+};
+const EEL_GLSL_COMMON = `
+  uniform float uBs, uBf, uGlaze, uChar, uCook, uHeat, uSide, uFlash, uTime; uniform sampler2D uProfile;
+  varying vec3 vLocal;
+  float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hsh(i), hsh(i + vec2(1.0, 0.0)), f.x), mix(hsh(i + vec2(0.0, 1.0)), hsh(i + vec2(1.0, 1.0)), f.x), f.y); }
+  float fbm(vec2 p){ return 0.55 * vnoise(p) + 0.3 * vnoise(p * 2.13) + 0.15 * vnoise(p * 4.37); }
+`;
+const bodyMat = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.4, metalness: 0, clearcoat: 0.15, clearcoatRoughness: 0.35, envMapIntensity: 0.85 });
+bodyMat.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, eelUniforms);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vLocal;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', '#include <common>\n' + EEL_GLSL_COMMON)
+    .replace('#include <map_fragment>', `
+      float top = smoothstep(-0.12, 0.12, vLocal.y);                  // 1 = flesh side, 0 = skin side
+      vec2 P = vLocal.xz;
+      float az = abs(P.y);                                             // distance from the centre line
+      // flesh: pale pink when raw, creamier as it cooks, brown where it browns, deep amber under the tare
+      float myo = smoothstep(0.40, 0.5, abs(fract(P.x * 0.62 + az * 0.42) - 0.5));
+      vec3 raw = vec3(0.90, 0.74, 0.68), cooked = vec3(0.95, 0.85, 0.72);
+      vec3 flesh = mix(raw, cooked, uCook) * (1.0 - 0.06 * myo);
+      flesh *= 1.0 - 0.12 * exp(-az * az * 5.0);                      // the groove left by the spine
+      float fn = fbm(P * 1.3);
+      flesh = mix(flesh, vec3(0.70, 0.42, 0.18), clamp(uBf * (0.75 + 0.5 * fn), 0.0, 1.0));
+      float gl = uGlaze * (0.78 + 0.22 * fn);
+      vec3 glazeCol = mix(vec3(0.42, 0.17, 0.05), vec3(0.2, 0.07, 0.02), smoothstep(1.6, 3.8, az) * 0.8 + fbm(P * 3.1) * 0.35);
+      glazeCol *= 1.0 - 0.35 * smoothstep(0.62, 0.8, fbm(P * 2.2 + 11.0)) * uGlaze;   // caramelised spots
+      flesh = mix(flesh, glazeCol, gl);
+      float edge = smoothstep(3.5, 3.95, az);                          // the skin wraps round the edges
+      // skin: wet blue-black with a paler belly band, crisp brown, then char in patches
+      float sn = fbm(P * 2.4 + 3.0);
+      vec3 skin = mix(vec3(0.06, 0.07, 0.085), vec3(0.14, 0.15, 0.18), sn * 0.6);
+      skin = mix(skin, vec3(0.36, 0.33, 0.27), (1.0 - smoothstep(0.5, 2.0, az)) * 0.45);
+      skin = mix(skin, vec3(0.30, 0.17, 0.08), clamp(uBs * (0.7 + 0.6 * sn), 0.0, 1.0));
+      float charMask = 1.0 - smoothstep(0.35, 0.55, fbm(P * 0.9 + 7.0) - uChar * 0.55 + 0.35);
+      skin = mix(skin, vec3(0.025, 0.022, 0.02), clamp(uChar, 0.0, 1.0) * charMask);
+      diffuseColor.rgb = mix(skin, flesh, top * (1.0 - edge));
+    `)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+      float rSkin = mix(mix(0.22, 0.46, clamp(uBs, 0.0, 1.0)), 0.9, clamp(uChar, 0.0, 1.0) * charMask);
+      float rFlesh = mix(0.5, 0.16, uGlaze);
+      roughnessFactor = mix(rSkin, rFlesh, top);`)
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      // received heat: amber on the side that faces the coals, strongest in the middle of the fillet
+      float facing = mix(1.0 - top, top, uSide);
+      float mid = 1.0 - smoothstep(10.0, 15.2, abs(P.x));
+      totalEmissiveRadiance += vec3(1.0, 0.52, 0.16) * facing * uHeat * (0.35 + 0.65 * mid) * 0.9;
+      totalEmissiveRadiance += vec3(1.0, 0.97, 0.92) * facing * uFlash * 1.4;
+      totalEmissiveRadiance += vec3(1.0, 0.25, 0.05) * facing * clamp(uChar - 0.2, 0.0, 1.0) * charMask * 0.35 * (0.6 + 0.4 * sin(uTime * 9.0 + P.x));`);
+};
+// The cut face is drawn as a diagram (unlit): tissue layers with the modelled temperature laid over them.
+const sectionMat = new THREE.ShaderMaterial({
+  uniforms: eelUniforms,
+  vertexShader: `varying vec3 vLocal; void main(){ vLocal = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: EEL_GLSL_COMMON + `
+    float yTop(float z){ float r = z / 4.0; float u = max(0.0, 1.0 - r * r); return 0.6 * (0.8 + 0.2 * pow(u, 0.6)); }
+    float yBot(float z){ float r = z / 4.0; float u = max(0.0, 1.0 - r * r); return -0.6 * (0.86 + 0.14 * pow(u, 0.8)); }
+    vec3 ramp(float t){ // 20 → 260 °C: deep red, orange, pale yellow
+      vec3 c = mix(vec3(0.22, 0.03, 0.01), vec3(0.75, 0.12, 0.02), smoothstep(0.02, 0.2, t));
+      c = mix(c, vec3(1.0, 0.36, 0.05), smoothstep(0.2, 0.36, t));
+      c = mix(c, vec3(1.0, 0.72, 0.28), smoothstep(0.36, 0.62, t));
+      return mix(c, vec3(1.0, 0.95, 0.82), smoothstep(0.62, 0.95, t));
+    }
+    void main(){
+      float wob = 0.12 * sin(vLocal.x * 0.23 + 0.6);
+      float yb = yBot(vLocal.z) + wob, yt = yTop(vLocal.z) + wob;
+      float s = clamp((vLocal.y - yb) / max(0.01, yt - yb), 0.0, 1.0);   // 0 skin side → 1 flesh side
+      vec4 pr = texture2D(uProfile, vec2(s * (24.0 / 25.0) + 0.5 / 25.0, 0.5));
+      float T = pr.r, dry = pr.g;
+      vec3 skin = mix(vec3(0.1, 0.1, 0.12), vec3(0.3, 0.16, 0.07), clamp(uBs, 0.0, 1.0));
+      skin = mix(skin, vec3(0.03), clamp(uChar, 0.0, 1.0));
+      vec3 fat = vec3(0.93, 0.87, 0.72);
+      vec3 flesh = mix(vec3(0.86, 0.74, 0.7), vec3(0.93, 0.86, 0.76), uCook);
+      float fib = smoothstep(0.42, 0.5, abs(fract(s * 9.0 + vLocal.z * 0.07) - 0.5)) * 0.07;
+      vec3 col = s < 0.07 ? skin : (s < 0.23 ? fat : flesh * (1.0 - fib));
+      col = mix(col, vec3(0.3, 0.12, 0.04), uGlaze * smoothstep(0.94, 0.99, s));
+      col = mix(col, vec3(0.5, 0.3, 0.15), dry * 0.8);
+      col *= 0.3;
+      float a = smoothstep(0.03, 0.2, T);
+      col = mix(col, ramp(T), a * 0.95);
+      col += ramp(T) * smoothstep(0.45, 0.9, T) * 0.7;              // the hottest layer glows
+      col = mix(col, col * 0.5, (1.0 - smoothstep(0.0, 0.012, abs(s - 0.07))) + (1.0 - smoothstep(0.0, 0.012, abs(s - 0.23))) * 0.6);   // layer boundaries
+      float front = 1.0 - smoothstep(0.0, 0.012, abs(T - 0.333));    // 100 °C line: the evaporation front
+      col = mix(col, vec3(1.0), front * 0.5);
+      float edge = smoothstep(0.0, 0.03, s) * (1.0 - smoothstep(0.97, 1.0, s));
+      col *= 0.55 + 0.45 * edge;
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+});
+const eelBody = new THREE.Mesh(eelBodyGeometry(), bodyMat);
+eelFlip.add(eelBody);
+const capGeo = mergeGeometries([eelCapGeometry(1), eelCapGeometry(-1)]);
+const eelCaps = new THREE.Mesh(capGeo, sectionMat);
+eelFlip.add(eelCaps);
+
+// Bamboo skewers across the fillet.
+const skewerMat = new THREE.MeshStandardMaterial({ color: '#d2b98c', roughness: 0.6, metalness: 0 });
+const SKEWER_X = [-11.2, -3.8, 3.8, 11.2];
+for (const x of SKEWER_X) {
+  const s = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 24, 10), skewerMat);
+  s.rotation.x = Math.PI / 2; s.position.set(x, 0, 4.6);
+  eelFlip.add(s);
+}
+const skewerPick = new THREE.Mesh(new THREE.BoxGeometry(EEL_L + 6, 5, 28), new THREE.MeshBasicMaterial({ visible: false }));
+skewerPick.position.z = 4;
+eelRoot.add(skewerPick);
+
+// Blisters on the skin: moisture boiling out when the skin starts to brown.
+const BUB_N = 120;
+const bubbleMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshPhysicalMaterial({ color: '#f5ede2', roughness: 0.12, metalness: 0, clearcoat: 1, transparent: true, opacity: 0.85, emissive: '#ffd9a8', emissiveIntensity: 0.25 }), BUB_N);
+bubbleMesh.frustumCulled = false;
+const BUBBLES = Array.from({ length: BUB_N }, () => ({ x: (rnd() - 0.5) * (EEL_L - 2), z: (rnd() - 0.5) * (EEL_W - 1.2), r: 0.07 + rnd() * 0.16, ph: rnd(), per: 0.5 + rnd() * 0.9 }));
+eelFlip.add(bubbleMesh);
+
+// White flash at the moment browning starts.
+const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+eelRoot.add(flashSprite);
+
+// Height dimension (coal surface → eel underside).
+const dimGroup = new THREE.Group();
+scene.add(dimGroup);
+const dimMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false });
+const dimLine = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 6), dimMat);
+const dimTickA = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.12), dimMat), dimTickB = dimTickA.clone();
+dimGroup.add(dimLine, dimTickA, dimTickB);
+const DIM_X = -EEL_L / 2 - 2.6, DIM_Z = 5.5;
+
+// Exploded view: the section of the eel, three times larger, in its three layers.
+const secX = new THREE.Group();
+scene.add(secX);
+secX.visible = false;
+const SEC_LAYERS = [];
+{
+  const layer = (name, t, color, rough, y) => {
+    const m = new THREE.Mesh(new RoundedBoxGeometry(12, t, 24, 3, Math.min(0.35, t / 2.2)), new THREE.MeshPhysicalMaterial({ color, roughness: rough, metalness: 0, clearcoat: 0.3, envMapIntensity: 0.8 }));
+    m.position.y = y; m.userData.baseY = y; secX.add(m); SEC_LAYERS.push({ name, mesh: m, t });
+    return m;
+  };
+  layer('皮', 0.36, '#3a2616', 0.35, 0);
+  layer('皮下の脂', 0.72, '#efe3c6', 0.5, 0.54);
+  layer('身', 2.52, '#eadccb', 0.55, 2.16);
+  secX.position.set(31, 33, 16);
+  secX.rotation.y = -0.5;
+}
+
+// =====================================================================================
+// Infrared rays: fixed Monte Carlo rays from the coal surface, cosine-weighted.
+// Rays that meet the eel's underside end there (bright); the rest fade out. The share that hits = view factor.
+// =====================================================================================
+const RAY_N = 1500;
+const RAYS = [];
+for (let i = 0; i < RAY_N; i++) {
+  const c = COALS[Math.floor(rnd() * COALS.length)];
+  const ox = clamp(c.x + (rnd() - 0.5) * c.rad * 1.6, -BED_X / 2, BED_X / 2), oz = clamp(c.z + (rnd() - 0.5) * c.len * 0.8, -BED_Z / 2, BED_Z / 2);
+  // cosine-weighted hemisphere
+  const u1 = rnd(), u2 = rnd(), r = Math.sqrt(u1), phi = 2 * Math.PI * u2;
+  RAYS.push({ o: [ox, 0.2 + rnd() * 0.5, oz], d: [r * Math.cos(phi), Math.sqrt(Math.max(0.02, 1 - u1)), r * Math.sin(phi)], s: rnd(), L: 2.5 + rnd() * 4.5 });
+}
+const rayGeo = new THREE.InstancedBufferGeometry();
+{
+  const base = new THREE.CylinderGeometry(1, 1, 1, 4, 1, true);
+  base.translate(0, 0.5, 0);
+  rayGeo.index = base.index;
+  rayGeo.setAttribute('position', base.attributes.position);
+  rayGeo.setAttribute('uv', base.attributes.uv);
+}
+const rayStart = new Float32Array(RAY_N * 3), rayEnd = new Float32Array(RAY_N * 3), rayInfo = new Float32Array(RAY_N * 2);
+rayGeo.setAttribute('aStart', new THREE.InstancedBufferAttribute(rayStart, 3));
+rayGeo.setAttribute('aEnd', new THREE.InstancedBufferAttribute(rayEnd, 3));
+rayGeo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(rayInfo, 2));
+rayGeo.instanceCount = RAY_N;
+const rayMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uTime: { value: 0 }, uGain: { value: 1 } },
+  vertexShader: `attribute vec3 aStart; attribute vec3 aEnd; attribute vec2 aInfo; varying float vAlong; varying float vHit; varying float vSeed; varying float vLen;
+    void main(){
+      vec3 d = aEnd - aStart; float len = length(d); vec3 t = d / max(1e-4, len);
+      vec3 a = normalize(abs(t.y) < 0.95 ? cross(t, vec3(0.0, 1.0, 0.0)) : cross(t, vec3(1.0, 0.0, 0.0)));
+      vec3 b = cross(t, a);
+      float rad = (aInfo.x > 0.5 ? 0.05 : 0.03) * (1.0 - 0.4 * position.y);
+      vec3 p = aStart + d * position.y + (a * position.x + b * position.z) * rad;
+      vAlong = position.y; vHit = aInfo.x; vSeed = aInfo.y; vLen = len;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }`,
+  fragmentShader: `uniform float uTime; uniform float uGain; varying float vAlong; varying float vHit; varying float vSeed; varying float vLen;
+    void main(){
+      float s = vAlong * vLen;
+      float pulse = smoothstep(0.78, 1.0, fract(s * 0.16 - uTime * 1.25 + vSeed * 7.0));
+      vec3 col = mix(vec3(1.0, 0.16, 0.05), vec3(1.0, 0.5, 0.18), vAlong);
+      float base = vHit > 0.5 ? 0.22 : 0.022 * (1.0 - vAlong);
+      float I = base + pulse * (vHit > 0.5 ? 0.95 : 0.07 * (1.0 - vAlong));
+      I *= smoothstep(0.0, 0.08, vAlong);
+      gl_FragColor = vec4(col * I * uGain, 1.0);
+    }`,
+});
+const rayMesh = new THREE.Mesh(rayGeo, rayMat);
+rayMesh.frustumCulled = false;
+rayMesh.renderOrder = 4;
+scene.add(rayMesh);
+let rayHitCount = 0, rayLastH = -1;
+function updateRays(h) {
+  if (Math.abs(h - rayLastH) < 1e-4) return;
+  rayLastH = h;
+  let hits = 0;
+  for (let i = 0; i < RAY_N; i++) {
+    const R = RAYS[i];
+    const [ox, oy, oz] = R.o, [dx, dy, dz] = R.d;
+    rayStart[i * 3] = ox; rayStart[i * 3 + 1] = oy; rayStart[i * 3 + 2] = oz;
+    const t = (h - oy) / dy;
+    const px = ox + dx * t, pz = oz + dz * t;
+    const hit = t > 0 && Math.abs(px) < EEL_L / 2 - 0.2 && Math.abs(pz) < EEL_W / 2 - 0.4;
+    const L = hit ? t : R.L;
+    rayEnd[i * 3] = ox + dx * L; rayEnd[i * 3 + 1] = oy + dy * L; rayEnd[i * 3 + 2] = oz + dz * L;
+    rayInfo[i * 2] = hit ? 1 : 0; rayInfo[i * 2 + 1] = R.s;
+    if (hit) hits++;
+  }
+  rayHitCount = hits;
+  rayGeo.attributes.aStart.needsUpdate = true; rayGeo.attributes.aEnd.needsUpdate = true; rayGeo.attributes.aInfo.needsUpdate = true;
+}
+
+// =====================================================================================
+// Smoke, fat drips, flares, flames
+// =====================================================================================
+// Smoke: soft noise sheets (billboards around the vertical axis) rising from the bed and from the eel.
+const SMOKE_N = 16;
+const smokeGeo = new THREE.InstancedBufferGeometry();
+{
+  const base = new THREE.PlaneGeometry(1, 1, 1, 1);
+  base.translate(0, 0.5, 0);
+  smokeGeo.index = base.index;
+  smokeGeo.setAttribute('position', base.attributes.position);
+  smokeGeo.setAttribute('uv', base.attributes.uv);
+  const pos = new Float32Array(SMOKE_N * 3), info = new Float32Array(SMOKE_N * 4);
+  for (let i = 0; i < SMOKE_N; i++) {
+    const kind = i < 7 ? 0 : 1;   // 0: from the coal bed, 1: from the eel
+    pos[i * 3] = kind ? (rnd() - 0.5) * 22 : (rnd() - 0.5) * 50; pos[i * 3 + 1] = 0; pos[i * 3 + 2] = kind ? (rnd() - 0.5) * 6 : (rnd() - 0.5) * 20;
+    info[i * 4] = kind; info[i * 4 + 1] = rnd(); info[i * 4 + 2] = kind ? 12 + rnd() * 8 : 16 + rnd() * 12; info[i * 4 + 3] = kind ? 34 + rnd() * 18 : 30 + rnd() * 20;
+  }
+  smokeGeo.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 3));
+  smokeGeo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(info, 4));
+  smokeGeo.instanceCount = SMOKE_N;
+}
+const smokeMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uTime: { value: 0 }, uEelY: { value: 20 }, uBase: { value: 0.4 }, uEel: { value: 0 }, uBurn: { value: 0 } },
+  vertexShader: `attribute vec3 aPos; attribute vec4 aInfo; uniform float uEelY; varying vec2 vUv; varying float vKind; varying float vSeed; varying float vY; varying float vDist;
+    void main(){
+      vUv = uv; vKind = aInfo.x; vSeed = aInfo.y;
+      vec3 right = normalize(vec3(viewMatrix[0][0], 0.0, viewMatrix[2][0]));
+      vec3 base = aPos + vec3(0.0, aInfo.x > 0.5 ? uEelY + 0.6 : 0.5, 0.0);
+      vec3 p = base + right * (position.x * aInfo.z) + vec3(0.0, position.y * aInfo.w, 0.0);
+      vY = p.y;
+      vec4 mv = viewMatrix * vec4(p, 1.0);
+      vDist = -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `uniform float uTime, uBase, uEel, uBurn; varying vec2 vUv; varying float vKind; varying float vSeed; varying float vY; varying float vDist;
+    float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
+    float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+    void main(){
+      float y = vUv.y;
+      vec2 q = vec2(vUv.x * 2.2 + vSeed * 13.0, y * 3.2 - uTime * (0.34 + 0.1 * vSeed));
+      float w = fbm(q * 1.2 + vec2(0.0, uTime * 0.05));
+      float d = fbm(q + vec2(w * 1.6, w * 0.8));
+      float sway = 0.14 * sin(y * 4.0 + uTime * 0.5 + vSeed * 6.3) * y;
+      float col = 1.0 - smoothstep(0.02 + 0.3 * y, 0.5, abs(vUv.x - 0.5 - sway));   // narrow at the source, spreading upward
+      float fade = smoothstep(0.0, 0.18, y) * (1.0 - smoothstep(0.45, 1.0, y));
+      float amt = vKind < 0.5 ? uBase : (uEel + uBurn * 1.4);
+      float a = smoothstep(0.34, 0.95, d) * smoothstep(0.34, 0.95, d) * col * fade * amt * smoothstep(14.0, 55.0, vDist);
+      vec3 grey = mix(vec3(0.86, 0.86, 0.9), vec3(0.2, 0.19, 0.19), uBurn * vKind);
+      vec3 c = mix(grey, vec3(1.0, 0.56, 0.3), (1.0 - smoothstep(2.0, 26.0, vY)) * 0.85);
+      gl_FragColor = vec4(c * a * 0.2, 1.0);
+    }`,
+});
+const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+smoke.frustumCulled = false;
+smoke.renderOrder = 6;
+scene.add(smoke);
+
+const DRIP_N = 22;
+const dripMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.17, 8, 6), new THREE.MeshStandardMaterial({ color: '#f4dca0', roughness: 0.15, emissive: '#ffb050', emissiveIntensity: 0.6 }), DRIP_N);
+dripMesh.frustumCulled = false;
+scene.add(dripMesh);
+const DRIPS = Array.from({ length: DRIP_N }, () => ({ x: (rnd() - 0.5) * (EEL_L - 4), z: (rnd() - 0.5) * (EEL_W - 2), per: 0.55 + rnd() * 0.9, ph: rnd(), gate: rnd() }));
+const flareMats = [];
+const flares = DRIPS.map(() => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.8, 0.8, 0.3), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); scene.add(s); flareMats.push(s.material); return s; });
+
+const FLAME_N = 22;
+const flameGeo = new THREE.InstancedBufferGeometry();
+{
+  const base = new THREE.PlaneGeometry(1, 1, 1, 8);
+  base.translate(0, 0.5, 0);
+  flameGeo.index = base.index;
+  flameGeo.setAttribute('position', base.attributes.position);
+  flameGeo.setAttribute('uv', base.attributes.uv);
+  const pos = new Float32Array(FLAME_N * 3), sd = new Float32Array(FLAME_N);
+  for (let i = 0; i < FLAME_N; i++) { pos[i * 3] = (rnd() - 0.5) * 27; pos[i * 3 + 1] = 0.2; pos[i * 3 + 2] = (rnd() - 0.5) * 6; sd[i] = rnd(); }
+  flameGeo.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 3));
+  flameGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(sd, 1));
+  flameGeo.instanceCount = FLAME_N;
+}
+const flameMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { uTime: { value: 0 }, uFlame: { value: 0 }, uTop: { value: 10 } },
+  vertexShader: `attribute vec3 aPos; attribute float aSeed; uniform float uTime, uFlame, uTop; varying vec2 vUv; varying float vSeed;
+    void main(){
+      vUv = uv; vSeed = aSeed;
+      float h = max(0.01, uFlame * uTop * (0.55 + 0.45 * sin(uTime * (3.0 + aSeed * 2.0) + aSeed * 30.0) * 0.5 + 0.45 * aSeed));
+      float w = 1.5 + 1.2 * aSeed;
+      vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+      vec3 p = aPos + right * position.x * w + vec3(0.0, position.y * h, 0.0);
+      gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+    }`,
+  fragmentShader: `uniform float uTime, uFlame; varying vec2 vUv; varying float vSeed;
+    float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
+    void main(){
+      float y = vUv.y;
+      float n = vn(vec2(vUv.x * 4.0 + vSeed * 9.0, y * 3.0 - uTime * 5.5));
+      float x = (vUv.x - 0.5) * 2.0 + 0.35 * sin(y * 5.0 + uTime * 6.0 + vSeed * 6.0) * y;
+      float w = (1.0 - y) * (0.55 + 0.45 * n) + 0.02;
+      float a = (1.0 - smoothstep(0.1, 1.0, abs(x) / w)) * smoothstep(0.0, 0.1, y) * (1.0 - smoothstep(0.55, 1.0, y + (n - 0.5) * 0.35));
+      vec3 col = mix(vec3(1.0, 0.7, 0.3), vec3(0.95, 0.22, 0.04), smoothstep(0.05, 0.7, y));
+      gl_FragColor = vec4(col * a * uFlame * 0.42, 1.0);
+    }`,
+});
+const flames = new THREE.Mesh(flameGeo, flameMat);
+flames.frustumCulled = false;
+flames.renderOrder = 7;
+scene.add(flames);
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), hval: $('hval'), qval: $('qval'), tsval: $('tsval'), tcval: $('tcval'), stateTag: $('stateTag'), meter: $('meter'),
+  fill: document.querySelector('#meter .fill'), thBrown: $('thBrown'), thChar: $('thChar'),
+  steps: [...document.querySelectorAll('#steps li')], stepsEl: $('steps'), counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'),
+};
+ui.thBrown.style.left = `${(T_BROWN / T_SCALE) * 100}%`;
+ui.thChar.style.left = `${(T_CHAR / T_SCALE) * 100}%`;
+$('ticks').innerHTML = [0, 50, 100, 150, 200, 250, 300].map(v => `<span style="left:${(v / T_SCALE) * 100}%">${v}${v === 300 ? '℃' : ''}</span>`).join('');
+ui.range.min = H_MIN; ui.range.max = H_MAX;
+
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'),
+  document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'),
+  document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'),
+  document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+function freshState() {
+  return {
+    h: 28, q: 0, Ts: 22, G: G_SKIN,
+    T: new Float64Array(NN).fill(T_AIR), W: new Float64Array(NN).fill(NODE_WATER),
+    side: 0,                 // 0: skin faces the coals, 1: flesh faces the coals
+    flip: 0,                 // visual turn-over (0 → 1 → 2 for the second turn)
+    Bs: 0, Bf: 0, glaze: 0, char: 0,
+    status: 'idle',          // idle | run | done | burnt | rest
+    tProc: 0, phase: -1, success: false,
+    speed: 'fast',
+    flash: 0, blister: 0, flame: 0, coolFor: 0,
+    exploded: false, explode: 0,
+    camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0,
+  };
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+
+function crustDepth(side) {
+  let d = 0;
+  for (let k = 0; k < NN; k++) {
+    const i = side === 0 ? k : NN - 1 - k;
+    const f = 1 - S.W[i] / NODE_WATER;
+    if (f >= 0.999) d += DX; else { d += f * DX; break; }
+  }
+  return d;
+}
+/** Advance the heat model by dtm model-seconds (dtm = 0 just re-evaluates the surface for a new height). */
+function integrate(dtm) {
+  S.q = fluxAt(S.h);
+  let st = surfaceTemp(S.q, crustDepth(S.side));
+  if (dtm > 0) {
+    const nsub = Math.max(1, Math.ceil(dtm / 0.2)), d = dtm / nsub, a = K_FLESH / DX;
+    const E = new Float64Array(NN);
+    for (let s = 0; s < nsub; s++) {
+      st = surfaceTemp(S.q, crustDepth(S.side));
+      let kf = 0;
+      while (kf < NN && S.W[S.side === 0 ? kf : NN - 1 - kf] <= 0) kf++;
+      E.fill(0);
+      for (let i = 0; i < NN - 1; i++) { if (S.W[i] <= 0 || S.W[i + 1] <= 0) continue; const fl = a * (S.T[i] - S.T[i + 1]) * d; E[i] -= fl; E[i + 1] += fl; }
+      if (kf < NN) { const i0 = S.side === 0 ? kf : NN - 1 - kf; E[i0] += Math.max(0, st.G * (st.Ts - Math.min(100, S.T[i0]))) * d; }
+      const iTop = S.side === 0 ? NN - 1 : 0;
+      E[iTop] -= H_TOP * (S.T[iTop] - T_AIR) * d;
+      for (let i = 0; i < NN; i++) {
+        if (S.W[i] <= 0) continue;
+        const e = E[i];
+        if (S.T[i] + e / NODE_CAP > 100) { const boil = e - (100 - S.T[i]) * NODE_CAP; S.T[i] = 100; S.W[i] = Math.max(0, S.W[i] - boil / L_VAP); }
+        else S.T[i] += e / NODE_CAP;
+      }
+      // dry layers sit between the surface and the evaporation front
+      for (let k = 0; k < kf; k++) S.T[S.side === 0 ? k : NN - 1 - k] = st.Ts + (100 - st.Ts) * ((k + 0.5) / Math.max(1, kf));
+      if (st.Ts > T_BROWN) { const dB = (d * (st.Ts - T_BROWN)) / 50 / 240; if (S.side === 0) S.Bs = Math.min(1.25, S.Bs + dB); else S.Bf = Math.min(1.25, S.Bf + dB); }
+      if (st.Ts > T_CHAR && S.side === 0) S.char += (d * (st.Ts - T_CHAR)) / 30;
+      if (st.Ts > T_CHAR && S.side === 1) S.char += (d * (st.Ts - T_CHAR)) / 30;
+    }
+  }
+  S.Ts = st.Ts; S.G = st.G;
+}
+const centerTemp = () => S.T[(NN - 1) / 2];
+
+function startProcess() {
+  S.status = 'run'; S.tProc = 0; S.phase = 0; S.flash = 1; S.blister = 1;
+  logEvent('brown');
+}
+function completeProcess() {
+  S.status = 'done'; S.phase = PHASES.length - 1;
+  S.success = S.Bs >= 0.7 && centerTemp() >= 60;
+  showBubble(S.success ? 'ok' : 'short');
+  sound('ok');
+  logEvent('done');
+}
+function burn() {
+  S.status = 'burnt'; S.coolFor = 0;
+  showBubble('err');
+  sound('err');
+  logEvent('burn');
+  if (!DEMO_ACTIVE) setCamera('fail');
+}
+
+/** Advance by dt display-seconds. The process runs time-lapsed; everything else runs in real time. */
+function stepState(dt) {
+  S.t += dt;
+  const fast = S.status === 'run' && S.speed === 'fast' ? FAST : 1;
+  const dtm = dt * fast;
+  integrate(dtm);
+  if (S.status === 'idle' && S.Ts >= T_BROWN) startProcess();
+  if (S.status === 'run') {
+    const before = S.tProc;
+    S.tProc += dtm;
+    let ph = PHASES.length - 1;
+    for (let i = 0; i < PHASES.length; i++) if (S.tProc < PH_START[i] + PHASES[i].dur) { ph = i; break; }
+    S.phase = ph;
+    if (before < PH_START[3] && S.tProc >= PH_START[3]) { S.side = 1; integrate(0); }
+    if (before < PH_START[5] && S.tProc >= PH_START[5]) { S.side = 0; integrate(0); }
+    if (S.tProc >= PH_START[4]) S.glaze = clamp((S.tProc - PH_START[4]) / PHASES[4].dur, 0, 1);
+    if (S.tProc >= PROC_TOTAL) completeProcess();
+  }
+  if (S.char >= 1 && S.status !== 'burnt' && S.status !== 'rest') burn();
+  if (S.status === 'burnt') {
+    S.coolFor = S.Ts < 200 ? S.coolFor + dt : 0;
+    if (S.coolFor > 0.7) { S.status = 'rest'; logEvent('recover'); }
+  }
+  // visual state
+  const flipTarget = S.side === 1 ? 1 : S.tProc >= PH_START[5] ? 2 : 0;
+  S.flip += clamp(flipTarget - S.flip, -dt * 2.6, dt * 2.6);
+  S.flash = Math.max(0, S.flash - dt * 1.1);
+  S.blister = S.status === 'run' && S.phase <= 1 ? Math.max(S.blister - dt * 0.25, 0.35) : Math.max(0, S.blister - dt * 1.2);
+  const flameTarget = S.status === 'burnt' ? clamp((S.Ts - 190) / 50, 0, 1) : 0;
+  S.flame += clamp(flameTarget - S.flame, -dt * 1.6, dt * 3.5);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+  if (S.t >= S.histNext) {
+    S.hist.push([S.t, S.Ts, centerTemp()]);
+    if (S.hist.length > 240) S.hist.shift();
+    S.histNext = S.t + 1 / 30;
+  }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'err' ? 2.7 : 4.2); }
+
+// =====================================================================================
+// Sound (Web Audio, created on the first user gesture; the demo video gets its cues from export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.16) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.006);
+  g.gain.setValueAtTime(gain, start + dur - 0.012); g.gain.linearRampToValueAtTime(0, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.02);
+}
+function sizzle(start) {
+  const n = Math.floor(audio.sampleRate * 0.5), buf = audio.createBuffer(1, n, audio.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audio.sampleRate * 0.12));
+  const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+  src.buffer = buf; f.type = 'bandpass'; f.frequency.value = 5200; f.Q.value = 0.6; g.gain.value = 0.35;
+  src.connect(f).connect(g).connect(audio.destination); src.start(start);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') sizzle(t0);
+  else for (let i = 0; i < 3; i++) tone(3000, t0 + i * 0.12, 0.07, 0.13);
+}
+
+// =====================================================================================
+// Camera presets ({pos, tgt}; `follow` keeps the eel's height in frame)
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-46, 70, 88], tgt: [0, 17.5, 0] },
+  grill: { pos: [-38, 12, 58], tgt: [0, 13, -2] },
+  section: { pos: [28.5, 2.2, 5.2], tgt: [13.6, -0.8, 0.3], follow: true },
+  griller: { pos: [2, 70, 50], tgt: [0, 6, -3] },
+  side: { pos: [-66, 36, 44], tgt: [0, 12, 0] },
+  under: { pos: [-38, -5.5, 48], tgt: [3, -2.2, 0], follow: true },
+  finish: { pos: [-30, 16, 34], tgt: [0, 0.4, 0], follow: true },
+  fail: { pos: [-72, 46, 108], tgt: [0, 8, 0] },
+  exploded: { pos: [-26, 66, 132], tgt: [7, 13, 7] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = CAMS[name];
+  const off = p.follow ? S.h + 0.6 : 0, k = p.followK ?? 1;
+  return { pos: new THREE.Vector3(p.pos[0], p.pos[1] + off * k, p.pos[2]), tgt: new THREE.Vector3(p.tgt[0], p.tgt[1] + off, p.tgt[2]) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3();
+function applyScene(time) {
+  const e = ease(S.explode);
+  // eel pose
+  const yEel = S.h + EEL_T / 2;
+  eelRoot.position.set(0, lerp(yEel, 42, e), 0);
+  const fk = S.flip <= 1 ? ease(clamp(S.flip, 0, 1)) : 1 + ease(clamp(S.flip - 1, 0, 1));
+  eelFlip.rotation.x = fk * Math.PI;
+  eelFlip.position.y = Math.sin(clamp(S.flip % 1 === 0 ? 0 : S.flip % 1, 0, 1) * Math.PI) * 3.5;
+  // exploded offsets
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  secX.visible = S.explode > 0.01;
+  secX.scale.setScalar(Math.max(0.001, e));
+  SEC_LAYERS.forEach((l, i) => (l.mesh.position.y = l.mesh.userData.baseY + e * i * 3.2));
+  dimGroup.visible = S.explode < 0.5;
+
+  // heat on the eel
+  const qn = S.q / Q_MAX;
+  eelUniforms.uHeat.value = Math.min(0.62, Math.pow(qn, 1.6) * 1.15) * (1 - 0.5 * S.flame);
+  eelUniforms.uBs.value = S.Bs; eelUniforms.uBf.value = S.Bf; eelUniforms.uGlaze.value = S.glaze;
+  bodyMat.clearcoat = 0.15 + 0.45 * S.glaze; bodyMat.clearcoatRoughness = 0.35 - 0.1 * S.glaze;
+  eelUniforms.uChar.value = clamp(S.char / 2.5, 0, 1);
+  eelUniforms.uCook.value = smooth01((centerTemp() - 35) / 45);
+  eelUniforms.uSide.value = S.side;
+  eelUniforms.uFlash.value = S.flash * S.flash;
+  eelUniforms.uTime.value = time;
+  // section profile (node 0 = skin side)
+  for (let i = 0; i < NN; i++) {
+    profileData[i * 4] = Math.round(clamp((S.T[i] - 20) / 240, 0, 1) * 255);
+    profileData[i * 4 + 1] = Math.round(clamp(1 - S.W[i] / NODE_WATER, 0, 1) * 255);
+    profileData[i * 4 + 2] = 0; profileData[i * 4 + 3] = 255;
+  }
+  profileTex.needsUpdate = true;
+
+  // coals and rays
+  coalUniforms.uTime.value = time;
+  const burning = S.flame;
+  for (const [i, l] of coalLights.entries()) l.intensity = (1150 + 160 * Math.sin(time * 1.7 + i * 2.1)) * (1 + 0.35 * burning) * (1 - 0.7 * e);
+  updateRays(S.h);
+  rayMat.uniforms.uTime.value = time;
+  rayMat.uniforms.uGain.value = (0.45 + 0.85 * Math.sqrt(qn)) * (1 - 0.85 * e);
+  rayMesh.visible = e < 0.95;
+  heatHaze.material.opacity = 0.14 + 0.05 * Math.sin(time * 0.9);
+
+  // blisters on the skin side (they turn over with the eel)
+  for (let i = 0; i < BUB_N; i++) {
+    const b = BUBBLES[i];
+    const cyc = ((time / b.per + b.ph) % 1);
+    const sc = S.blister > 0.01 ? b.r * S.blister * Math.sin(cyc * Math.PI) * (0.4 + 0.6 * hash(i + Math.floor(time / b.per + b.ph))) : 0;
+    tmpS.setScalar(Math.max(0.0001, sc));
+    tmpM.compose(tmpV.set(b.x, eelYBot(b.z) + 0.12 * Math.sin(b.x * 0.23 + 0.6) - sc * 0.25, b.z), tmpQ.identity(), tmpS);
+    bubbleMesh.setMatrixAt(i, tmpM);
+  }
+  bubbleMesh.instanceMatrix.needsUpdate = true;
+  bubbleMesh.visible = S.blister > 0.01;
+  // flash
+  flashSprite.material.opacity = Math.min(0.42, S.flash * 0.5);
+  flashSprite.scale.set(34 + 8 * S.flash, 3 + 3 * S.flash, 1);
+  flashSprite.position.set(0, -EEL_T, 0);
+  flashLight.position.set(0, yEel - 2, 0);
+  flashLight.intensity = 380 * S.flash * S.flash;
+
+  // fat drips (more while the fat renders, and when burning)
+  const dripAmt = S.status === 'run' ? (S.phase === 2 ? 1 : S.phase >= 1 ? 0.3 : 0) : S.status === 'burnt' ? 1 : 0;
+  const g = 160;
+  for (let i = 0; i < DRIP_N; i++) {
+    const d = DRIPS[i];
+    const on = d.gate < dripAmt && e < 0.2;
+    const cyc = (time / d.per + d.ph) % 1;
+    const tf = cyc * d.per, fall = 0.5 * g * tf * tf;
+    const y = S.h - fall;
+    const visible = on && y > 0.3;
+    tmpS.setScalar(visible ? 1 : 0.0001);
+    tmpM.compose(tmpV.set(d.x, Math.max(0.3, y), d.z), tmpQ.identity(), tmpS);
+    dripMesh.setMatrixAt(i, tmpM);
+    // flare where the drip lands
+    const tLand = Math.sqrt((2 * S.h) / g), since = tf - tLand;
+    const fl = on && since > 0 && since < 0.28 ? Math.sin((since / 0.28) * Math.PI) : 0;
+    flares[i].position.set(d.x, 1.2, d.z);
+    flares[i].scale.setScalar(3 + 6 * fl);
+    flareMats[i].opacity = fl * 0.8;
+  }
+  dripMesh.instanceMatrix.needsUpdate = true;
+
+  // smoke and flames
+  smokeMat.uniforms.uTime.value = time;
+  smokeMat.uniforms.uEelY.value = S.h;
+  smokeMat.uniforms.uBase.value = 0.4 * (1 - e);
+  smokeMat.uniforms.uEel.value = (S.status === 'run' ? 0.35 + 0.65 * dripAmt : S.status === 'done' || S.status === 'rest' ? 0.3 : 0.12 * smooth01((S.Ts - 100) / 50)) * (1 - e);
+  smokeMat.uniforms.uBurn.value = S.flame;
+  flameMat.uniforms.uTime.value = time;
+  flameMat.uniforms.uFlame.value = S.flame;
+  flameMat.uniforms.uTop.value = Math.max(3, S.h + 1.5);
+  flames.visible = S.flame > 0.01;
+  flameLight.intensity = 1300 * S.flame * (0.8 + 0.2 * Math.sin(time * 13));
+
+  // height dimension
+  const hh = S.h;
+  dimLine.scale.y = Math.max(0.01, hh); dimLine.position.set(DIM_X, hh / 2, DIM_Z);
+  dimTickA.position.set(DIM_X, 0.02, DIM_Z); dimTickB.position.set(DIM_X, hh, DIM_Z);
+
+  ui.imageTag.classList.toggle('show', S.camera === 'section' || S.explode > 0.3);
+}
+
+// =====================================================================================
+// Graph (height → flux) and the temperature record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const curve = [];
+for (let h = 0.5; h <= H_MAX + 1e-9; h += 0.1) curve.push([h, fluxAt(h) / 1000]);
+const Q_AXIS = 40;
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 34, r: w - 10, t: 12, b: h - 26 });
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = d => g.l + (d / H_MAX) * (g.r - g.l), Y = v => g.b - (v / Q_AXIS) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (let d = 0; d <= 30; d += 10) x.fillText(`${d}`, X(d), g.b + 12);
+  x.textAlign = 'right';
+  for (let v = 0; v <= Q_AXIS; v += 10) x.fillText(`${v}`, g.l - 5, Y(v) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('炭からの距離 cm', g.r - 78, g.b + 23); x.fillText('kW/m²', g.l + 4, g.t + 2);
+  // browning threshold (fresh skin)
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.6)';
+  x.beginPath(); x.moveTo(X(H_BROWN), g.t); x.lineTo(X(H_BROWN), g.b); x.stroke();
+  x.setLineDash([]);
+  x.fillStyle = '#c4c2bd'; x.fillText(`焼き色のしきい値 約${Math.round(H_BROWN)}cm`, X(H_BROWN) + 4, g.t + 9);
+  // area + curve
+  const grad = x.createLinearGradient(0, g.t, 0, g.b);
+  grad.addColorStop(0, 'rgba(255,107,61,0.28)'); grad.addColorStop(1, 'rgba(255,107,61,0)');
+  x.fillStyle = grad; x.beginPath(); x.moveTo(X(curve[0][0]), g.b);
+  curve.forEach(([d, v]) => x.lineTo(X(d), Y(v))); x.lineTo(X(curve[curve.length - 1][0]), g.b); x.closePath(); x.fill();
+  x.strokeStyle = '#ff6b3d'; x.lineWidth = 1.8; x.beginPath();
+  curve.forEach(([d, v], i) => (i ? x.lineTo(X(d), Y(v)) : x.moveTo(X(d), Y(v))));
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+  x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const px = g.l + (S.h / H_MAX) * (g.r - g.l), py = g.b - (S.q / 1000 / Q_AXIS) * (g.b - g.t);
+  x.fillStyle = S.status === 'burnt' ? '#ff5448' : S.Ts >= T_BROWN ? '#ffffff' : '#ffb04a';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 26, r = w - 4, t = 6, b = h - 6;
+  const Y = v => b - (clamp(v, 0, 300) / 300) * (b - t);
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  for (const v of [100, 200]) { x.beginPath(); x.moveTo(l, Y(v)); x.lineTo(r, Y(v)); x.stroke(); }
+  x.fillStyle = '#8d8b86'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  for (const v of [0, 100, 200, 300]) x.fillText(`${v}`, l - 4, Y(v) + 3);
+  x.setLineDash([3, 3]);
+  x.strokeStyle = 'rgba(255,255,255,0.45)'; x.beginPath(); x.moveTo(l, Y(T_BROWN)); x.lineTo(r, Y(T_BROWN)); x.stroke();
+  x.strokeStyle = 'rgba(255,120,110,0.55)'; x.beginPath(); x.moveTo(l, Y(T_CHAR)); x.lineTo(r, Y(T_CHAR)); x.stroke();
+  x.setLineDash([]);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  for (const [k, col] of [[1, '#ffb04a'], [2, '#e8edf5']]) {
+    x.strokeStyle = col; x.lineWidth = 1.6; x.beginPath();
+    H.forEach((p, i) => (i ? x.lineTo(X(i), Y(p[k])) : x.moveTo(X(i), Y(p[k]))));
+    x.stroke();
+  }
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+// section labels sit on the screen-right edge of the cut face, whichever way up the eel is
+const secAnchor = s01 => () => { const up = Math.cos(eelFlip.rotation.x) >= 0; const y = -0.55 + 1.1 * s01; return eelFlip.localToWorld(tmpV.set(EEL_L / 2 + 0.05, up ? y : -y, up ? -3.7 : 3.7)).clone(); };
+const LABELS = [
+  { id: 'eel', text: '鰻', cls: 'key amber', pri: 100, mode: 'normal', anchor: () => eelFlip.localToWorld(tmpV.set(-6, 0.7, -1)).clone() },
+  { id: 'skewer', text: '串', cls: 'key', pri: 92, mode: 'normal', anchor: () => eelFlip.localToWorld(tmpV.set(SKEWER_X[3], 0, 14.5)).clone() },
+  { id: 'ray', text: '赤外線（熱放射）', cls: 'key ray', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(7.5, Math.max(1.5, S.h * 0.42), 2.4) },
+  { id: 'coal', text: '炭火', cls: 'key', pri: 94, mode: 'normal', anchor: () => new THREE.Vector3(-23, 0.4, 9) },
+  { id: 'dim', text: '', cls: 'dim', pri: 98, mode: 'normal', anchor: () => new THREE.Vector3(DIM_X, S.h * 0.5, DIM_Z), dyn: () => `高さ ${S.h.toFixed(1)} cm` },
+  { id: 'grill', text: '焼き台', cls: '', pri: 70, mode: 'normal', anchor: () => new THREE.Vector3(24, -4, 20.4) },
+  // section camera
+  { id: 'sSkin', text: '皮', cls: 'amber', pri: 90, mode: 'section', side: true, anchor: secAnchor(0.03) },
+  { id: 'sFat', text: '皮下の脂', cls: '', pri: 80, mode: 'section', side: true, anchor: secAnchor(0.15) },
+  { id: 'sFlesh', text: '身', cls: '', pri: 85, mode: 'section', side: true, anchor: secAnchor(0.6) },
+  // exploded
+  { id: 'xrails', text: '焼き網の受け', cls: '', pri: 80, mode: 'x', anchor: () => rails.localToWorld(tmpV.set(28, BOX_Y1 + 1.35, 19.0)).clone() },
+  { id: 'xchamber', text: '炭床', cls: 'key', pri: 88, mode: 'x', anchor: () => chamber.localToWorld(tmpV.set(-26, 0.5, 8)).clone() },
+  { id: 'xgrate', text: 'ロストル', cls: '', pri: 84, mode: 'x', anchor: () => grate.localToWorld(tmpV.set(22, -6.7, 15)).clone() },
+  { id: 'xash', text: '灰受け', cls: '', pri: 82, mode: 'x', anchor: () => ashTray.localToWorld(tmpV.set(-20, -10.6, 12)).clone() },
+  { id: 'xsec', text: '鰻の断面（3倍に拡大）', cls: 'key amber', pri: 96, mode: 'x', anchor: () => secX.localToWorld(tmpV.set(0, 9.4, -12)).clone() },
+  { id: 'xskin', text: '皮', cls: 'amber', pri: 90, mode: 'x', anchor: () => SEC_LAYERS[0].mesh.localToWorld(tmpV.set(6, 0, 0)).clone() },
+  { id: 'xfat', text: '皮下の脂', cls: '', pri: 89, mode: 'x', anchor: () => SEC_LAYERS[1].mesh.localToWorld(tmpV.set(6, 0, 0)).clone() },
+  { id: 'xflesh', text: '身', cls: '', pri: 88, mode: 'x', anchor: () => SEC_LAYERS[2].mesh.localToWorld(tmpV.set(6, 0, 0)).clone() },
+  { id: 'xeel', text: '鰻', cls: 'key amber', pri: 86, mode: 'x', anchor: () => eelFlip.localToWorld(tmpV.set(-8, 0.7, 0)).clone() },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div');
+  L.el.className = `lbl ${L.cls}`;
+  L.el.textContent = L.text;
+  labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)');
+  L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [];
+let blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id))
+    .filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+/** Screen box of the cut face (the section diagram must stay uncovered). */
+function sectionBox() {
+  const pts = [[-0.8, -4.2], [-0.8, 4.2], [0.8, -4.2], [0.8, 4.2]].map(([y, z]) => screenOf(eelFlip.localToWorld(new THREE.Vector3(EEL_L / 2, y, z))));
+  if (!pts.every(p => p.ok)) return null;
+  return { x0: Math.min(...pts.map(p => p.x)), x1: Math.max(...pts.map(p => p.x)), y0: Math.min(...pts.map(p => p.y)), y1: Math.max(...pts.map(p => p.y)) };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : S.camera === 'section' ? 'section' : 'normal';
+  const placed = [];
+  const sb = sectionBox();
+  if (sb && (mode === 'section' || S.camera === 'section')) placed.push(sb);
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  const sorted = [...LABELS].sort((a, b) => b.pri - a.pri);
+  for (const L of sorted) {
+    let show = false;
+    if (L.mode === mode) {
+      if (L.dyn) { const t = L.dyn(); if (L.el.textContent !== t) { L.el.textContent = t; L.size = null; } }
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        const cands = L.id === 'dim' ? [[-24 - w, 0], [24, 0], [-w / 2, -40], [-w / 2, 40]]
+          : L.side ? [[70, 0], [70, L.id === 'sSkin' ? 38 : -38], [110, L.id === 'sSkin' ? 64 : -64]]
+          : [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]];
+        for (const [dx, dy] of cands) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p))) continue;
+          if (blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1));
+          L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true;
+          break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const fmtClock = s => { const m = Math.floor(s / 60), r = Math.floor(s % 60); return `${m}分${String(r).padStart(2, '0')}秒`; };
+function updateUI() {
+  ui.hval.innerHTML = `${S.h.toFixed(1)}<span class="unit">cm</span>`;
+  ui.qval.textContent = `${(S.q / 1000).toFixed(1)} kW/m²`;
+  const hot = S.Ts >= T_CHAR;
+  ui.tsval.innerHTML = `${Math.round(S.Ts)}<span class="unit">℃</span>`;
+  ui.tsval.classList.toggle('on', S.Ts >= T_BROWN && !hot);
+  ui.tsval.classList.toggle('err', hot);
+  ui.tcval.textContent = `${Math.round(centerTemp())} ℃`;
+  ui.fill.style.width = `${Math.min(100, (S.Ts / T_SCALE) * 100).toFixed(1)}%`;
+  ui.meter.classList.toggle('hot', hot);
+  const tagText = S.status === 'burnt' ? '焦げ　高さを上げてください'
+    : S.status === 'done' || S.status === 'rest' ? (S.success ? '表面 焼き色　中 ふっくら' : '焼き上がり')
+    : S.status === 'run' ? '焼き色がつき始めた'
+    : '焼き色 まだ';
+  if (ui.stateTag.textContent !== tagText) ui.stateTag.textContent = tagText;
+  ui.stateTag.className = `tag ${S.status === 'burnt' ? 'err' : S.status === 'idle' ? '' : 'on'}`;
+  if (document.activeElement !== ui.range) ui.range.value = S.h.toFixed(1);
+  ui.stepsEl.classList.toggle('aborted', S.status === 'burnt');
+  ui.steps.forEach((li, i) => {
+    const running = S.status === 'run';
+    const finished = S.status === 'done' || S.status === 'burnt' || S.status === 'rest';
+    li.classList.toggle('active', (running && i === S.phase) || (finished && S.phase >= 0 && i === PHASES.length - 1 && S.tProc >= PROC_TOTAL));
+    li.classList.toggle('done', (running && i < S.phase) || (finished && S.tProc >= PROC_TOTAL));
+  });
+  ui.counter.textContent = `経過 ${fmtClock(Math.min(PROC_TOTAL, S.tProc))}`;
+  ui.stateText.textContent =
+    S.status === 'run' ? `${PHASES[S.phase].label}${S.phase === 3 ? '（身の側を焼く）' : ''}`
+    : S.status === 'done' ? '焼き上がり'
+    : S.status === 'burnt' ? '焦げ　高さを上げてください'
+    : S.status === 'rest' ? '炎が収まりました'
+    : S.Ts >= T_BROWN - 25 ? 'もう少しで焼き色がつきます' : '串を炭に近づけてください';
+  ui.realnote.classList.toggle('show', S.status === 'done' || S.status === 'rest');
+  ui.speedTag.textContent = S.speed === 'fast' ? `早回し表示（約${FAST}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  // bubble near the eel
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? '焦げ　高さを上げてください<small>皮の表面が焦げ始めるラインを越えました</small>'
+      : S.bubble === 'short' ? '焼きが足りません<small>焼き色がつくまで高さを下げてください</small>'
+      : 'ジュッ　表面 焼き色　中 ふっくら<small>焼き上がりました</small>';
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const p = screenOf(eelFlip.localToWorld(new THREE.Vector3(6, 1.5, -2)));
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 30;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: skewer drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null;
+let tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setHeightUser(h) {
+  tapPlan = null;
+  S.h = clamp(h, H_MIN, H_MAX);
+  stepState(0);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(skewerPick, false).length) {
+    dragging = { y: e.clientY, h: S.h };
+    controls.enabled = false;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = 'grabbing';
+    markInteraction();
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) {
+    const camDist = camera.position.distanceTo(eelRoot.position);
+    setHeightUser(dragging.h + (dragging.y - e.clientY) * 0.0011 * camDist);
+    return;
+  }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(skewerPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => {
+  if (DEMO_ACTIVE) return;
+  e.preventDefault();
+  markInteraction();
+  setHeightUser(S.h + e.deltaY * 0.012);
+}, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setHeightUser(S.h + 0.4); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setHeightUser(S.h - 0.4); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setHeightUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+
+/** お手本: a fresh eel, lowered to the browning height, then lifted along the plan as the crust grows. */
+function tap() {
+  const keep = { speed: S.speed, camera: S.camera, exploded: S.exploded, explode: S.explode, interacted: S.interacted, t: S.t, events: S.events };
+  S = Object.assign(freshState(), keep, { h: S.h });
+  tapPlan = { stage: 'in', from: S.h, t: 0 };
+  stepState(0);
+}
+function updateTap(dt) {
+  if (!tapPlan) return;
+  const p = tapPlan;
+  p.t += dt;
+  if (p.stage === 'in') {
+    S.h = lerp(p.from, 17.9, ease(Math.min(1, p.t / 2.2)));
+    if (S.status === 'run') p.stage = 'run';
+    else if (p.t > 2.2) S.h = Math.max(H_MIN, S.h - dt * 0.4);
+  } else if (p.stage === 'run') {
+    if (S.status === 'run') S.h = planHeight(S.tProc);
+    else { p.stage = 'rest'; p.t = 0; p.from = S.h; }
+  } else if (p.stage === 'rest') {
+    S.h = lerp(p.from, 30, ease(Math.min(1, p.t / 1.4)));
+    if (p.t >= 1.4) tapPlan = null;
+  }
+}
+function setExploded(on) {
+  S.exploded = !!on;
+  if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview');
+}
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '鰻を焼く炭火の熱の主役は、炎ではありません'],
+  [3, 7, '赤く焼けた炭は、目に見えない赤外線（熱放射）で鰻を焼いています'],
+  [7, 12, '炭に近づけるほど、届く熱は強くなります'],
+  [12, 14, '皮の温度がある線を越えた瞬間、焼き色がつき始めます'],
+  [14, 18.5, '表面は一気に焼き固め、中はゆっくり火を通します'],
+  [18.5, 23, '皮はパリッと、中はふっくら。焼き手は串の高さでこれを作ります'],
+  [23, 27, '近すぎると、表面が焦げてしまいます'],
+  [27, 30, 'だから鰻の焼きは、長い修業で身につける技です'],
+];
+/** Skewer height for the demo. While the process runs it follows the griller's plan (model time). */
+function demoHeight(t) {
+  if (S.status === 'run') return planHeight(S.tProc);
+  if (t < 7) return 28;
+  if (t < 12.2) return lerp(28, 18.3, ease(seg(t, 7, 12.2)));
+  if (S.status === 'idle') return lerp(18.3, 17.9, ease(seg(t, 12.2, 12.6)));
+  if (t < 23) { const td = S.events.find(ev => ev.type === 'done'); const t0 = td ? td.t : t; return lerp(23.6, 30, ease(seg(t, t0, t0 + 1.4))); }
+  if (t < 23.9) return lerp(30, 7, ease(seg(t, 23, 23.9)));
+  if (t < 25.8) return 7;
+  if (t < 26.6) return lerp(7, 30, ease(seg(t, 25.8, 26.6)));
+  return 30;
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'grill'], [7, 'side'], [11.4, 'under'], [14, 'section'], [18.4, 'finish'], [23, 'side'], [24.3, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name);
+  const prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'fail' ? 1.0 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * 0.05;
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt);
+  camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+/** Deterministic: the state at t is rebuilt from t = 0 with a fixed 1/120 s step. A snapshot of the last whole step is
+ *  kept so the next later frame continues from it; the result is identical to re-simulating from zero. */
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  S.h = demoHeight(tt + dt);
+  S.exploded = tt + dt >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'fast'; stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t);
+  demoSubtitle(t);
+  camera.updateMatrixWorld();
+  refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr);
+  composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h;
+  camera.fov = w / h < 0.8 ? 50 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 && document.body.classList.contains('collapsed') ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift();
+  applyScene(time);
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld();
+  updateUI();
+  layoutLabels();
+  drawGraph();
+  drawScope();
+  gradePass.uniforms.uTime.value = time;
+  composer.render(dt);
+}
+
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) {
+    const t = Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000);
+    renderDemoFrame(t);
+    return;
+  }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt);
+  stepState(dt);
+  updateCameraAnim(dt);
+  if (CAMS[S.camera]?.follow && camAnim.t >= 1) { const v = presetVectors(S.camera); controls.target.lerp(v.tgt, 0.1); }
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  return {
+    ready: window.__lab.ready,
+    height: +S.h.toFixed(3),
+    heatFlux: +(S.q / 1000).toFixed(3),
+    viewFactor: +(S.q / Q_COEF).toFixed(4),
+    surfaceTemp: +S.Ts.toFixed(2),
+    centerTemp: +centerTemp().toFixed(2),
+    crustMm: +(crustDepth(S.side) * 1000).toFixed(3),
+    profile: Array.from(S.T, v => +v.toFixed(1)),
+    browning: { skin: +S.Bs.toFixed(3), flesh: +S.Bf.toFixed(3) },
+    glaze: +S.glaze.toFixed(3),
+    char: +S.char.toFixed(3),
+    browningStarted: S.status !== 'idle',
+    charred: S.status === 'burnt' || S.status === 'rest',
+    thresholds: { brown: T_BROWN, char: T_CHAR, brownHeight: +H_BROWN.toFixed(2) },
+    status: S.status,
+    success: S.success,
+    phase: S.phase,
+    phaseLabel: S.phase >= 0 ? PHASES[S.phase].label : null,
+    processElapsed: +Math.min(PROC_TOTAL, S.tProc).toFixed(2),
+    side: S.side === 0 ? 'skin-down' : 'flesh-down',
+    rayHits: rayHitCount,
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setHeight(cm) { DEMO_ACTIVE = false; markInteraction(); setHeightUser(cm); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  fluxAt: h => fluxAt(h) / 1000,
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  await fontsReady;
+  drawGraphStatic();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
