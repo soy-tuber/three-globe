@@ -1,0 +1,1826 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>なぜ関東の鰻は蒸すのか</title>
+<meta name="description" content="関東風の鰻の「蒸し」の工程で、蒸気の熱がどう身に伝わり、身がどう変わるのかを、光る蒸気と蒸す時間の操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #08080a;
+    --ink: #f2f1ee;
+    --sub: #c4c2bd;
+    --muted: #8d8b86;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --steam: #bfe2ff;
+    --amber: #ffb04a;
+    --fat: #f3d98a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.4vw, 64px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(22, 20, 22, 0.66), rgba(10, 9, 11, 0.56)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 34px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 176, 74, 0.25), var(--amber)); box-shadow: 0 0 16px rgba(255, 176, 74, 0.5); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); right: 5px; font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .mini { position: relative; height: 5px; margin: 5px 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); overflow: hidden; }
+  .mini .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; }
+  #ubar .fill { background: linear-gradient(90deg, rgba(255, 255, 255, 0.25), #fff); }
+  #fbar .fill { background: linear-gradient(90deg, rgba(243, 217, 138, 0.25), var(--fat)); }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.err { color: #ffd6d2; border-color: var(--err); }
+  .graph-wrap { margin-top: 10px; }
+  canvas.plot { width: 100%; height: 140px; display: block; margin-top: 6px; }
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 5px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps.err li.active { border-color: var(--err); background: rgba(255, 84, 72, 0.12); }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #stateText.err { color: #ffb4ac; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; line-height: 1.6; }
+  #realnote.show { opacity: 1; }
+  .proc-box { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+  .proc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; font-size: 12px; }
+  .chip { white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 999px; padding: 2px 9px; color: var(--sub); }
+  .chip.steam { border-color: var(--steam); color: #e8f5ff; box-shadow: 0 0 10px rgba(160, 210, 255, 0.35); }
+  .chip.none { border-style: dashed; color: var(--muted); }
+  .arr { color: var(--muted); font-size: 11px; }
+  .scope-wrap { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+  canvas#scope { height: 96px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 620px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(580px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #compare { position: fixed; left: 50%; top: 84px; translate: -50% 0; padding: 12px 18px 13px; display: grid; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+  #compare.show { opacity: 1; }
+  #compare .crow { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+  #compare .cname { width: 4.2em; font-weight: 700; color: #fff; }
+  #compare .chip { font-size: 13px; padding: 3px 11px; }
+  #compare .cnote { font-size: 11px; color: var(--muted); text-align: right; }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 5, 7, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 7, 9, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 7, 9, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.steam { border-color: rgba(191, 226, 255, 0.85); color: #eaf6ff; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.82); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 58px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 21px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 14px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    #compare { top: auto; bottom: calc(56vh + 8px); left: 8px; right: 8px; translate: 0 0; padding: 8px 10px; }
+    #compare .crow { font-size: 11px; gap: 3px; flex-wrap: wrap; }
+    #compare .chip { font-size: 10.5px; padding: 1px 6px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="朝の光が差す厨房の蒸し器（蒸籠）と、中に並んだ白焼きの鰻、立ちこめる蒸気の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>なぜ関東の鰻は蒸すのか</h1>
+  <p class="lead">関東の鰻は、たれをつけて焼く前に一度蒸します。蒸気は身に触れた瞬間に水に戻り、大きな熱を一気に手渡します。蒸す時間を進めて、身がやわらかく変わる瞬間を見てください。</p>
+</header>
+<div id="imageTag">身の変化は模型による計算のイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">お手本</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn" data-act="style">関西風にする</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">蒸す時間</span><span class="mid-num" id="dval">0分00秒</span></div>
+  <div class="row" style="margin-top: 8px"><span class="k">中心温度（模型の値）</span><span class="big-num" id="tval">20.0<span class="unit">℃</span></span></div>
+  <div class="meter" id="cmeter">
+    <div class="fill"></div>
+    <div class="th" id="thSoft"><span class="th-label">身がやわらかくなり始めるライン</span></div>
+    <div class="ticks" id="cticks"></div>
+  </div>
+  <div class="row"><span class="k">ほぐれ度（模型の値）</span><span class="mid-num" id="uval">0<span class="unit">%</span></span></div>
+  <div class="mini" id="ubar"><div class="fill"></div></div>
+  <div class="row"><span class="k">落ちた余分な脂（模型の値）</span><span class="mid-num" id="fval">0<span class="unit">%</span></span></div>
+  <div class="mini" id="fbar"><div class="fill"></div></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">時間と中心温度（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <div class="legend"><span><i style="background: var(--steam)"></i>蒸気</span><span><i style="background: #8d8b86"></i>同じ100℃の乾いた空気</span></div>
+      <p class="note">同じ100℃でも、蒸気のほうがずっと速く熱を伝えます</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">蒸しで起きること</span><span class="k" id="speedTag">早回し表示（約90倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>触れる</b><small>蒸気が冷たい表面に触れる</small></li>
+    <li><span class="n">②</span><b>水に戻る</b><small>水に戻るときに熱を渡す</small></li>
+    <li><span class="n">③</span><b>伝わる</b><small>熱が身の中へ広がる</small></li>
+    <li><span class="n">④</span><b>ほぐれる</b><small>身がやわらかくなる</small></li>
+    <li><span class="n">⑤</span><b>落ちる</b><small>余分な脂が落ちる</small></li>
+    <li><span class="n">⑥</span><b>やわらかく</b><small>脂肪が多少除かれ、肉が軟らかくなる</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">ふたを回して、蒸す時間を進めてください</span><span id="counter">経過 0分00秒</span></div>
+  <p id="realnote">蒸しの工程は、実際には20〜30分位です（それ以上かかることもあります）</p>
+  <div class="proc-box">
+    <div class="k" id="procTitle">工程（関東風）</div>
+    <div class="proc" id="proc"></div>
+  </div>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">表面温度と中心温度の変化（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div class="legend"><span><i style="background: var(--amber)"></i>表面温度</span><span><i style="background: #fff"></i>中心温度</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">お手本</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+    <button class="btn" data-act="style">関西風にする</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="inside">蒸籠の中</button>
+    <button class="btn sm" data-cam="section">身の断面</button>
+    <button class="btn sm" data-cam="chopsticks">箸で持ち上げる</button>
+  </div>
+  <label class="slider"><span>0分</span><input type="range" id="range" min="0" max="40" step="0.1" value="0" aria-label="蒸す時間" /><span>40分</span></label>
+</section>
+
+<div id="notes">温度と時間は原理を示すための模型の値です。身の中の変化は模型による計算のイメージです。蒸気の動きは目で見える速さに落とした模式表示です。</div>
+<div id="hint">ふたを回すと蒸す時間が進みます（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="compare" class="panel">
+  <div class="crow"><span class="cname">関東風</span><span class="chip">背開き</span><span class="arr">→</span><span class="chip">白焼き</span><span class="arr">→</span><span class="chip steam">蒸す</span><span class="arr">→</span><span class="chip">たれをつけて焼く</span></div>
+  <div class="crow"><span class="cname">関西風</span><span class="chip">腹開き</span><span class="arr">→</span><span class="chip none">蒸さずにたれをつけて焼く</span></div>
+  <div class="cnote">工程は農林水産省「うちの郷土料理」の説明による</div>
+</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>関東では、鰻を背開きにして骨と内臓を取り、串に刺して白焼きにし、蒸します。そして、炭火でたれをつけながら焼きあげます。関西では、腹開きにして骨と内臓を取り、串に刺し、蒸さずに炭火でたれをつけながら焼きあげます。<a href="https://www.maff.go.jp/j/keikaku/syokubunka/k_ryouri/search_menu/menu/34_24_tokyo.html" target="_blank" rel="noopener">（農林水産省「うちの郷土料理」「鰻のかば焼き 東京都」）</a>白焼きを蒸すと、脂肪が多少除かれ、肉が軟らかくなります。<a href="https://www.jstage.jst.go.jp/article/cookeryscience1968/12/2/12_85/_article/-char/ja/" target="_blank" rel="noopener">（調理科学 12巻2号（1979）「ウナギ」）</a>蒸し器では20〜30分位蒸すが、それ以上かかるときもあり、蒸し過ぎると鰻のエッセンスが出切ってしまうので、その一歩手前で止める、という説明があります。<a href="https://www.jstage.jst.go.jp/article/aquaculturesci1953/39/2/39_2_228/_article/-char/ja/" target="_blank" rel="noopener">（水産増殖 39巻2号（1991）「4.関東(江戸)風蒲焼き考—特に調理方法について」）</a></li>
+    <li>関東で背開きになったのは、江戸時代中期、武士文化であった関東で、腹を開くのは切腹を連想させ縁起が悪いと嫌われたから、と言われています。<a href="https://www.maff.go.jp/j/pr/aff/1607/spe2_01.html" target="_blank" rel="noopener">（農林水産省 広報誌 aff 2016年7月号「特集2 鰻(1)」）</a>一方で、腹はやわらかくて裂くのが難しく、背は硬くて包丁を入れやすいことから、包丁さばきは関西のほうが上だった、とみる見方もあります。<a href="https://www.jstage.jst.go.jp/article/aquaculturesci1953/39/2/39_2_229/_article/-char/ja/" target="_blank" rel="noopener">（水産増殖 39巻2号（1991）「5.関西鰻蒲焼論」）</a></li>
+    <li>水の蒸発（凝縮）潜熱は、1kg あたり約2257 kJ です。食品の温度が低いうちは、表面で水蒸気が凝縮（結露）します。これを利用すると、水分の蒸発を抑えながら急速に加熱できます。100℃の空気を湿った食品に吹き付けても、熱が水分の蒸発に使われるため100℃には届きませんが、飽和水蒸気を使うと、表面温度を100℃まで急速に上げられます。飽和水蒸気を使う加熱は、蒸し加熱に近いものです。<a href="https://www.jstage.jst.go.jp/article/jsfe/25/1/25_23641/_article/-char/ja/" target="_blank" rel="noopener">（日本食品工学会誌 25巻1号（2024）「食品加工における過熱水蒸気利用に関する研究」）</a></li>
+    <li>水蒸気を使うオーブン加熱について、水を含ませたガーゼ球を試料にして、加わる熱を対流、ふく射、伝導伝熱および凝縮伝熱に分けて解析した研究があります。水蒸気の凝縮を伴うオーブン加熱では、加熱初期に食品表面での水蒸気の凝縮熱によって急速に熱が与えられ、その後は水分の蒸発を伴いながら、対流やふく射（放射）で加熱されると説明されています。<a href="https://www.jstage.jst.go.jp/article/nskkk/59/10/59_491/_article/-char/ja/" target="_blank" rel="noopener">（日本食品科学工学会誌 59巻10号（2012）「水蒸気凝縮を伴う調理オーブンの伝熱機構解析」）</a></li>
+    <li>魚の皮や骨のコラーゲンは、50〜60℃位に加熱すると収縮し、そのまま熱し続けると分解してゼラチンになります。煮魚のまわりにできる煮こごりは、このゼラチンです。なお、魚肉の筋組織が畜肉より軟らかいのは、結合組織のたんぱく質（肉基質たんぱく質）が2〜5％で、畜肉の20〜30％よりはるかに少ないためと考えられています。<a href="https://www.jstage.jst.go.jp/article/seikatsueisei1957/27/4/27_4_221/_article/-char/ja/" target="_blank" rel="noopener">（生活衛生 27巻4号（1983）「魚の調理」）</a></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+const hash = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+// =====================================================================================
+// Heat model (model values). One white-grilled piece, 1.2 cm thick, heated from both faces.
+// Cells across the thickness from the skin side (bottom) to the flesh side (top).
+// =====================================================================================
+const NC = 24, H_SLAB = 0.012, DXM = H_SLAB / NC;           // m
+const K_M = 0.0785;                                          // W/(m·K), model value for the flesh
+const LAYER_OF = i => { const y = (i + 0.5) * DXM * 100; return y < 0.1 ? 0 : y < 0.25 ? 1 : 2; };   // skin / fat / muscle
+const K_L = [0.7 * K_M, 0.5 * K_M, K_M], RC_L = [3.2e6, 2.2e6, 3.6e6];                             // J/(m³·K)
+const T0 = 20, T_SAT = 100;                                  // °C: start, steam inside the steamer
+const H_COND = 8000, MAT_COVER = 0.6;                        // W/(m²·K) condensation (model); the mat hides part of the underside
+const L_V = 2.257e6;                                         // J/kg latent heat
+const T_AIR = 100, H_AIR = 25, W_AIR = 0.03, W_RES = 0.3, A_MIN = 0.25, CP_AIR = 1006;   // dry-air comparison (model)
+const DIAL_MAX = 40, DT_M = 0.25, NSMP = DIAL_MAX * 60 + 1;  // min, s, samples (1 s)
+const SOFT_LO = 65, SOFT_HI = 80;                            // °C band where the flesh softens (model)
+const TAU_S = 6.3 * 60, TAU_F = 12 * 60, O_FAIL = 1.65;      // s, s, over-steaming beyond full softness (model)
+const FAST = 90;                                             // time-lapse of お手本 and the demo
+const softRate = T => clamp((T - SOFT_LO) / (SOFT_HI - SOFT_LO), 0, 1);
+const fatRate = T => clamp((T - 45) / 35, 0, 1);
+const HIST = (() => {
+  const kf = new Float64Array(NC + 1);
+  for (let i = 1; i < NC; i++) { const a = K_L[LAYER_OF(i - 1)], b = K_L[LAYER_OF(i)]; kf[i] = 2 / (1 / a + 1 / b) / DXM; }
+  const gBot = (2 * K_L[LAYER_OF(0)]) / DXM, gTop = (2 * K_L[LAYER_OF(NC - 1)]) / DXM;
+  const cap = new Float64Array(NC); for (let i = 0; i < NC; i++) cap[i] = RC_L[LAYER_OF(i)] * DXM;
+  const psat = T => { T = clamp(T, 0, 100); return 0.61121 * Math.exp((18.678 - T / 234.5) * (T / (257.14 + T))); };   // kPa
+  const wsat = T => { const p = Math.min(psat(T), 101); return (0.622 * p) / Math.max(0.3, 101.325 - p); };
+  const fatCells = []; for (let i = 0; i < NC; i++) if (LAYER_OF(i) === 1) fatCells.push(i);
+  function run(steam) {
+    const T = new Float64Array(NC).fill(T0), nT = new Float64Array(NC), U = new Float64Array(NC), W = [W_RES, W_RES];
+    let fatI = 0;
+    const r = { tc: new Float32Array(NSMP), tsTop: new Float32Array(NSMP), tsBot: new Float32Array(NSMP), qTop: new Float32Array(NSMP), qBot: new Float32Array(NSMP), prof: new Float32Array(NSMP * NC), soft: new Float32Array(NSMP * NC), fat: new Float32Array(NSMP) };
+    // oven surface: convection in, evaporation out (wet surface stays below 100 °C), conduction into the piece
+    const ovenSurface = (T1, g, h, side) => {
+      const a = clamp(W[side] / W_RES, A_MIN, 1);
+      const qe = s => a * (h / CP_AIR) * L_V * Math.max(0, wsat(s) - W_AIR);
+      let lo = 0, hi = 100;
+      for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (h * (T_AIR - m) - qe(m) - g * (m - T1) > 0) lo = m; else hi = m; }
+      const s = (lo + hi) / 2;
+      W[side] = Math.max(0, W[side] - (qe(s) / L_V) * DT_M);
+      return [s, g * (s - T1)];
+    };
+    const steps = Math.round((DIAL_MAX * 60) / DT_M), per = Math.round(1 / DT_M);
+    for (let s = 0; s <= steps; s++) {
+      let sb, qb, st, qt;
+      if (steam) {
+        // quasi-steady surface: condensation film ↔ conduction into the first cell
+        const hb = H_COND * MAT_COVER, ht = H_COND;
+        sb = (hb * T_SAT + gBot * T[0]) / (hb + gBot); qb = gBot * (sb - T[0]);
+        st = (ht * T_SAT + gTop * T[NC - 1]) / (ht + gTop); qt = gTop * (st - T[NC - 1]);
+      } else {
+        [sb, qb] = ovenSurface(T[0], gBot, H_AIR * 0.8, 0);
+        [st, qt] = ovenSurface(T[NC - 1], gTop, H_AIR, 1);
+      }
+      if (s % per === 0) {
+        const j = s / per;
+        r.tc[j] = 0.5 * (T[NC / 2 - 1] + T[NC / 2]); r.tsTop[j] = st; r.tsBot[j] = sb; r.qTop[j] = qt; r.qBot[j] = qb;
+        for (let i = 0; i < NC; i++) { r.prof[j * NC + i] = T[i]; r.soft[j * NC + i] = U[i]; }
+        r.fat[j] = 1 - Math.exp(-fatI);
+      }
+      for (let i = 0; i < NC; i++) {
+        const f = (i > 0 ? kf[i] * (T[i - 1] - T[i]) : qb) + (i < NC - 1 ? kf[i + 1] * (T[i + 1] - T[i]) : qt);
+        nT[i] = T[i] + (f * DT_M) / cap[i];
+      }
+      T.set(nT);
+      for (let i = 0; i < NC; i++) U[i] += (softRate(T[i]) * DT_M) / TAU_S;
+      let tf = 0; for (const i of fatCells) tf += T[i];
+      fatI += (fatRate(tf / fatCells.length) * DT_M) / TAU_F;
+    }
+    return r;
+  }
+  return { steam: run(true), oven: run(false) };
+})();
+const S_H = HIST.steam, O_H = HIST.oven;
+const uCenterAt = j => 0.5 * (S_H.soft[j * NC + NC / 2 - 1] + S_H.soft[j * NC + NC / 2]);
+function firstTime(pred) { for (let j = 1; j < NSMP; j++) if (pred(j)) { return j - 1 + 0.5; } return DIAL_MAX * 60; }
+function crossTime(get, th) { for (let j = 1; j < NSMP; j++) { const a = get(j - 1), b = get(j); if (a < th && b >= th) return (j - 1 + (th - a) / (b - a)) / 60; } return DIAL_MAX; }
+const T_X = crossTime(j => S_H.tc[j], SOFT_LO);              // min: the centre reaches the softening line
+const T_S = crossTime(uCenterAt, 1);                         // min: softness 100 % down to the centre
+const T_F = crossTime(uCenterAt, 1 + O_FAIL);                // min: over-steamed
+void firstTime;
+/** Model state at a steaming time (min), interpolated from the 1 s table. */
+const tmpProf = new Float32Array(NC), tmpSoft = new Float32Array(NC);
+function modelAt(dial) {
+  const x = clamp(dial, 0, DIAL_MAX) * 60, j = Math.min(NSMP - 2, Math.floor(x)), f = x - j;
+  const L = (arr, k = 1, o = 0) => arr[j * k + o] * (1 - f) + arr[(j + 1) * k + o] * f;
+  for (let i = 0; i < NC; i++) { tmpProf[i] = L(S_H.prof, NC, i); tmpSoft[i] = L(S_H.soft, NC, i); }
+  const uc = uCenterAt(j) * (1 - f) + uCenterAt(j + 1) * f;
+  return { tc: L(S_H.tc), tsTop: L(S_H.tsTop), tsBot: L(S_H.tsBot), qTop: L(S_H.qTop), qBot: L(S_H.qBot), fat: L(S_H.fat), uc, prof: tmpProf, soft: tmpSoft, ovenTc: L(O_H.tc), ovenTs: L(O_H.tsTop) };
+}
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.localClippingEnabled = true;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0c0b0b');
+scene.fog = new THREE.FogExp2('#0f0d0c', 0.0022);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.25; controls.maxPolarAngle = 1.55;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.55, 0.86);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uFlash: { value: 0 }, uRed: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uFlash; uniform float uRed; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      float r = length(q);
+      c.rgb *= mix(0.74, 1.0, 1.0 - smoothstep(0.3, 1.15, r));
+      c.rgb = mix(c.rgb, vec3(1.0), uFlash * (1.0 - 0.6 * smoothstep(0.1, 0.9, r)));
+      c.rgb += vec3(0.45, 0.02, 0.0) * uRed * smoothstep(0.55, 1.2, r);
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  // environment for reflections: bright window on the left, warm room light, dark floor
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#5d5a57');
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 3.0, 2.6), side: THREE.DoubleSide }));
+  win.position.set(-3, 1.5, -3); win.lookAt(0, 0, 0); env.add(win);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.45, 1.4), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.y = 3; env.add(top);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#221f1d', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.42;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 29;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const mistTex = canvasTex(256, 256, (x, w, h) => {
+  x.clearRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * w * 0.26, cx = w / 2 + Math.cos(a) * r, cy = h / 2 + Math.sin(a) * r, rad = w * (0.08 + rnd() * 0.16);
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    g.addColorStop(0, `rgba(255,255,255,${0.1 + rnd() * 0.12})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+  }
+});
+// worn hinoki: grain around the frame, darker water marks near the bottom, two cherry-bark ties
+const hinokiTex = canvasTex(1024, 256, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#d8b98b'); g.addColorStop(0.7, '#caa674'); g.addColorStop(1, '#a98657');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { const y = rnd() * h; x.strokeStyle = `rgba(120,82,44,${0.05 + rnd() * 0.12})`; x.lineWidth = 0.6 + rnd() * 1.4; x.beginPath(); x.moveTo(0, y); for (let px = 0; px <= w; px += 32) x.lineTo(px, y + Math.sin(px * 0.01 + i) * 2.2); x.stroke(); }
+  for (let i = 0; i < 40; i++) { const cx = rnd() * w, cy = h * (0.75 + rnd() * 0.25); const rg = x.createRadialGradient(cx, cy, 0, cx, cy, 30 + rnd() * 50); rg.addColorStop(0, 'rgba(80,55,30,0.18)'); rg.addColorStop(1, 'rgba(80,55,30,0)'); x.fillStyle = rg; x.fillRect(0, 0, w, h); }
+  for (const v of [0.26, 0.74]) { x.fillStyle = '#4a2f22'; x.fillRect(0, h * v - 7, w, 14); x.fillStyle = 'rgba(255,220,180,0.12)'; for (let px = 0; px < w; px += 18) x.fillRect(px, h * v - 7, 2, 14); }
+});
+const bambooTex = canvasTex(256, 64, (x, w, h) => {
+  x.fillStyle = '#cdb88c'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(120,95,55,${0.05 + rnd() * 0.08})`; x.fillRect(0, rnd() * h, w, 1); }
+  for (const p of [0.22, 0.61, 0.93]) { x.fillStyle = 'rgba(110,80,40,0.35)'; x.fillRect(w * p, 0, 3, h); }
+});
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#bcc0c5'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.026; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [3, 1] });
+const plasterTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#d9d2c6'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1800; i++) { x.fillStyle = `rgba(${rnd() > 0.5 ? '255,255,255' : '90,80,70'},${0.02 + rnd() * 0.04})`; x.beginPath(); x.arc(rnd() * w, rnd() * h, 1 + rnd() * 6, 0, 7); x.fill(); }
+}, { repeat: [4, 2] });
+const tileTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#b9b6b0'; x.fillRect(0, 0, w, h);
+  const cols = 8, rows = 4, sw = w / cols, sh = h / rows;
+  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { const v = 226 + rnd() * 14; x.fillStyle = `rgb(${v},${v - 1},${v - 4})`; x.fillRect(i * sw + 2, j * sh + 2, sw - 4, sh - 4); }
+}, { repeat: [6, 1] });
+const windowTex = canvasTex(512, 512, (x, w, h) => {
+  // paper screen with a wooden lattice, lit from outside in the morning
+  const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#fff6df'); g.addColorStop(1, '#ffe7bf');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#5a4430';
+  for (let i = 0; i <= 4; i++) x.fillRect((i / 4) * (w - 12), 0, 12, h);
+  for (let j = 0; j <= 6; j++) x.fillRect(0, (j / 6) * (h - 12), w, 12);
+});
+// white-grilled flesh: blotchy golden browning, faint zigzag of the muscle segments, small char spots and fat beads
+const fleshTex = canvasTex(512, 256, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#7e4f26'); g.addColorStop(0.14, '#b17a40'); g.addColorStop(0.5, '#c79458'); g.addColorStop(0.86, '#b17a40'); g.addColorStop(1, '#7e4f26');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 240; i++) { const cx = rnd() * w, cy = rnd() * h, r = 4 + rnd() * 18, dark = rnd() > 0.45; const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, dark ? `rgba(92,52,22,${0.16 + rnd() * 0.24})` : `rgba(236,196,130,${0.1 + rnd() * 0.18})`); rg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = rg; x.fillRect(cx - r, cy - r, 2 * r, 2 * r); }
+  x.strokeStyle = 'rgba(110,62,26,0.16)'; x.lineWidth = 2;
+  for (let i = 0; i < 26; i++) { const px = (i + 0.5) * (w / 26); x.beginPath(); x.moveTo(px, 0); x.lineTo(px + 7, h * 0.5); x.lineTo(px, h); x.stroke(); }
+  for (let i = 0; i < 70; i++) { x.fillStyle = `rgba(48,26,10,${0.2 + rnd() * 0.3})`; x.beginPath(); x.arc(rnd() * w, rnd() > 0.5 ? rnd() * h * 0.16 : h - rnd() * h * 0.16, 1 + rnd() * 3, 0, 7); x.fill(); }
+  for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(255,238,196,${0.14 + rnd() * 0.2})`; x.beginPath(); x.arc(rnd() * w, rnd() * h, 1 + rnd() * 2.5, 0, 7); x.fill(); }
+});
+const fleshBump = canvasTex(256, 128, (x, w, h) => {
+  x.fillStyle = '#808080'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { const cx = rnd() * w, cy = rnd() * h, r = 2 + rnd() * 9; const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); const v = rnd() > 0.5 ? 255 : 0; rg.addColorStop(0, `rgba(${v},${v},${v},${0.18 + rnd() * 0.22})`); rg.addColorStop(1, 'rgba(128,128,128,0)'); x.fillStyle = rg; x.fillRect(cx - r, cy - r, 2 * r, 2 * r); }
+}, { color: false });
+fleshTex.wrapS = THREE.RepeatWrapping;
+
+// =====================================================================================
+// Kitchen: counter, wall with a paper window and morning light, stove, pot, steamer
+// =====================================================================================
+const CUT_Z = 9.6;                                          // the cutaway plane (front of the steamer removed)
+const CUT = new THREE.Plane(new THREE.Vector3(0, 0, -1), CUT_Z);
+const clipList = [CUT];
+const Y_POT0 = 7, Y_POT1 = 22, R_POT = 20.5, Y_WATER = 17;
+const Y_FRAME0 = 22, Y_FRAME1 = 32, R_OUT = 22, R_IN = 20.9;
+const Y_MAT0 = 23.0, Y_MAT1 = 23.6, Y_EEL = 24.2, Y_EEL_TOP = 24.8;
+const Y_LID0 = 32, Y_LID1 = 33.6, R_LID = 22.4;
+const room = new THREE.Group(); scene.add(room);
+{
+  const counter = new THREE.Mesh(new RoundedBoxGeometry(280, 4, 96, 3, 1.2), new THREE.MeshStandardMaterial({ color: '#8a8e93', map: brushedTex, metalness: 0.5, roughness: 0.64, envMapIntensity: 0.6 }));
+  counter.position.set(0, -2, -8); room.add(counter);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(280, 90, 2), new THREE.MeshStandardMaterial({ color: '#6d7074', metalness: 0.7, roughness: 0.45 }));
+  front.position.set(0, -49, 39); room.add(front);
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(420, 220), new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d8d0c3', roughness: 0.9 }));
+  wall.position.set(0, 100, -56); room.add(wall);
+  const tiles = new THREE.Mesh(new THREE.PlaneGeometry(420, 30), new THREE.MeshStandardMaterial({ map: tileTex, color: '#e6e3dd', roughness: 0.35, envMapIntensity: 0.5 }));
+  tiles.position.set(0, 15, -55.8); room.add(tiles);
+  // window frame + glowing paper screen (upper left)
+  const winGroup = new THREE.Group();
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(62, 56), new THREE.MeshBasicMaterial({ map: windowTex, color: new THREE.Color(1.6, 1.5, 1.35) }));
+  winGroup.add(paper);
+  const frameMat = new THREE.MeshStandardMaterial({ color: '#4a3726', roughness: 0.7 });
+  for (const [w, h, x, y] of [[68, 3, 0, 29.5], [68, 3, 0, -29.5], [3, 62, -32.5, 0], [3, 62, 32.5, 0]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 3), frameMat); b.position.set(x, y, 1); winGroup.add(b); }
+  winGroup.position.set(-66, 70, -55.4); room.add(winGroup);
+  // a shelf with white ceramic bowls (right)
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(70, 2, 16), new THREE.MeshStandardMaterial({ color: '#8a6a48', roughness: 0.65 }));
+  shelf.position.set(78, 58, -48); room.add(shelf);
+  const bowlGeo = new THREE.LatheGeometry([new THREE.Vector2(0, 0), new THREE.Vector2(4, 0), new THREE.Vector2(4.4, 0.6), new THREE.Vector2(7.6, 5.2), new THREE.Vector2(7.2, 5.2), new THREE.Vector2(3.8, 1.2), new THREE.Vector2(0, 1.2)], 48);
+  const ceramic = new THREE.MeshPhysicalMaterial({ color: '#f4f2ee', roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15 });
+  for (const [x, s] of [[58, 1], [74, 1], [90, 0.8]]) { const b = new THREE.Mesh(bowlGeo, ceramic); b.scale.setScalar(s); b.position.set(x, 59, -48); room.add(b); }
+  // stove under the pot
+  const stove = new THREE.Mesh(new RoundedBoxGeometry(46, 6, 44, 3, 1.2), new THREE.MeshStandardMaterial({ color: '#232427', metalness: 0.3, roughness: 0.72 }));
+  stove.position.set(0, 3, 0); room.add(stove);
+  const grateMat = new THREE.MeshStandardMaterial({ color: '#141414', metalness: 0.4, roughness: 0.7 });
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI; const b = new THREE.Mesh(new THREE.BoxGeometry(36, 1, 1.4), grateMat); b.rotation.y = a; b.position.y = 6.5; room.add(b); }
+}
+// morning light from the window (warm, low), soft fill from the room
+scene.add(new THREE.HemisphereLight('#efe9df', '#3a322b', 0.42));
+const sun = new THREE.DirectionalLight('#ffe0b8', 2.0);
+sun.position.set(-150, 118, -130); sun.target.position.set(4, 22, 0); scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight('#dfe8ff', 0.28);
+fill.position.set(90, 60, 160); scene.add(fill);
+
+// ---- pot with water
+const potGroup = new THREE.Group(); scene.add(potGroup);
+const steelMat = new THREE.MeshStandardMaterial({ color: '#d4d7db', map: brushedTex, metalness: 0.9, roughness: 0.34, envMapIntensity: 1.0, side: THREE.DoubleSide, clippingPlanes: clipList });
+steelMat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n if (!gl_FrontFacing) diffuseColor.rgb *= 0.45;'); };
+{
+  const prof = [new THREE.Vector2(0, Y_POT0), new THREE.Vector2(R_POT - 1, Y_POT0), new THREE.Vector2(R_POT, Y_POT0 + 1), new THREE.Vector2(R_POT, Y_POT1), new THREE.Vector2(R_POT - 0.5, Y_POT1), new THREE.Vector2(R_POT - 0.5, Y_POT0 + 1.2), new THREE.Vector2(0, Y_POT0 + 0.6)];
+  const pot = new THREE.Mesh(new THREE.LatheGeometry(prof, 96), steelMat); potGroup.add(pot);
+  for (const sx of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(3, 0.55, 10, 24, Math.PI), steelMat); h.rotation.set(0, sx > 0 ? -Math.PI / 2 : Math.PI / 2, Math.PI / 2); h.position.set(sx * (R_POT + 0.2), Y_POT1 - 4, 0); potGroup.add(h); }
+}
+// water surface: a disk already cut at the plane
+const waterMat = new THREE.MeshStandardMaterial({ color: '#34414b', metalness: 0.2, roughness: 0.12, transparent: true, opacity: 0.92, envMapIntensity: 1.2 });
+{
+  const g = new THREE.CircleGeometry(R_POT - 0.55, 96); g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position; for (let i = 0; i < p.count; i++) if (p.getZ(i) > CUT_Z) p.setZ(i, CUT_Z);
+  const w = new THREE.Mesh(g, waterMat); w.position.y = Y_WATER; potGroup.add(w);
+}
+// section caps at the cut plane: pot wall, water column
+const capUniforms = { uTime: { value: 0 } };
+{
+  const half = Math.sqrt((R_POT - 0.55) ** 2 - CUT_Z * CUT_Z);
+  const waterCap = new THREE.Mesh(new THREE.PlaneGeometry(2 * half, Y_WATER - Y_POT0 - 1.2), new THREE.ShaderMaterial({
+    uniforms: capUniforms, transparent: true,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv;
+      float h1(float n){ return fract(sin(n) * 43758.5453); }
+      void main(){
+        vec3 c = mix(vec3(0.09, 0.12, 0.15), vec3(0.2, 0.26, 0.3), vUv.y);
+        float b = 0.0;
+        for (int k = 0; k < 14; k++) {
+          float fk = float(k); float per = 1.4 + h1(fk * 3.1) * 1.2; float ph = fract(uTime / per + h1(fk * 7.7));
+          vec2 p = vec2(0.06 + 0.88 * h1(fk * 5.3 + floor(uTime / per + h1(fk * 7.7))), ph);
+          vec2 d = (vUv - p) * vec2(3.6, 1.0);
+          b += smoothstep(0.022, 0.0, length(d)) * (0.4 + 0.6 * ph);
+        }
+        c += vec3(0.55, 0.62, 0.68) * b;
+        gl_FragColor = vec4(c, 0.95);
+      }`,
+  }));
+  waterCap.position.set(0, (Y_WATER + Y_POT0 + 1.2) / 2, CUT_Z + 0.01); potGroup.add(waterCap);
+  const potCapMat = new THREE.MeshStandardMaterial({ color: '#9ea2a7', metalness: 0.8, roughness: 0.35 });
+  const xi = Math.sqrt((R_POT - 0.5) ** 2 - CUT_Z * CUT_Z), xo = Math.sqrt(R_POT ** 2 - CUT_Z * CUT_Z);
+  for (const s of [-1, 1]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(xo - xi + 0.05, Y_POT1 - Y_POT0), potCapMat); c.position.set(s * (xi + xo) / 2, (Y_POT0 + Y_POT1) / 2, CUT_Z + 0.01); potGroup.add(c); }
+}
+
+// ---- steamer frame (worn hinoki), mat, lid with the time dial
+const woodMat = new THREE.MeshStandardMaterial({ map: hinokiTex, color: '#ffffff', roughness: 0.72, side: THREE.DoubleSide, clippingPlanes: clipList });
+woodMat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n if (!gl_FrontFacing) diffuseColor.rgb *= 0.55;'); };
+const endGrainMat = new THREE.MeshStandardMaterial({ color: '#b98f5e', roughness: 0.85 });
+const frameGroup = new THREE.Group(); scene.add(frameGroup);
+{
+  const prof = [new THREE.Vector2(R_IN, Y_FRAME0), new THREE.Vector2(R_OUT, Y_FRAME0), new THREE.Vector2(R_OUT, Y_FRAME1), new THREE.Vector2(R_IN, Y_FRAME1), new THREE.Vector2(R_IN, Y_FRAME0)];
+  const frame = new THREE.Mesh(new THREE.LatheGeometry(prof, 128), woodMat); frameGroup.add(frame);
+  const xi = Math.sqrt(R_IN * R_IN - CUT_Z * CUT_Z), xo = Math.sqrt(R_OUT * R_OUT - CUT_Z * CUT_Z);
+  for (const s of [-1, 1]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(xo - xi + 0.05, Y_FRAME1 - Y_FRAME0), endGrainMat); c.position.set(s * (xi + xo) / 2, (Y_FRAME0 + Y_FRAME1) / 2, CUT_Z + 0.01); frameGroup.add(c); }
+  // the fixed pointer for the dial, at the back of the rim
+  const tri = new THREE.Shape(); tri.moveTo(-1.1, 0); tri.lineTo(1.1, 0); tri.lineTo(0, -1.8); tri.closePath();
+  const ptr = new THREE.Mesh(new THREE.ShapeGeometry(tri), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
+  ptr.rotation.x = -Math.PI / 2; ptr.position.set(0, Y_LID1 + 0.12, -R_LID + 0.4); frameGroup.add(ptr);
+  const ptrPost = new THREE.Mesh(new THREE.BoxGeometry(0.6, Y_LID1 - Y_FRAME1 + 0.9, 0.6), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+  ptrPost.position.set(0, (Y_FRAME1 + Y_LID1) / 2 + 0.2, -R_LID - 0.3); frameGroup.add(ptrPost);
+  frameGroup.userData.pointer = [ptr, ptrPost];
+}
+const matGroup = new THREE.Group(); scene.add(matGroup);
+{
+  const slatMat = new THREE.MeshStandardMaterial({ map: bambooTex, color: '#ffffff', roughness: 0.6, clippingPlanes: clipList, side: THREE.DoubleSide });
+  const pitch = 1.46, n = Math.floor((2 * R_IN - 0.6) / pitch);
+  for (let i = 0; i < n; i++) {
+    const z = -R_IN + 0.6 + (i + 0.5) * pitch; const len = 2 * Math.sqrt(Math.max(0, R_IN * R_IN - z * z)) - 0.4;
+    if (len < 2) continue;
+    const s = new THREE.Mesh(new THREE.BoxGeometry(len, Y_MAT1 - Y_MAT0, 1.1), slatMat); s.position.set(0, (Y_MAT0 + Y_MAT1) / 2, z); matGroup.add(s);
+  }
+  for (const x of [-12, 0, 12]) { const r = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 2 * Math.sqrt(R_IN * R_IN - x * x) - 1), slatMat); r.position.set(x, Y_MAT0 - 0.4, 0); matGroup.add(r); }
+}
+// lid: rim + planar top carrying the dial scale
+const lidGroup = new THREE.Group(); scene.add(lidGroup);
+const lidSpin = new THREE.Group(); lidGroup.add(lidSpin);
+const lidCanvas = document.createElement('canvas'); lidCanvas.width = lidCanvas.height = 1024;
+const lidTex = new THREE.CanvasTexture(lidCanvas); lidTex.colorSpace = THREE.SRGBColorSpace; lidTex.flipY = false; lidTex.anisotropy = 8;
+const DIAL_SPAN = (300 / 180) * Math.PI;                    // the scale covers 300°
+const PTR_ANGLE = -Math.PI / 2;                              // pointer at the back (−z)
+const tickAngle = m => PTR_ANGLE - (m / DIAL_MAX) * DIAL_SPAN;
+function drawLid() {
+  const x = lidCanvas.getContext('2d'), W = 1024, R = R_LID - 0.8, S = W / (2 * R);
+  x.fillStyle = '#cfae7e'; x.fillRect(0, 0, W, W);
+  // boards
+  for (let b = 0; b < 7; b++) { x.fillStyle = b % 2 ? 'rgba(120,85,45,0.08)' : 'rgba(255,240,210,0.06)'; x.fillRect(0, (b / 7) * W, W, W / 7); x.fillStyle = 'rgba(70,45,25,0.35)'; x.fillRect(0, (b / 7) * W - 1, W, 2); }
+  let s2 = 71; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 320; i++) { const y = r2() * W; x.strokeStyle = `rgba(120,82,44,${0.04 + r2() * 0.1})`; x.lineWidth = 0.6 + r2() * 1.2; x.beginPath(); x.moveTo(0, y); for (let px = 0; px <= W; px += 40) x.lineTo(px, y + Math.sin(px * 0.012 + i) * 2.5); x.stroke(); }
+  for (let i = 0; i < 26; i++) { const cx = r2() * W, cy = r2() * W, rg = x.createRadialGradient(cx, cy, 0, cx, cy, 40 + r2() * 60); rg.addColorStop(0, 'rgba(90,60,30,0.12)'); rg.addColorStop(1, 'rgba(90,60,30,0)'); x.fillStyle = rg; x.fillRect(0, 0, W, W); }
+  // dial ring
+  const c = W / 2, r0 = 15.2 * S, r1 = 20.9 * S;
+  x.beginPath(); x.arc(c, c, r1, 0, Math.PI * 2); x.arc(c, c, r0, 0, Math.PI * 2, true); x.fillStyle = 'rgba(40,28,18,0.72)'; x.fill();
+  x.strokeStyle = 'rgba(255,245,230,0.5)'; x.lineWidth = 2; x.beginPath(); x.arc(c, c, r1 - 3, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(c, c, r0 + 3, 0, Math.PI * 2); x.stroke();
+  for (let m = 0; m <= DIAL_MAX; m += 1) {
+    const a = tickAngle(m), major = m % 5 === 0, big = m % 10 === 0;
+    const ra = r1 - 6, rb = r1 - (big ? 40 : major ? 28 : 16);
+    x.strokeStyle = big ? '#fff6e8' : 'rgba(255,240,220,0.75)'; x.lineWidth = big ? 5 : major ? 3.5 : 2;
+    x.beginPath(); x.moveTo(c + Math.cos(a) * ra, c + Math.sin(a) * ra); x.lineTo(c + Math.cos(a) * rb, c + Math.sin(a) * rb); x.stroke();
+    if (big) {
+      x.save(); x.translate(c + Math.cos(a) * (r0 + 44), c + Math.sin(a) * (r0 + 44)); x.rotate(a + Math.PI / 2);
+      x.fillStyle = '#fff6e8'; x.font = '600 50px "JetBrains Mono"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(m), 0, 0); x.restore();
+    }
+  }
+  const aL = tickAngle(DIAL_MAX) - 0.2;
+  x.save(); x.translate(c + Math.cos(aL) * (r0 + 44), c + Math.sin(aL) * (r0 + 44)); x.rotate(aL + Math.PI / 2);
+  x.fillStyle = 'rgba(255,246,232,0.85)'; x.font = '700 36px "Noto Sans JP"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('分', 0, 0); x.restore();
+  lidTex.needsUpdate = true;
+}
+{
+  const rimProf = [new THREE.Vector2(R_LID - 1.3, 0), new THREE.Vector2(R_LID, 0), new THREE.Vector2(R_LID, Y_LID1 - Y_LID0 - 0.1), new THREE.Vector2(R_LID - 0.6, Y_LID1 - Y_LID0), new THREE.Vector2(R_LID - 0.8, Y_LID1 - Y_LID0), new THREE.Vector2(R_LID - 1.3, Y_LID1 - Y_LID0 - 0.4), new THREE.Vector2(R_LID - 1.3, 0)];
+  const rim = new THREE.Mesh(new THREE.LatheGeometry(rimProf, 128), woodMat); lidSpin.add(rim);
+  const topGeo = new THREE.CircleGeometry(R_LID - 0.8, 128); topGeo.rotateX(-Math.PI / 2);
+  const uvA = topGeo.attributes.uv, pA = topGeo.attributes.position, R = R_LID - 0.8;
+  for (let i = 0; i < pA.count; i++) uvA.setXY(i, 0.5 + pA.getX(i) / (2 * R), 0.5 + pA.getZ(i) / (2 * R));
+  const lidTopMat = new THREE.MeshStandardMaterial({ map: lidTex, roughness: 0.7, side: THREE.DoubleSide, clippingPlanes: clipList });
+  lidTopMat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n if (!gl_FrontFacing) diffuseColor.rgb = vec3(0.42, 0.32, 0.22);'); };
+  const top = new THREE.Mesh(topGeo, lidTopMat); top.position.y = Y_LID1 - Y_LID0 - 0.2; lidSpin.add(top);
+  const under = new THREE.Mesh(topGeo, woodMat); under.position.y = 0.3; lidSpin.add(under);
+  const knob = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.5, 1.6, 32), new THREE.MeshStandardMaterial({ color: '#7a5634', roughness: 0.6 }));
+  knob.position.y = Y_LID1 - Y_LID0 + 0.6; lidSpin.add(knob);
+  const half = Math.sqrt(R_LID * R_LID - CUT_Z * CUT_Z);
+  const cap = new THREE.Mesh(new THREE.PlaneGeometry(2 * half, Y_LID1 - Y_LID0 - 0.2), endGrainMat); cap.position.set(0, (Y_LID1 - Y_LID0 - 0.2) / 2, CUT_Z + 0.01); lidGroup.add(cap);
+  lidGroup.position.y = Y_LID0;
+}
+const lidPick = new THREE.Mesh(new THREE.CylinderGeometry(R_LID + 2, R_LID + 2, 4.5, 48), new THREE.MeshBasicMaterial({ visible: false }));
+lidPick.position.y = (Y_LID1 - Y_LID0) / 2 + 0.6; lidGroup.add(lidPick);
+
+// ---- the white-grilled pieces on the mat; the front one is cut open by the section plane
+const EEL_Z = [-9.6, 0, 9.6];
+const eelUniforms = { uGlowTop: { value: 0 }, uGlowBot: { value: 0 }, uFlash: { value: 0 }, uWet: { value: 0 }, uSteamed: { value: 0 }, uKansai: { value: 0 } };
+function makeEelMat(clip, U = eelUniforms) {
+  const m = new THREE.MeshPhysicalMaterial({ map: fleshTex, bumpMap: fleshBump, bumpScale: 0.6, color: '#f2e4d0', roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.3, clippingPlanes: clip ? clipList : null });
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = 'varying vec3 vOP; varying vec3 vON;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vOP = position; vON = normal;');
+    sh.fragmentShader = 'varying vec3 vOP; varying vec3 vON; uniform float uGlowTop, uGlowBot, uFlash, uWet, uSteamed;\n' + sh.fragmentShader
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        vec3 on = normalize(vON);
+        float isTop = smoothstep(0.55, 0.8, on.y), isBot = smoothstep(0.55, 0.8, -on.y);
+        float yy = vOP.y;
+        vec3 skin = vec3(0.14, 0.15, 0.17), fat = vec3(0.84, 0.78, 0.6), meat = vec3(0.74, 0.58, 0.42);
+        vec3 side = yy < -0.5 ? skin : (yy < -0.35 ? fat : meat * (0.95 + 0.05 * sin(vOP.x * 6.0 + vOP.y * 20.0)));
+        vec3 topC = mix(diffuseColor.rgb, diffuseColor.rgb * 1.08 + vec3(0.04), uSteamed);
+        diffuseColor.rgb = mix(mix(side, topC, isTop), skin, isBot);`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        totalEmissiveRadiance += vec3(1.0, 0.55, 0.15) * (uGlowTop * isTop + uGlowBot * isBot) + vec3(uFlash);`)
+      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n material.clearcoat = clamp(0.15 + 0.85 * uWet, 0.0, 1.0);');
+  };
+  return m;
+}
+const eelMat = makeEelMat(false), eelMatCut = makeEelMat(true);
+const skewerMat = new THREE.MeshStandardMaterial({ color: '#c8b081', roughness: 0.6, clippingPlanes: clipList });
+const eelGroup = new THREE.Group(); matGroup.add(eelGroup);
+const EELS = EEL_Z.map((z, k) => {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new RoundedBoxGeometry(20, 1.2, 8, 3, 0.22), k === 2 ? eelMatCut : eelMat);
+  g.add(m);
+  for (const x of [-7.5, -2.5, 2.5, 7.5]) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 12.6, 8), skewerMat); s.rotation.x = Math.PI / 2; s.position.set(x, 0.05, 0); g.add(s); }
+  g.position.set(0, Y_EEL, z); eelGroup.add(g);
+  return g;
+});
+// section of the front piece: layers + temperature (amber) + loosening fibres; driven by the model profile
+const profData = new Uint8Array(32 * 4);
+const profTex = new THREE.DataTexture(profData, 32, 1, THREE.RGBAFormat); profTex.magFilter = THREE.LinearFilter; profTex.minFilter = THREE.LinearFilter; profTex.needsUpdate = true;
+const sectionUniforms = { uProf: { value: profTex }, uFlash: { value: 0 }, uFat: { value: 0 }, uOver: { value: 0 }, uTime: { value: 0 } };
+const SECTION_GLSL = `
+  uniform sampler2D uProf; uniform float uFlash, uFat, uOver, uTime;
+  // d: cm from the skin side (0..1.2), s: position along the piece (cm)
+  vec3 sectionColor(float d, float s, out float softOut) {
+    float cc = clamp(d / 1.2 * 24.0 - 0.5, 0.0, 23.0);
+    vec4 pr = texture2D(uProf, vec2((cc / 23.0 * 31.0 + 0.5) / 32.0, 0.5));
+    float T = pr.r * 100.0, U = pr.g;
+    softOut = U;
+    float fatTop = 0.1 + 0.15 * (1.0 - 0.55 * uFat);
+    vec3 base; float ov = 0.8;
+    if (d < 0.1) { base = vec3(0.13, 0.14, 0.17); ov = 0.25; }
+    else if (d < fatTop) { base = vec3(0.95, 0.9, 0.7); ov = 0.45; }
+    else {
+      float m = fract(s * 1.25 + 0.45 * abs(d - 0.72));
+      float dl = min(m, 1.0 - m);
+      float gap = 0.018 + 0.09 * U + 0.1 * uOver;
+      vec3 meat = mix(vec3(0.62, 0.42, 0.3), vec3(0.9, 0.8, 0.68), 0.6 * U);
+      meat *= 0.94 + 0.06 * sin(d * 140.0);
+      float g = smoothstep(gap, gap * 0.4, dl);
+      base = mix(meat, vec3(0.3, 0.2, 0.16), g * (0.35 + 0.6 * U + 0.3 * uOver));
+      base += vec3(0.12) * smoothstep(gap * 1.6, gap, dl) * (1.0 - g) * U;
+    }
+    float h = clamp((T - 20.0) / 80.0, 0.0, 1.0);
+    vec3 ramp = h < 0.4 ? mix(vec3(0.2, 0.19, 0.2), vec3(0.5, 0.26, 0.1), h / 0.4) : (h < 0.7 ? mix(vec3(0.5, 0.26, 0.1), vec3(0.95, 0.5, 0.1), (h - 0.4) / 0.3) : mix(vec3(0.95, 0.5, 0.1), vec3(1.0, 0.78, 0.42), (h - 0.7) / 0.3));
+    float luma = dot(base, vec3(0.3, 0.55, 0.15));
+    base = mix(base, ramp * (0.55 + 0.6 * luma), ov);
+    float fc = (d - 0.6) / 0.14;
+    base += vec3(1.0) * uFlash * exp(-fc * fc) * 0.9;
+    return base;
+  }`;
+{
+  const capMat = new THREE.ShaderMaterial({
+    uniforms: sectionUniforms,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: SECTION_GLSL + `varying vec2 vUv; void main(){ float u; vec3 c = sectionColor(vUv.y * 1.2, vUv.x * 20.0, u); gl_FragColor = vec4(c, 1.0); }`,
+  });
+  const cap = new THREE.Mesh(new THREE.PlaneGeometry(19.6, 1.14), capMat);
+  cap.position.set(0, 0, CUT_Z - EEL_Z[2] + 0.012);
+  EELS[2].add(cap);
+}
+
+// ---- the magnified section diagram (always faces the camera)
+const PANEL_W = 32, PANEL_H = 10.5;
+const panelCanvas = document.createElement('canvas'); panelCanvas.width = 1024; panelCanvas.height = Math.round((1024 * PANEL_H) / PANEL_W);
+const panelTextTex = new THREE.CanvasTexture(panelCanvas); panelTextTex.colorSpace = THREE.SRGBColorSpace;
+const BAND = { u0: 0.05, u1: 0.95, v0: 0.26, v1: 0.72 };
+const panelUniforms = Object.assign({}, sectionUniforms, { uText: { value: panelTextTex }, uPTop: { value: 0 }, uPBot: { value: 0 }, uDrip: { value: 0 }, uOp: { value: 1 }, uSteamOn: { value: 1 } });
+const panel = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, PANEL_H), new THREE.ShaderMaterial({
+  uniforms: panelUniforms, transparent: true, depthTest: false, depthWrite: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: SECTION_GLSL + `
+    uniform sampler2D uText; uniform float uPTop, uPBot, uDrip, uOp, uSteamOn;
+    varying vec2 vUv;
+    float h1(float n){ return fract(sin(n * 12.9898 + 4.1) * 43758.5453); }
+    void main(){
+      vec2 uv = vUv; float asp = ${(PANEL_W / PANEL_H).toFixed(4)};
+      vec3 col = vec3(0.03, 0.03, 0.04); float a = 0.84;
+      float bx = min(uv.x, 1.0 - uv.x) * asp, by = min(uv.y, 1.0 - uv.y);
+      float border = smoothstep(0.012, 0.004, min(bx, by));
+      float v0 = ${BAND.v0.toFixed(3)}, v1 = ${BAND.v1.toFixed(3)}, u0 = ${BAND.u0.toFixed(3)}, u1 = ${BAND.u1.toFixed(3)};
+      // mat slats under the piece
+      if (uv.y < v0 && uv.y > v0 - 0.035 && uv.x > u0 && uv.x < u1) { float sl = fract((uv.x - u0) * 26.0); col = mix(col, vec3(0.56, 0.47, 0.32), step(0.28, sl) * 0.9); }
+      if (uv.y > v0 && uv.y < v1 && uv.x > u0 && uv.x < u1) {
+        float d = (uv.y - v0) / (v1 - v0) * 1.2, s = (uv.x - u0) / (u1 - u0) * 6.0, U;
+        col = sectionColor(d, s, U);
+        // centre line (dashed)
+        if (abs(d - 0.6) < 0.008 && fract(s * 4.0) < 0.55) col = mix(col, vec3(1.0), 0.55);
+      }
+      // steam from above and below; some turn into water on the surface and hand over heat (amber)
+      vec2 P = vec2(uv.x * asp, uv.y);
+      vec3 add = vec3(0.0);
+      for (int k = 0; k < 16; k++) {
+        float fk = float(k), top = step(8.0, fk);
+        float per = 1.5 + h1(fk * 1.7) * 0.9, ph = uTime / per + h1(fk * 3.3), cyc = floor(ph); ph = fract(ph);
+        float x = mix(u0 + 0.02, u1 - 0.02, h1(fk * 5.1 + cyc * 1.37));
+        float cond = step(h1(fk * 9.7 + cyc * 2.3), top > 0.5 ? uPTop : uPBot);
+        float ySurf = top > 0.5 ? v1 : v0 - 0.035, yFar = top > 0.5 ? 0.9 : 0.04;
+        float hitP = 0.55;
+        float y = mix(yFar, ySurf, clamp(ph / hitP, 0.0, 1.0));
+        if (ph > hitP && cond < 0.5) y = mix(ySurf, yFar, (ph - hitP) / (1.0 - hitP));
+        vec2 q = vec2(x * asp + 0.08 * sin(ph * 6.28 + fk), y);
+        float dd = length(P - q);
+        float alive = uSteamOn * (ph < hitP || cond < 0.5 ? 1.0 : 0.0);
+        add += vec3(0.62, 0.82, 1.0) * smoothstep(0.03, 0.0, dd) * alive * 0.9;
+        if (cond > 0.5 && ph > hitP) {
+          float t2 = (ph - hitP) / (1.0 - hitP);
+          vec2 qs = vec2(x * asp, top > 0.5 ? v1 + 0.012 : v0 - 0.035 - 0.012);
+          float ds = length(P - qs);
+          add += vec3(1.0, 0.56, 0.16) * smoothstep(0.09, 0.0, ds) * (1.0 - smoothstep(0.0, 0.45, t2)) * 1.3 * uSteamOn;
+          add += vec3(0.75, 0.88, 1.0) * smoothstep(0.018, 0.006, ds) * smoothstep(0.1, 0.3, t2) * (1.0 - smoothstep(0.75, 1.0, t2)) * uSteamOn;
+        }
+      }
+      // fat dripping from the underside through the mat
+      for (int k = 0; k < 6; k++) {
+        float fk = float(k); float per = 1.2 + h1(fk * 4.4) * 0.7, ph = uTime / per + h1(fk * 8.1), cyc = floor(ph); ph = fract(ph);
+        if (h1(fk * 2.9 + cyc * 3.7) > uDrip) continue;
+        float x = mix(u0 + 0.04, u1 - 0.04, h1(fk * 6.3 + cyc * 1.9));
+        float fu = clamp((ph - 0.4) / 0.6, 0.0, 1.0);
+        float y = ph < 0.4 ? v0 - 0.04 : mix(v0 - 0.04, 0.03, fu * fu);
+        float r = ph < 0.4 ? 0.008 + 0.012 * ph / 0.4 : 0.018;
+        float dd = length((P - vec2(x * asp, y)) * vec2(1.0, ph < 0.4 ? 1.0 : 0.7));
+        add += vec3(0.95, 0.82, 0.42) * smoothstep(r, r * 0.4, dd) * 0.9;
+      }
+      col += add;
+      vec4 tx = texture2D(uText, vec2(uv.x, uv.y));
+      col = mix(col, tx.rgb, tx.a);
+      col = mix(col, vec3(0.9), border * 0.6);
+      gl_FragColor = vec4(col, a * uOp);
+    }`,
+}));
+panel.renderOrder = 30;
+scene.add(panel);
+const PANEL_POS = new THREE.Vector3(34, 47, 6), PANEL_POS_PORTRAIT = new THREE.Vector3(8, 60, 2);
+function drawPanelText() {
+  const x = panelCanvas.getContext('2d'), W = panelCanvas.width, H = panelCanvas.height;
+  x.clearRect(0, 0, W, H);
+  x.fillStyle = '#ffffff'; x.font = '700 28px "Noto Sans JP"'; x.textBaseline = 'top'; x.fillText('身の断面（模型による計算のイメージ・厚さは拡大）', 26, 18);
+  x.font = '500 20px "Noto Sans JP"'; x.fillStyle = 'rgba(235,230,222,0.9)'; x.textBaseline = 'middle';
+  const yv = v => (1 - v) * H;
+  x.textAlign = 'right'; x.fillText('中心', W * BAND.u1 - 8, yv((BAND.v0 + BAND.v1) / 2) - 18);
+  x.textAlign = 'left';
+  x.fillText('身の側', W * BAND.u0, yv(BAND.v1) - 16);
+  x.fillText('皮の側（下は簀の子）', W * BAND.u0, yv(BAND.v0 - 0.035) + 22);
+  const lx = W * 0.4, ly = H - 22;
+  const dot = (cx, c) => { x.fillStyle = c; x.beginPath(); x.arc(cx, ly, 7, 0, 7); x.fill(); };
+  dot(lx, '#9fd0ff'); x.fillStyle = 'rgba(235,230,222,0.9)'; x.fillText('蒸気', lx + 14, ly);
+  dot(lx + 92, '#ffa640'); x.fillStyle = 'rgba(235,230,222,0.9)'; x.fillText('水に戻るときの熱', lx + 106, ly);
+  dot(lx + 290, '#f3d98a'); x.fillStyle = 'rgba(235,230,222,0.9)'; x.fillText('落ちる脂', lx + 304, ly);
+  panelTextTex.needsUpdate = true;
+}
+const panelLeader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.8, gapSize: 0.7, transparent: true, opacity: 0.55, depthTest: false }));
+panelLeader.renderOrder = 29; scene.add(panelLeader);
+
+// ---- steam particles (blue-white), their condensation flashes (amber) and water beads
+const NSTEAM = 1100;
+const steamGeo = new THREE.BufferGeometry();
+const sPos = new Float32Array(NSTEAM * 3), sCol = new Float32Array(NSTEAM * 3), sSize = new Float32Array(NSTEAM), sAlpha = new Float32Array(NSTEAM);
+steamGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+steamGeo.setAttribute('aColor', new THREE.BufferAttribute(sCol, 3));
+steamGeo.setAttribute('aSize', new THREE.BufferAttribute(sSize, 1));
+steamGeo.setAttribute('aAlpha', new THREE.BufferAttribute(sAlpha, 1));
+const pointUniforms = { uScale: { value: 600 }, uMaxPx: { value: 6 } };
+const steamPoints = new THREE.Points(steamGeo, new THREE.ShaderMaterial({
+  uniforms: pointUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `attribute vec3 aColor; attribute float aSize; attribute float aAlpha; uniform float uScale; uniform float uMaxPx; varying vec3 vC; varying float vA;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; float px = aSize * uScale / max(0.5, -mv.z); px = aSize < 0.6 ? min(px, uMaxPx) : min(px, 64.0); gl_PointSize = px; vC = aColor; vA = aAlpha; }`,
+  fragmentShader: `varying vec3 vC; varying float vA; void main(){ vec2 d = gl_PointCoord - 0.5; float r = length(d); float a = smoothstep(0.5, 0.0, r); gl_FragColor = vec4(vC, a * a * vA); }`,
+}));
+steamPoints.frustumCulled = false;
+scene.add(steamPoints);
+const steamFill = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(0.36, 0.6, 1.0), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.22 }));
+steamFill.scale.set(52, 16, 1); steamFill.position.set(0, 28.2, -2); scene.add(steamFill);
+// fat drops falling through the mat into the pot
+const NDROP = 36;
+const dropMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: '#f1d27c', emissive: '#b88a22', emissiveIntensity: 0.6, roughness: 0.2 }), NDROP);
+dropMesh.frustumCulled = false; scene.add(dropMesh);
+// visible mist (湯気) rising from the lid and the seam, lit by the window light
+const NMIST = 30;
+const mists = Array.from({ length: NMIST }, (_, i) => {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: '#ffffff', transparent: true, depthWrite: false, opacity: 0 }));
+  sp.userData = { per: 5.5 + hash(i * 3.3) * 3, off: hash(i * 7.1), ang: hash(i * 1.9) * Math.PI * 2, rim: i % 3 !== 0 };
+  scene.add(sp); return sp;
+});
+// light shafts from the window
+const beamUniforms = { uTime: { value: 0 }, uOp: { value: 1 } };
+const beamMat = new THREE.ShaderMaterial({
+  uniforms: beamUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uTime, uOp; varying vec2 vUv;
+    void main(){ float x = abs(vUv.x * 2.0 - 1.0); float a = pow(max(0.0, 1.0 - x), 1.8) * smoothstep(0.0, 0.12, vUv.y) * pow(max(0.0, 1.0 - vUv.y), 0.7);
+      a *= 0.8 + 0.2 * sin(vUv.y * 9.0 - uTime * 0.4 + vUv.x * 3.0);
+      gl_FragColor = vec4(vec3(1.0, 0.9, 0.74) * a * 0.032 * uOp, 1.0); }`,
+});
+const BEAMS = [[new THREE.Vector3(-74, 84, -54), new THREE.Vector3(-6, 40, 0), 16], [new THREE.Vector3(-56, 74, -54), new THREE.Vector3(8, 34, 2), 10], [new THREE.Vector3(-88, 64, -54), new THREE.Vector3(-20, 30, 2), 9]].map(([a, b, w]) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), beamMat); m.userData = { a, b, w }; scene.add(m); return m;
+});
+const BEAM_DIR = BEAMS[0].userData.b.clone().sub(BEAMS[0].userData.a).normalize();
+const beamLight = p => { const a = BEAMS[0].userData.a; const v = p.clone().sub(a); const along = v.dot(BEAM_DIR); const perp = v.addScaledVector(BEAM_DIR, -along).length(); return Math.exp(-(perp * perp) / (2 * 16 * 16)); };
+const dustGeo = new THREE.BufferGeometry(); const NDUST = 90; const dPos = new Float32Array(NDUST * 3);
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#fff0d6', size: 0.5, map: glowTex, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+scene.add(dust);
+
+// ---- the plate, a steamed portion, chopsticks (for the lifting scene)
+const plateGroup = new THREE.Group(); scene.add(plateGroup);
+const PLATE_C = new THREE.Vector3(36, 0, 29);
+const flakeUniforms = { uGlowTop: { value: 0 }, uGlowBot: { value: 0 }, uFlash: { value: 0 }, uWet: { value: 0 }, uSteamed: { value: 0 } };
+const flakeMat = makeEelMat(false, flakeUniforms);
+const plateBits = [];
+const FLAKES = [];
+{
+  const ceramic = new THREE.MeshPhysicalMaterial({ color: '#f5f3ef', roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.1 });
+  const plate = new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(0, 0.2), new THREE.Vector2(8, 0.2), new THREE.Vector2(8.6, 0), new THREE.Vector2(11.5, 0.9), new THREE.Vector2(11.9, 1.5), new THREE.Vector2(11.4, 1.5), new THREE.Vector2(8.2, 0.75), new THREE.Vector2(0, 0.75)], 64), ceramic);
+  plateGroup.add(plate);
+  const main = new THREE.Mesh(new RoundedBoxGeometry(6.4, 1.2, 4.8, 3, 0.2), flakeMat); main.position.set(-3.2, 1.35, 0); plateGroup.add(main); plateBits.push(main);
+  // the bite that the chopsticks lift: 3 × 2 flakes
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
+    const f = new THREE.Mesh(new RoundedBoxGeometry(1.75, 1.2, 2.3, 2, 0.15), flakeMat);
+    f.userData = { i, j, home: new THREE.Vector3(2.2 + i * 1.8, 1.35, -1.2 + j * 2.4) };
+    plateGroup.add(f); FLAKES.push(f);
+  }
+  plateGroup.position.copy(PLATE_C);
+  const rest = new THREE.Mesh(new RoundedBoxGeometry(4, 1, 1.4, 2, 0.4), ceramic); rest.position.set(PLATE_C.x + 14, 0.5, PLATE_C.z + 7); room.add(rest);
+}
+const chop = new THREE.Group(); scene.add(chop);
+{
+  const m = new THREE.MeshStandardMaterial({ color: '#3a2418', roughness: 0.35, metalness: 0.1 });
+  const tipM = new THREE.MeshStandardMaterial({ color: '#b98d5c', roughness: 0.6 });
+  for (const s of [-1, 1]) {
+    const stick = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.16, 20, 12), m); body.position.y = 12; stick.add(body);
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.1, 3, 12), tipM); tip.position.y = 0.5; stick.add(tip);
+    stick.userData.side = s; chop.add(stick);
+  }
+}
+
+// ---- exploded view: the layers of the section, magnified three times
+const layerX = new THREE.Group(); scene.add(layerX);
+const layerParts = [];
+{
+  const SC = 3, L = 6 * SC, D = 2.2 * SC;
+  const skin = new THREE.Mesh(new RoundedBoxGeometry(L, 0.1 * SC, D, 2, 0.08), new THREE.MeshStandardMaterial({ color: '#2b2e34', roughness: 0.45, metalness: 0.1 }));
+  const fat = new THREE.Mesh(new RoundedBoxGeometry(L, 0.15 * SC, D, 2, 0.1), new THREE.MeshStandardMaterial({ color: '#efe0b0', roughness: 0.4, emissive: '#3a2e10', emissiveIntensity: 0.3 }));
+  const bundle = new THREE.Group();
+  const fibMat = new THREE.MeshStandardMaterial({ color: '#e7cdb0', roughness: 0.55 });
+  const nSeg = 6, segL = L / nSeg;
+  for (let s = 0; s < nSeg; s++) {
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      const f = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, segL - 0.35, 10), fibMat);
+      f.rotation.z = Math.PI / 2; f.position.set(-L / 2 + (s + 0.5) * segL, (r - 1.5) * 0.66, (c - 1.5) * 1.55); bundle.add(f);
+    }
+  }
+  bundle.scale.set(1, 0.95 * SC * 0.95 / (4 * 0.66), 1);
+  [bundle, fat, skin].forEach(g => { layerX.add(g); layerParts.push(g); });
+  layerX.visible = false;
+}
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), dval: $('dval'), tval: $('tval'), uval: $('uval'), fval: $('fval'),
+  cfill: document.querySelector('#cmeter .fill'), ufill: document.querySelector('#ubar .fill'), ffill: document.querySelector('#fbar .fill'),
+  steps: [...document.querySelectorAll('#steps li')], stepsEl: $('steps'), counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'), compare: $('compare'), proc: $('proc'), procTitle: $('procTitle'),
+};
+const C_MIN = 20, C_MAX = 100;
+const cPct = T => ((T - C_MIN) / (C_MAX - C_MIN)) * 100;
+$('thSoft').style.left = `${cPct(SOFT_LO)}%`;
+$('cticks').innerHTML = [20, 40, 60, 80, 100].map(v => `<span style="left:${cPct(v)}%">${v}${v === 100 ? '℃' : ''}</span>`).join('');
+const PROC_HTML = {
+  kanto: '<span class="chip">背開き</span><span class="arr">→</span><span class="chip">白焼き</span><span class="arr">→</span><span class="chip steam">蒸す</span><span class="arr">→</span><span class="chip">たれをつけて焼く</span>',
+  kansai: '<span class="chip">腹開き</span><span class="arr">→</span><span class="chip none">蒸さずにたれをつけて焼く</span>',
+};
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'), document.fonts.load('600 50px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+const PHASES = ['触れる', '水に戻る', '伝わる', 'ほぐれる', '落ちる', 'やわらかく'];
+function freshState() {
+  return {
+    dial: 0, style: 'kanto', speed: 'fast',
+    auto: null,                 // お手本 / rewind: { to, rate }
+    softened: false, done: false, over: false, overT: -1, doneT: -1,
+    flash: 0, exploded: false, explode: 0, styleMix: 0,
+    chopT: -1, chopOn: false, breakT: -1, panelVis: 1,
+    camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    phase: 0,
+  };
+}
+let S = freshState();
+let M = modelAt(0);
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+function updateFlags() {
+  M = modelAt(S.style === 'kansai' ? 0 : S.dial);
+  if (S.style === 'kansai') { M.tsTop = M.tsBot = T0; M.qTop = M.qBot = 0; }
+  const d = S.style === 'kansai' ? 0 : S.dial;
+  if (!S.softened && d >= T_X) { S.softened = true; S.flash = 1; logEvent('soften'); }
+  else if (S.softened && d < T_X) S.softened = false;
+  if (!S.over && d >= T_F) { S.over = true; S.overT = S.t; S.done = false; showBubble('err'); sound('err'); logEvent('over'); if (!DEMO_ACTIVE) { S.chopT = S.t; S.chopOn = true; setCamera('chopsticks'); } }
+  else if (S.over && d < T_F) { S.over = false; S.done = d >= T_S; logEvent('restore'); if (S.bubble === 'err') S.bubble = null; if (!DEMO_ACTIVE) { S.chopOn = false; S.breakT = -1; setCamera('overview'); } }
+  if (!S.over) {
+    if (!S.done && d >= T_S) { S.done = true; S.doneT = S.t; showBubble('ok'); sound('ok'); logEvent('done'); }
+    else if (S.done && d < T_S) S.done = false;
+  }
+  S.phase = S.over || S.done ? 5 : S.softened ? (M.uc < 0.45 ? 3 : 4) : d < 0.3 ? 0 : d < 3 ? 1 : 2;
+}
+/** Advance by dt display-seconds. */
+function stepState(dt) {
+  S.t += dt;
+  if (S.auto) {
+    const rate = (S.auto.rate ?? (S.speed === 'fast' ? FAST : 1)) / 60;   // steaming minutes per display second
+    const dir = Math.sign(S.auto.to - S.dial);
+    S.dial = dir >= 0 ? Math.min(S.auto.to, S.dial + rate * dt) : Math.max(S.auto.to, S.dial - rate * dt);
+    if (S.dial === S.auto.to) S.auto = null;
+  }
+  updateFlags();
+  // over-steamed: after a few seconds the time is turned back and the piece recovers
+  if (!DEMO_ACTIVE && S.over && !S.auto && !dragging && S.t - S.overT > 4) S.auto = { to: Math.min(T_S + 1, T_F - 0.5), rate: 900 };
+  // the lifted bite of an over-steamed piece falls apart once it is up (model image)
+  if (S.chopOn && S.over && S.chopT >= 0 && S.t - S.chopT >= 0.9 && S.breakT < 0) S.breakT = S.t;
+  if (!S.chopOn) S.breakT = -1;
+  S.flash = Math.max(0, S.flash - dt * 1.3);
+  S.explode += clamp((S.exploded ? 1 : 0) - S.explode, -dt * 1.25, dt * 1.25);
+  S.styleMix += clamp((S.style === 'kansai' ? 1 : 0) - S.styleMix, -dt * 2, dt * 2);
+  const pv = S.camera === 'inside' || S.camera === 'surface' ? 0 : 1;   // the floating diagram would only be half in view in the close-ups
+  S.panelVis += clamp(pv - S.panelVis, -dt * 2.5, dt * 2.5);
+  if (S.bubble === 'ok' && S.t > S.bubbleUntil) S.bubble = null;
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + 4.2; }
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') { tone(520, t0, 0.16, 0.2); tone(780, t0, 0.08, 0.06); }
+  else for (let i = 0; i < 3; i++) tone(3000, t0 + i * 0.12, 0.07, 0.12);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [54, 64, 112], tgt: [10, 30, 2] },
+  inside: { pos: [16, 32.5, 44], tgt: [-2, 25.5, 0] },
+  surface: { pos: [9, 31, 34], tgt: [-1, 24.8, 2] },
+  section: { pos: [27, 45, 70], tgt: [29, 38, 6] },
+  chopsticks: { pos: [62, 30, 88], tgt: [36, 9, 28] },
+  exploded: { pos: [46, 98, 168], tgt: [12, 42, 4] },
+};
+const CAMS_PORTRAIT = {
+  overview: { pos: [10, 84, 172], tgt: [4, 38, 2] },
+  inside: { pos: [12, 36, 66], tgt: [-2, 26, 0] },
+  surface: { pos: [6, 31, 40], tgt: [-1, 24.6, 3] },
+  section: { pos: [8, 54, 104], tgt: [8, 48, 4] },
+  chopsticks: { pos: [58, 40, 128], tgt: [34, 11, 26] },
+  exploded: { pos: [38, 118, 268], tgt: [12, 44, 4] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = (innerWidth / innerHeight < 0.8 && CAMS_PORTRAIT[name]) || CAMS[name];
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  if (name === 'chopsticks' && !S.chopOn) { S.chopOn = true; S.chopT = S.t; }
+  if (name !== 'chopsticks' && !S.over) S.chopOn = false;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3();
+const STEAM_C = [0.42, 0.66, 1.0], AMBER_C = [1.0, 0.52, 0.12], BEAD_C = [0.78, 0.9, 1.0];
+const Q_REF = 5000;                                   // W/m²: flux at which every touching particle condenses (display)
+const condP = q => clamp(Math.pow(Math.max(0, q) / Q_REF, 0.6), 0.05, 1);
+const EEL_HALF_X = 10, EEL_HALF_Z = 4;
+function eelUnder(x, z) { for (let k = 0; k < 3; k++) if (Math.abs(x) <= EEL_HALF_X && Math.abs(z - EEL_Z[k]) <= EEL_HALF_Z + 0.25) return k; return -1; }
+/** Deterministic steam particles: a pure function of time and the current condensation probability. */
+function updateSteam(time, pTop, pBot, on, lift) {
+  const yLid = Y_LID0 - 0.6, yW = Y_WATER + 0.2;
+  for (let i = 0; i < NSTEAM; i++) {
+    const per = 2.3 + hash(i * 1.7) * 1.3, ps = time / per + hash(i * 0.37), cyc = Math.floor(ps), ph = ps - cyc;
+    const r1 = hash(i * 13.1 + cyc * 7.7), r2 = hash(i * 3.3 + cyc * 1.9), r3 = hash(i * 5.9 + cyc * 4.1), r4 = hash(i * 2.3 + cyc * 9.1);
+    let x, y, z, state = 0, st = 0;          // state 0 moving, 1 flash, 2 bead, 3 gone
+    if (i % 5 < 3) {
+      // rising from the water, through the mat; under a piece it meets the skin side
+      const rad = 18.2 * Math.sqrt(r1), ang = r2 * Math.PI * 2;
+      const x0 = Math.cos(ang) * rad, z0 = Math.sin(ang) * rad;
+      const k = eelUnder(x0, z0);
+      const yOf = p => yW + (yLid - yW) * (p / 0.92);
+      x = x0 + 0.6 * Math.sin(6.28 * (ph * 1.4 + r3)); z = z0 + 0.6 * Math.cos(6.28 * (ph * 1.2 + r1)); y = yOf(ph);
+      if (k >= 0) {
+        const pHit = ((Y_MAT1 - 0.05 - yW) / (yLid - yW)) * 0.92;
+        if (ph >= pHit) {
+          if (r3 < pBot) { x = x0; z = z0; y = Y_MAT1 - 0.05; st = (ph - pHit) * per; state = st < 0.35 ? 1 : st < 1.1 ? 2 : 3; }
+          else { const edge = EEL_Z[k] + (z0 > EEL_Z[k] ? 1 : -1) * (EEL_HALF_Z + 0.5); const u = smooth01((ph - pHit) / 0.07); z = lerp(z0, edge, u); x = x0 * (1 + 0.02 * u); y = Math.max(Y_MAT1 - 0.2, yOf(ph)); }
+        }
+      }
+      if (ph > 0.92) state = 3;
+    } else {
+      // swirling: up along the wall, under the lid, down onto the flesh side of a piece
+      const a0 = r1 * Math.PI * 2, xs = Math.cos(a0) * 19.3, zs = Math.sin(a0) * 19.3;
+      const k = Math.floor(r2 * 3), xt = -9 + 18 * r3, zt = EEL_Z[k] - 3.4 + 6.8 * r4;
+      if (ph < 0.38) { const u = ph / 0.38; x = xs; z = zs; y = lerp(yW + 2, yLid - 0.6, u); }
+      else if (ph < 0.74) { const u = (ph - 0.38) / 0.36, cx = lerp(xs, xt, 0.6), cz = lerp(zs, zt, 0.6); const a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u; x = a * xs + b * cx + c * xt; z = a * zs + b * cz + c * zt; y = a * (yLid - 0.6) + b * (yLid + 0.2) + c * (Y_EEL_TOP + 0.08); }
+      else if (hash(i * 11.3 + cyc * 5.5) < pTop) { x = xt; z = zt; y = Y_EEL_TOP + 0.06; st = (ph - 0.74) * per; state = st < 0.35 ? 1 : st < 1.1 ? 2 : 3; }
+      else { const u = (ph - 0.74) / 0.26; x = lerp(xt, xs * 1.04, u); z = lerp(zt, zs * 1.04, u); y = lerp(Y_EEL_TOP + 0.1, yLid + 0.4, u); if (u > 0.9) state = 3; }
+    }
+    const i3 = i * 3;
+    sPos[i3] = x; sPos[i3 + 1] = y + lift; sPos[i3 + 2] = z;
+    let a = 0, size = 0.5, c = STEAM_C;
+    if (state === 0) { a = 0.62 * smooth01(ph / 0.06); }
+    else if (state === 1) { c = AMBER_C; a = 1.2 * (1 - st / 0.35) + 0.3; size = 1.25 - st * 1.2; }
+    else if (state === 2) { c = BEAD_C; a = 0.7 * (1 - (st - 0.35) / 0.75); size = 0.3; }
+    if (z > CUT_Z - 0.1 || !on) a = 0;
+    sCol[i3] = c[0]; sCol[i3 + 1] = c[1]; sCol[i3 + 2] = c[2]; sSize[i] = size; sAlpha[i] = a;
+  }
+  steamGeo.attributes.position.needsUpdate = true; steamGeo.attributes.aColor.needsUpdate = true;
+  steamGeo.attributes.aSize.needsUpdate = true; steamGeo.attributes.aAlpha.needsUpdate = true;
+}
+function updateDrops(time, rate, on, lift) {
+  for (let i = 0; i < NDROP; i++) {
+    const per = 1.1 + hash(i * 2.7) * 0.8, ps = time / per + hash(i * 0.91), cyc = Math.floor(ps), ph = ps - cyc;
+    const active = on && hash(i * 4.3 + cyc * 2.1) < rate;
+    const k = Math.floor(hash(i * 6.1 + cyc) * 2.999), x = -9 + 18 * hash(i * 8.3 + cyc * 3.1), z = EEL_Z[k] - 3 + 6 * hash(i * 1.3 + cyc * 5.9);
+    let y = Y_MAT0 - 0.2, s = 0;
+    if (active && z < CUT_Z - 0.2) {
+      if (ph < 0.35) { s = 0.4 + 1.6 * ph; y = Y_MAT0 - 0.15; }
+      else { const u = (ph - 0.35) / 0.65; s = 1; y = lerp(Y_MAT0 - 0.2, Y_WATER + 0.1, u * u); if (u > 0.98) s = 0; }
+    }
+    tmpM.compose(tmpV.set(x, y + lift, z), tmpQ.identity(), tmpS.set(s, s * 1.25, s));
+    dropMesh.setMatrixAt(i, tmpM);
+  }
+  dropMesh.instanceMatrix.needsUpdate = true;
+}
+function updateMist(time, strength, lift) {
+  for (let i = 0; i < NMIST; i++) {
+    const sp = mists[i], u = sp.userData;
+    const ph = (time / u.per + u.off) % 1;
+    const ang = u.ang + Math.floor(time / u.per + u.off) * 2.4;
+    const r0 = u.rim ? R_LID + 0.3 : 6 + 10 * hash(i * 5.7);
+    const x0 = Math.cos(ang) * r0, z0 = Math.min(CUT_Z - 2, Math.sin(ang) * r0 * 0.9);
+    const rise = ph * 46;
+    sp.position.set(x0 * (1 + ph * 0.5) + ph * ph * 12, Y_LID1 + 0.5 + rise + lift, z0 * (1 + ph * 0.3) - ph * 4);
+    const sc = 4 + ph * 17; sp.scale.set(sc, sc, 1);
+    const lit = beamLight(sp.position);
+    const near = smooth01((sp.position.distanceTo(camera.position) - sc * 0.6 - 6) / 40);
+    sp.material.opacity = strength * near * (0.07 + 0.36 * lit) * smooth01(ph / 0.12) * (1 - smooth01((ph - 0.5) / 0.5));
+    const b = 0.78 + 0.5 * lit; sp.material.color.setRGB(b, b * 0.97, b * 0.92);
+    sp.material.rotation = ang + ph * 0.8;
+  }
+}
+function updateBeams(time) {
+  beamUniforms.uTime.value = time;
+  for (const m of BEAMS) {
+    const { a, b, w } = m.userData;
+    const axis = tmpV.copy(b).sub(a); const len = axis.length(); axis.normalize();
+    const mid = tmpV2.copy(a).add(b).multiplyScalar(0.5);
+    const view = camera.position.clone().sub(mid).normalize();
+    const side = new THREE.Vector3().crossVectors(axis, view).normalize();
+    const normal = new THREE.Vector3().crossVectors(side, axis).normalize();
+    tmpM.makeBasis(side, axis, normal); m.quaternion.setFromRotationMatrix(tmpM);
+    m.position.copy(mid); m.scale.set(w, len, 1);
+  }
+  for (let i = 0; i < NDUST; i++) {
+    const t = (time * 0.02 + hash(i * 3.1)) % 1;
+    const p = BEAMS[0].userData.a.clone().lerp(BEAMS[0].userData.b, 0.15 + 0.8 * hash(i * 1.7));
+    p.x += Math.sin(i * 2.1 + time * 0.2) * 8; p.y += (t - 0.5) * 20; p.z += Math.cos(i * 1.3 + time * 0.17) * 8;
+    dPos.set([p.x, p.y, p.z], i * 3);
+  }
+  dustGeo.attributes.position.needsUpdate = true;
+}
+function updateChopsticks() {
+  const on = S.chopOn, tl = on && S.chopT >= 0 ? S.t - S.chopT : 0;
+  const lift = on ? smooth01(tl / 0.9) : 0;
+  const tip = new THREE.Vector3(PLATE_C.x + 6.0, lerp(2.2, 13.5, lift), PLATE_C.z);
+  chop.children.forEach(stick => {
+    const s = stick.userData.side;
+    let tipS, dir;
+    if (lift > 0.001) {
+      tipS = tip.clone().add(new THREE.Vector3(0.2, s * 0.62, 0));
+      dir = new THREE.Vector3(PLATE_C.x + 24, lerp(8, 23, lift) + s * 1.2, PLATE_C.z + 10 + s * 0.6).sub(tipS).normalize();
+    } else {
+      tipS = new THREE.Vector3(PLATE_C.x + 6, 1.05, PLATE_C.z + 8 + s * 0.7);
+      dir = new THREE.Vector3(1, 0.03, -0.05).normalize();
+    }
+    stick.position.copy(tipS); stick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  });
+  // the bite hangs from the tips at its right end; softer flesh droops more; an over-steamed bite falls apart (model image)
+  const soft = clamp(M.uc, 0, 1);
+  const tb = S.breakT >= 0 ? S.t - S.breakT : -1;
+  FLAKES.forEach(f => {
+    const { i, j, home } = f.userData;
+    const arm = (2 - i) * 1.8;
+    const droop = lift * (0.04 + 0.22 * soft) * arm * arm * 0.35;
+    const held = new THREE.Vector3(home.x + (tip.x - PLATE_C.x - 5.8), tip.y - PLATE_C.y - 0.75 - droop, home.z);
+    const p = home.clone().lerp(held, lift);
+    let rz = lift * (2 - i) * 0.1 * (0.3 + soft);
+    if (tb >= 0 && i < 2) {
+      const tt = tb - (1 - i) * 0.18;
+      if (tt > 0) { p.y = Math.max(home.y + 0.1 * j, p.y - 0.5 * 60 * tt * tt); p.x -= Math.min(tt, 0.9) * (1.8 - i * 0.7); p.z += (j - 0.5) * Math.min(tt, 0.9) * 0.8; rz += Math.min(tt, 0.9) * (1.8 - i); }
+    }
+    f.position.copy(p); f.rotation.set(0, 0, rz);
+  });
+}
+let lastLid = '';
+let cmpFade = 0;
+function applyScene(time) {
+  const e = ease(S.explode), kansai = S.styleMix;
+  const steamOn = kansai < 0.5;
+  // lid dial
+  lidSpin.rotation.y = -(clamp(S.dial, 0, DIAL_MAX) / DIAL_MAX) * DIAL_SPAN;
+  // exploded parts
+  potGroup.position.y = -8 * e; matGroup.position.y = 9 * e; frameGroup.position.y = 24 * e; lidGroup.position.y = Y_LID0 + 44 * e;
+  frameGroup.userData.pointer.forEach(o => (o.visible = e < 0.05));
+  const lift = 9 * e;
+  // heat on the surfaces (amber), wetness, softness
+  const glow = q => 0.22 * Math.pow(clamp(q / 20000, 0, 1), 0.5);
+  eelUniforms.uGlowTop.value = steamOn ? glow(M.qTop) : 0;
+  eelUniforms.uGlowBot.value = steamOn ? glow(M.qBot) : 0;
+  eelUniforms.uFlash.value = S.flash * S.flash * 0.35;
+  eelUniforms.uWet.value = steamOn ? clamp(S.dial / 3, 0, 1) : 0;
+  eelUniforms.uSteamed.value = steamOn ? clamp(M.uc, 0, 1) : 0;
+  // section profile → texture
+  for (let i = 0; i < 32; i++) {
+    const src = (i / 31) * (NC - 1), a = Math.floor(src), f = src - a, b = Math.min(NC - 1, a + 1);
+    const T = lerp(M.prof[a], M.prof[b], f), U = clamp(lerp(M.soft[a], M.soft[b], f), 0, 1);
+    profData[i * 4] = clamp(Math.round(T * 2.55), 0, 255); profData[i * 4 + 1] = Math.round(U * 255); profData[i * 4 + 2] = 0; profData[i * 4 + 3] = 255;
+  }
+  profTex.needsUpdate = true;
+  sectionUniforms.uFlash.value = S.flash;
+  sectionUniforms.uFat.value = steamOn ? M.fat : 0;
+  sectionUniforms.uOver.value = S.over ? 1 : clamp((M.uc - 1) / O_FAIL, 0, 1) * 0.6;
+  sectionUniforms.uTime.value = time;
+  capUniforms.uTime.value = time;
+  const pTop = condP(M.qTop), pBot = condP(M.qBot);
+  panelUniforms.uPTop.value = pTop; panelUniforms.uPBot.value = pBot;
+  const dripRate = steamOn ? clamp(3.2 * (fatRate(lerp(M.prof[2], M.prof[4], 0.5)) * (1 - M.fat)), 0, 0.85) : 0;
+  panelUniforms.uDrip.value = dripRate;
+  panelUniforms.uSteamOn.value = steamOn ? 1 : 0;
+  const pOp = (1 - e) * (1 - kansai) * (1 - cmpFade) * smooth01(S.panelVis);
+  panelUniforms.uOp.value = pOp;
+  panel.visible = pOp > 0.02;
+  panel.position.copy(innerWidth / innerHeight < 0.8 ? PANEL_POS_PORTRAIT : PANEL_POS); panel.quaternion.copy(camera.quaternion); panel.updateMatrixWorld();
+  // leader from the diagram to the real section
+  const lp = panelLeader.geometry.attributes.position;
+  const corner = tmpV.set(-PANEL_W / 2 + 1.5, -PANEL_H / 2, 0).applyQuaternion(panel.quaternion).add(panel.position);
+  lp.setXYZ(0, corner.x, corner.y, corner.z); lp.setXYZ(1, 5, Y_EEL + 0.2 + 9 * e, CUT_Z); lp.needsUpdate = true;
+  panelLeader.computeLineDistances(); panelLeader.visible = pOp > 0.3;
+  panelLeader.material.opacity = 0.55 * pOp;
+  // particles, drops, mist, light
+  updateSteam(time, pTop, pBot, steamOn && e < 0.9, lift);
+  steamFill.material.opacity = (steamOn ? 0.42 : 0) * (1 - e); steamFill.position.y = 28.2 + lift;
+  updateDrops(time, dripRate, steamOn && e < 0.9, lift);
+  updateMist(time, (steamOn ? 1 : 0.0) * (1 - e * 0.6), 44 * e);
+  updateBeams(time);
+  // chopsticks and the lifted bite
+  updateChopsticks();
+  flakeUniforms.uWet.value = eelUniforms.uWet.value; flakeUniforms.uSteamed.value = eelUniforms.uSteamed.value;
+  // exploded layer diagram
+  layerX.visible = e > 0.02;
+  layerX.position.set(44, 34, 40);
+  layerX.scale.setScalar(Math.max(0.001, 1.25 * e));
+  layerParts.forEach((g, i) => { g.position.set(0, 13 - i * 9 * e, 0); g.rotation.y = -0.5 + Math.sin(time * 0.3) * 0.08; });
+  layerX.updateMatrixWorld(true);
+  // lid scale redraw is static; nothing to do per frame
+  void lastLid;
+  gradePass.uniforms.uFlash.value = 0.22 * Math.pow(S.flash, 3);
+  gradePass.uniforms.uRed.value = S.over ? 0.5 + 0.15 * Math.sin(time * 6) : 0;
+  ui.imageTag.classList.toggle('show', (S.camera === 'section' || S.camera === 'chopsticks') && S.bubble !== 'err');
+}
+
+// =====================================================================================
+// Graph (time vs centre temperature: steam and dry air) and the record (surface & centre)
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 34, r: w - 8, t: 10, b: h - 22 });
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = m => g.l + (m / DIAL_MAX) * (g.r - g.l), Y = T => g.b - ((clamp(T, 20, 100) - 20) / 80) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (let m = 0; m <= DIAL_MAX; m += 10) x.fillText(`${m}`, X(m), g.b + 12);
+  x.textAlign = 'right';
+  for (const T of [20, 60, 100]) x.fillText(`${T}`, g.l - 5, Y(T) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('分', g.r - 10, g.b + 12); x.fillText('中心温度 ℃', g.l + 4, g.t + 2);
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.55)';
+  x.beginPath(); x.moveTo(g.l, Y(SOFT_LO)); x.lineTo(g.r, Y(SOFT_LO)); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#c4c2bd'; x.textAlign = 'right'; x.fillText('やわらかくなり始めるライン', g.r - 2, Y(SOFT_LO) - 5);
+  const curve = (arr, color, width) => { x.strokeStyle = color; x.lineWidth = width; x.beginPath(); for (let j = 0; j < NSMP; j += 10) { const px = X(j / 60), py = Y(arr[j]); j ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); };
+  curve(O_H.tc, 'rgba(160,158,152,0.8)', 1.2);
+  curve(S_H.tc, '#bfe2ff', 1.9);
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, graphCanvas.width, graphCanvas.height); x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const d = S.style === 'kansai' ? 0 : S.dial;
+  const px = g.l + (d / DIAL_MAX) * (g.r - g.l);
+  x.strokeStyle = 'rgba(255,255,255,0.25)'; x.beginPath(); x.moveTo(px, g.t); x.lineTo(px, g.b); x.stroke();
+  const py = g.b - ((clamp(M.tc, 20, 100) - 20) / 80) * (g.b - g.t), po = g.b - ((clamp(M.ovenTc, 20, 100) - 20) / 80) * (g.b - g.t);
+  x.fillStyle = 'rgba(190,188,182,0.9)'; x.beginPath(); x.arc(px, po, 3, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 8, t = 6, b = h - 14;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  x.fillStyle = '#8d8b86'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('100℃', l - 3, t + 7); x.fillText('20', l - 3, b); x.textAlign = 'center';
+  for (let m = 0; m <= DIAL_MAX; m += 10) x.fillText(`${m}分`, l + (m / DIAL_MAX) * (r - l), h - 2);
+  const d = S.style === 'kansai' ? 0 : S.dial, J = Math.min(NSMP - 1, Math.round(d * 60));
+  const X = j => l + (j / 60 / DIAL_MAX) * (r - l), Y = T => b - ((clamp(T, 20, 100) - 20) / 80) * (b - t);
+  const trace = (arr, color) => { x.strokeStyle = color; x.lineWidth = 1.6; x.beginPath(); for (let j = 0; j <= J; j += 5) { j ? x.lineTo(X(j), Y(arr[j])) : x.moveTo(X(j), Y(arr[j])); } x.lineTo(X(J), Y(arr[J])); x.stroke(); x.fillStyle = color; x.beginPath(); x.arc(X(J), Y(arr[J]), 2.8, 0, 7); x.fill(); };
+  trace(S_H.tsTop, '#ffb04a'); trace(S_H.tc, '#ffffff');
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance (never over the UI or the section diagram)
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const bandAnchor = (v, u = 0.06) => panel.localToWorld(tmpV.set((u - 0.5) * PANEL_W, (v - 0.5) * PANEL_H, 0)).clone();
+const LABELS = [
+  { id: 'seiro', text: '蒸し器（蒸籠）', cls: 'key', pri: 98, mode: 'normal', anchor: () => new THREE.Vector3(-21.6, 29, 4).add(tmpV2.set(0, frameGroup.position.y, 0)) },
+  { id: 'eel', text: '白焼き', cls: 'key amber', pri: 97, mode: 'normal', anchor: () => new THREE.Vector3(-5, Y_EEL_TOP, 7).add(tmpV2.set(0, matGroup.position.y, 0)) },
+  { id: 'steam', text: '蒸気（目に見えない気体を青白い粒で表示）', cls: 'steam', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(8, 29.5, 1), when: () => S.style !== 'kansai' },
+  { id: 'mist', text: '湯気（白く見える細かい水滴）', cls: '', pri: 90, mode: 'normal', anchor: () => new THREE.Vector3(-10, 52, -8), when: () => S.style !== 'kansai' },
+  { id: 'lid', text: 'ふた（回すと蒸す時間が進む）', cls: '', pri: 93, mode: 'normal', anchor: () => new THREE.Vector3(-8, Y_LID1 + 0.2, -16) },
+  { id: 'pot', text: '湯を張った鍋', cls: '', pri: 80, mode: 'normal', anchor: () => new THREE.Vector3(-19.5, 13, 6) },
+  { id: 'lskin', text: '皮', cls: '', pri: 88, mode: 'normal', anchor: () => bandAnchor(BAND.v0 + 0.02 * (BAND.v1 - BAND.v0) / 0.2, 0.05), when: () => panel.visible && S.camera === 'section' },
+  { id: 'lfat', text: '皮下の脂', cls: '', pri: 87, mode: 'normal', anchor: () => bandAnchor(BAND.v0 + ((0.1 + 0.075) / 1.2) * (BAND.v1 - BAND.v0), 0.05), when: () => panel.visible && S.camera === 'section' },
+  { id: 'lmus', text: '身の筋の束', cls: '', pri: 86, mode: 'normal', anchor: () => bandAnchor(BAND.v0 + (0.8 / 1.2) * (BAND.v1 - BAND.v0), 0.05), when: () => panel.visible && S.camera === 'section' },
+  { id: 'kansai', text: '関西風には蒸しの工程がありません', cls: 'key', pri: 99, mode: 'normal', anchor: () => new THREE.Vector3(0, Y_LID1 + 3, -4), when: () => S.style === 'kansai' },
+  { id: 'chop', text: '箸で持ち上げた身（模型のイメージ）', cls: 'amber', pri: 95, mode: 'normal', anchor: () => FLAKES[4].getWorldPosition(new THREE.Vector3()), when: () => S.chopOn },
+  { id: 'xlid', text: 'ふた', cls: 'key', pri: 94, mode: 'x', anchor: () => new THREE.Vector3(-18, lidGroup.position.y + 1, 2) },
+  { id: 'xframe', text: '枠', cls: 'key', pri: 93, mode: 'x', anchor: () => new THREE.Vector3(-21.5, 27 + frameGroup.position.y, 3) },
+  { id: 'xmat', text: '簀の子', cls: 'key', pri: 92, mode: 'x', anchor: () => new THREE.Vector3(-17, Y_MAT1 + matGroup.position.y, 6) },
+  { id: 'xpot', text: '湯を張った鍋', cls: 'key', pri: 91, mode: 'x', anchor: () => new THREE.Vector3(-20, 12 + potGroup.position.y, 5) },
+  { id: 'xskin', text: '皮', cls: '', pri: 89, mode: 'x', anchor: () => layerParts[2].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xfat', text: '皮下の脂', cls: '', pri: 88, mode: 'x', anchor: () => layerParts[1].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xmus', text: '身の筋の束（3倍に拡大）', cls: 'amber', pri: 90, mode: 'x', anchor: () => layerParts[0].localToWorld(tmpV.set(9, 1, 0)).clone() },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag', 'compare']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function panelScreenBox() {
+  if (!panel.visible) return null;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const p = screenOf(panel.localToWorld(tmpV.set((sx * PANEL_W) / 2, (sy * PANEL_H) / 2, 0)).clone());
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+  }
+  return { x0, y0, x1, y1 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  const pb = panelScreenBox(); if (pb) placed.push(pb);
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false;
+    if (L.mode === mode && (!L.when || L.when())) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        for (const [dx, dy] of [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]]) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const fmtClock = m => { const s = Math.round(m * 60), mm = Math.floor(s / 60), ss = s % 60; return `${mm}分${String(ss).padStart(2, '0')}秒`; };
+const STATE_TEXT = ['蒸気が冷たい表面に触れています', '蒸気が水に戻り、熱を渡しています', '熱が身の中へ広がっています', '身がやわらかくなっています', '余分な脂が落ちています', '中心まで均一　やわらかく'];
+let speedLabel = '';
+function updateUI() {
+  const kansai = S.style === 'kansai', d = kansai ? 0 : S.dial;
+  ui.dval.textContent = fmtClock(d);
+  ui.tval.innerHTML = `${M.tc.toFixed(1)}<span class="unit">℃</span>`;
+  ui.cfill.style.width = `${clamp(cPct(M.tc), 0, 100).toFixed(1)}%`;
+  const U = clamp(M.uc, 0, 1);
+  ui.uval.innerHTML = `${Math.floor(U * 100 + 1e-6)}<span class="unit">%</span>`;
+  ui.ufill.style.width = `${(U * 100).toFixed(1)}%`;
+  ui.fval.innerHTML = `${Math.round(M.fat * 100)}<span class="unit">%</span>`;
+  ui.ffill.style.width = `${(M.fat * 100).toFixed(1)}%`;
+  if (document.activeElement !== ui.range) ui.range.value = d.toFixed(1);
+  ui.range.disabled = kansai;
+  ui.steps.forEach((li, i) => { li.classList.toggle('active', !kansai && i === S.phase); li.classList.toggle('done', !kansai && i < S.phase); });
+  ui.stepsEl.classList.toggle('err', S.over);
+  ui.counter.textContent = `経過 ${fmtClock(d)}`;
+  const st = kansai ? '関西風では蒸しません' : S.over ? '蒸しすぎ　鰻のエッセンスが出切ります' : d <= 0 ? 'ふたを回して、蒸す時間を進めてください' : STATE_TEXT[S.phase];
+  if (ui.stateText.textContent !== st) ui.stateText.textContent = st;
+  ui.stateText.classList.toggle('err', S.over);
+  ui.realnote.classList.toggle('show', S.done || S.over);
+  const sp = S.speed === 'fast' ? `早回し表示（約${FAST}倍）` : '実時間';
+  if (sp !== speedLabel) { ui.speedTag.textContent = sp; speedLabel = sp; }
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  document.querySelectorAll('[data-act=style]').forEach(b => { b.classList.toggle('on', kansai); b.textContent = kansai ? '関東風に戻す' : '関西風にする'; });
+  const ph = kansai ? 'kansai' : 'kanto';
+  if (ui.proc.dataset.s !== ph) { ui.proc.innerHTML = PROC_HTML[ph]; ui.proc.dataset.s = ph; ui.procTitle.textContent = kansai ? '工程（関西風）' : '工程（関東風）'; }
+  if (!DEMO_ACTIVE) ui.compare.classList.toggle('show', kansai);
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? '蒸しすぎ　鰻のエッセンスが出切ります<small>身の変化は模型のイメージです。時間を戻すと元に戻ります</small>' : '中心まで均一　やわらかく<small>ほぐれ度 100%（模型の値）。蒸しの工程は、実際には20〜30分位です（それ以上かかることもあります）</small>';
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const anchor = isErr ? FLAKES[4].getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(-2, 5, 0)) : new THREE.Vector3(-24, Y_LID1 + 5, 2);
+    const p = screenOf(anchor);
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const Lr = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < Lr.right + 12) x = Lr.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(Lr.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: turn the lid (dial) vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null;
+const lidPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -Y_LID1);
+function lidAngleAt(e) {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = raycaster.ray.intersectPlane(lidPlane, new THREE.Vector3());
+  return hit ? Math.atan2(hit.z, hit.x) : null;
+}
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setDialUser(m) { if (S.style === 'kansai') S.style = 'kanto'; S.auto = null; S.dial = clamp(m, 0, DIAL_MAX); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(lidPick, false).length) {
+    const a = lidAngleAt(e);
+    dragging = { a: a ?? 0, y: e.clientY, x: e.clientX, dial: S.dial };
+    controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction();
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) {
+    const a = lidAngleAt(e);
+    if (a !== null) {
+      let da = a - dragging.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      dragging.a = a;
+      setDialUser(S.dial + (da / DIAL_SPAN) * DIAL_MAX);   // clockwise (seen from above) = longer
+    }
+    return;
+  }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(lidPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setDialUser(S.dial - e.deltaY * 0.01); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setDialUser(S.dial + 0.5); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setDialUser(S.dial - 0.5); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setDialUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.act === 'style') setStyle(S.style === 'kansai' ? 'kanto' : 'kansai');
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** お手本: start from the beginning and steam until the centre is soft, then stop. */
+function tap() {
+  if (S.style === 'kansai') S.style = 'kanto';
+  S.dial = 0; S.over = false; S.done = false; S.softened = false; S.bubble = null; S.chopOn = false;
+  S.auto = { to: T_S + 0.3 };
+  stepState(0);
+}
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function setStyle(style) { S.style = style === 'kansai' ? 'kansai' : 'kanto'; S.auto = null; if (S.style === 'kansai') S.bubble = null; stepState(0); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '関東の鰻は、たれをつけて焼く前に一度蒸します'],
+  [3, 7, '蒸籠の中には、目に見えない蒸気が満ちています'],
+  [7, 12, '蒸気は身に触れた瞬間に水に戻り、大きな熱を渡します'],
+  [12, 14, '中まで熱が届いた瞬間、身がやわらかくほどけ始めます'],
+  [14, 18.5, '身がやわらかくなり、余分な脂が落ちていきます'],
+  [18.5, 23, '関東は白焼きを蒸してから焼き、関西は蒸さずに焼きます。どちらも地域の文化です'],
+  [23, 27, '蒸しすぎると、鰻のエッセンスが出切ってしまいます'],
+  [27, 30, 'だから蒸しの時間は、毎日の鰻の様子を見て決めます'],
+];
+const D_START = 3.0, D_X = 12.2, D_S = 18.7;
+function demoDial(t) {
+  if (t < D_START) return 0;
+  if (t < D_X) return ((t - D_START) / (D_X - D_START)) * (T_X + 0.01);
+  if (t < D_S) return lerp(T_X + 0.01, T_S + 0.02, (t - D_X) / (D_S - D_X));
+  if (t < 23.0) return T_S + 0.02 + 0.3 * seg(t, D_S, 22.5);
+  if (t < 23.9) return lerp(T_S + 0.32, T_F + 1.2, ease(seg(t, 23.0, 23.9)));
+  if (t < 26.0) return T_F + 1.2;
+  return lerp(T_F + 1.2, T_S + 0.6, ease(seg(t, 26.0, 26.7)));
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'inside'], [7.2, 'surface'], [10.2, 'section'], [15.2, 'inside'], [17.4, 'overview'], [23.0, 'chopsticks'], [27, 'exploded']];
+function demoCamName(t) { let i = 0; while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++; return DEMO_CAMS[i][1]; }
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'section' ? 1.5 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * 0.04;
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  S.dial = demoDial(t);
+  S.camera = demoCamName(t);
+  S.exploded = t >= 27;
+  if (t >= 23.0 && t < 27 && !S.chopOn) { S.chopOn = true; S.chopT = 23.95; }
+  if (t >= 27 && S.chopOn) S.chopOn = false;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+  M = modelAt(S.dial);
+  if (S.style === 'kansai') { M.tsTop = M.tsBot = T0; M.qTop = M.qBot = 0; }
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  const cmp = t >= 18.9 && t < 23.0;
+  cmpFade = cmp ? Math.min(1, (t - 18.9) / 0.35, (23.0 - t) / 0.3) : 0;
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+    ui.compare.style.opacity = cmp ? Math.min(1, (t - 18.9) / 0.35, (23.0 - t) / 0.3).toFixed(3) : '0';
+  }
+  ui.compare.classList.toggle('show', cmp);
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 52 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  pointUniforms.uScale.value = (h * dpr) / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  pointUniforms.uMaxPx.value = 6.5 * (h * dpr) / 1080;
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift();
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld();
+  applyScene(time);
+  updateUI(); layoutLabels(); drawGraph(); drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  const kansai = S.style === 'kansai';
+  return {
+    ready: window.__lab.ready,
+    steamTime: +(kansai ? 0 : S.dial).toFixed(3),
+    centerTemp: +M.tc.toFixed(2),
+    surfaceTemp: +M.tsTop.toFixed(2),
+    heatFluxTop: Math.round(M.qTop),
+    softness: +clamp(M.uc, 0, 1).toFixed(4),
+    softnessPct: Math.floor(clamp(M.uc, 0, 1) * 100 + 1e-6),
+    fatRemovedPct: Math.round(M.fat * 100),
+    ovenCenterTemp: +M.ovenTc.toFixed(2),
+    softened: S.softened,
+    success: S.done,
+    failure: S.over,
+    phase: S.phase,
+    phaseLabel: PHASES[S.phase],
+    style: S.style,
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    thresholds: { softenLine: SOFT_LO, centerReachesLine: +T_X.toFixed(3), softAllTheWay: +T_S.toFixed(3), overSteamed: +T_F.toFixed(3) },
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setSteamTime(m) { DEMO_ACTIVE = false; markInteraction(); setDialUser(m); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  setStyle(style) { DEMO_ACTIVE = false; markInteraction(); setStyle(style); return getState(); },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  centerTempAt: m => +modelAt(m).tc.toFixed(2),
+  ovenCenterTempAt: m => +modelAt(m).ovenTc.toFixed(2),
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  drawLid(); drawPanelText();
+  await fontsReady;
+  drawLid(); drawPanelText(); drawGraphStatic();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
