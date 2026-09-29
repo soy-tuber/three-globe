@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>なぜピーク時に提供が遅れるのか</title>
+<meta name="description" content="鰻店の焼き台を窓口とする待ち行列の模型で、席数を増やすと稼働率と待ち時間がどう変わるかを、光る注文の粒で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #07070a;
+    --ink: #f2f1ee;
+    --sub: #c4c2bd;
+    --muted: #8d8b86;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --blue: #a9d4ff;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.4vw, 64px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(22, 20, 22, 0.66), rgba(10, 9, 11, 0.56)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; font-family: var(--font); }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 34px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; background: linear-gradient(90deg, rgba(169, 212, 255, 0.25), var(--blue)); box-shadow: 0 0 16px rgba(169, 212, 255, 0.45); }
+  .meter.busy .fill { background: linear-gradient(90deg, rgba(255, 150, 130, 0.3), #ff9d8a); box-shadow: 0 0 16px rgba(255, 140, 120, 0.45); }
+  .meter.fail .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.35), var(--err)); box-shadow: 0 0 18px rgba(255, 84, 72, 0.6); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th.flash { border-left-color: #fff; filter: drop-shadow(0 0 6px #fff); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .th-label.l { right: 5px; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.ok { color: #dcecff; border-color: rgba(169, 212, 255, 0.8); }
+  .tag.busy { color: #ffd8cf; border-color: rgba(255, 157, 138, 0.85); }
+  .tag.fail { color: #ffd6d2; border-color: var(--err); background: rgba(255, 84, 72, 0.14); }
+  #wval.fail { color: #ffb3aa; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #stateText { line-height: 1.5; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .grills, .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; align-items: center; }
+  .grills .k, .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 620px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(560px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 5, 7, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 7, 9, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble.busy { border-color: rgba(255, 190, 176, 0.9); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; white-space: normal; max-width: 30em; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 7, 9, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.blue { border-color: rgba(169, 212, 255, 0.85); color: #e6f3ff; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.82); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 21px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 14px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #bubble small { max-width: calc(100vw - 80px); }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="上から見下ろした鰻店の模型。客席、焼き台、流れる注文の粒の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>なぜピーク時に提供が遅れるのか</h1>
+  <p class="lead">焼き台がいつも埋まっている店は、繁盛しているように見えます。でも余裕がなくなると、待ち時間は少しずつではなく一気に伸びます。席を増やして、その境目を見てください。</p>
+</header>
+<div id="imageTag">厨房の配置は一般的な例をもとにしたイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">ピーク再生</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">席数</span><span class="big-num" id="sval">30<span class="unit">席</span></span></div>
+  <div class="row"><span class="k">1時間あたりの注文数（模型の値）</span><span class="mid-num" id="lval">12<span class="unit">件</span></span></div>
+  <div class="row"><span class="k">焼き台の数</span><span class="mid-num" id="gval">4<span class="unit">台</span></span></div>
+  <div class="meter" id="rmeter">
+    <div class="fill"></div>
+    <div class="th" id="thLine"><span class="th-label l">待ちが急に伸び始める目安（模型の値）</span></div>
+    <div class="ticks"><span style="left:0%">0</span><span style="left:50%">50</span><span style="left:100%">100%</span></div>
+  </div>
+  <div class="row"><span class="k">焼き台の稼働率</span><span class="big-num" id="rval">55<span class="unit">%</span></span></div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">平均の待ち時間（式の値）</span></div>
+  <div class="row" style="margin-top: 6px"><span class="tag ok" id="stateTag">余裕あり</span><span class="big-num" id="wval">1<span class="unit">分</span></span></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">稼働率と平均の待ち時間（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">稼働率が100%に近づくほど、待ち時間は際限なく伸びます</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">注文の流れ（印のついた注文）</span><span class="k" id="speedTag">早回し表示（約540倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>来店</b><small>お客さんが席に着く</small></li>
+    <li><span class="n">②</span><b>注文</b><small>注文が厨房に届く</small></li>
+    <li><span class="n">③</span><b>待ち</b><small>焼き台の空きを待つ</small></li>
+    <li><span class="n">④</span><b>焼き</b><small>焼き台で焼く</small></li>
+    <li><span class="n">⑤</span><b>盛り付け</b><small>重箱に盛る</small></li>
+    <li><span class="n">⑥</span><b>提供</b><small>お客さんのもとへ届く</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">席を増やしてください</span><span id="counter">ピーク前</span></div>
+  <p id="realnote">このピークは実際には1時間です</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">時刻ごとの注文数と、待ちの列の長さ（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--blue)"></i>1時間あたりの注文数</span><span><i style="background: #ff9d8a"></i>待ちの列の長さ</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">ピーク再生</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+  </div>
+  <div class="grills">
+    <span class="k">焼き台の台数</span>
+    <button class="btn sm" data-grills="2">2台</button>
+    <button class="btn sm" data-grills="3">3台</button>
+    <button class="btn sm" data-grills="4">4台</button>
+    <button class="btn sm" data-grills="5">5台</button>
+    <button class="btn sm" data-grills="6">6台</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="kitchen">厨房</button>
+    <button class="btn sm" data-cam="grill">焼き台</button>
+    <button class="btn sm" data-cam="entrance">入口</button>
+  </div>
+  <label class="slider"><span>席が少ない</span><input type="range" id="range" min="12" max="64" step="1" value="30" aria-label="席数" /><span>多い</span></label>
+</section>
+
+<div id="notes">注文数や焼き時間は原理を示すための模型の値です。稼働率85%の線は、この模型の式から決めた目安です。厨房の配置は一般的な例をもとにしたイメージです。お客さんの動きは目で見える速さに変えた模式表示です。</div>
+<div id="hint">客席の端（白い取っ手）を前後にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>平衡状態（安定した状態）にある待ち行列では、系内にいる平均の人数 L（待っている人とサービス中の人の合計）は、到着率 λ（1時間あたりの平均の到着数など）と、1人あたりの平均の系内滞在時間 W の積に等しくなります（L＝λW、リトルの公式）。待っている部分だけを見ても、平均の待ち人数 L<sub>q</sub> と平均の待ち時間 W<sub>q</sub> の間に L<sub>q</sub>＝λW<sub>q</sub> が成り立ちます。この公式の証明は、ジョン・D・C・リトルが1961年に発表しました。<span class="src"><a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E3%83%AA%E3%83%88%E3%83%AB%E3%81%AE%E5%85%AC%E5%BC%8F" target="_blank" rel="noopener">日本オペレーションズ・リサーチ学会 OR事典 Wiki「リトルの公式」</a>　<a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E3%83%AA%E3%83%88%E3%83%AB,_%E3%82%B8%E3%83%A7%E3%83%B3%E3%83%BBD%E3%83%BBC" target="_blank" rel="noopener">同「リトル, ジョン・D・C」</a>　<a href="https://doi.org/10.1287/opre.9.3.383" target="_blank" rel="noopener">原論文：J. D. C. Little, "A Proof for the Queuing Formula: L = λW", Operations Research 9(3), 383–387, 1961</a></span></li>
+    <li>待ち行列の理論は、20世紀の初めに、デンマークの電話技術者アーラン（A. K. Erlang）が電話交換機の処理能力を評価するために始めました。コペンハーゲン電話会社の技師だったアーランは、1909年に待ち行列理論で最初の論文を発表し、その後、電話回線の設計に今も広く使われる公式を導きました。<span class="src"><a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E5%BE%85%E3%81%A1%E8%A1%8C%E5%88%97%E3%83%A2%E3%83%87%E3%83%AB" target="_blank" rel="noopener">日本オペレーションズ・リサーチ学会 OR事典 Wiki「待ち行列モデル」</a>　<a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E3%82%A2%E3%83%BC%E3%83%A9%E3%83%B3%2C_%E3%82%A2%E3%82%B0%E3%83%8A%E3%83%BC%E3%83%BBK" target="_blank" rel="noopener">同「アーラン, アグナー・K」</a>　<a href="https://www.rs.tus.ac.jp/miyazawa/pdf-file/OR60-miyazawa-3c.pdf" target="_blank" rel="noopener">宮沢政清「待ち行列と私の研究 ―理論研究の可能性―」オペレーションズ・リサーチ 2015年1月号</a></span></li>
+    <li>稼働率 ρ（＝λ／cμ。λ：到着率、c：窓口の数、μ：1つの窓口が単位時間に処理できる平均の数）が0に近いときは混雑はほとんどなく、1（100%）に近づくにつれて混雑がひどくなります。窓口が1つのモデル（M/M/1）では、平均の待ち時間は ρ/μ(1−ρ) で表され、ρ が1に近づくと系内の平均の人数が急激に増え、ρ が1以上では系内の人数が限りなく増え続けます。<span class="src"><a href="http://www2b.comm.eng.osaka-u.ac.jp/~takine/tmp/v3-16.pdf" target="_blank" rel="noopener">滝根哲哉「初等通信トラヒック理論」大阪大学 講義資料</a>　<a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E5%BE%85%E3%81%A1%E8%A1%8C%E5%88%97%E3%83%A2%E3%83%87%E3%83%AB" target="_blank" rel="noopener">日本オペレーションズ・リサーチ学会 OR事典 Wiki「待ち行列モデル」</a>　<a href="https://orsj-ml.org/orwiki/wiki/index.php?title=%E5%BE%85%E3%81%A1%E8%A1%8C%E5%88%97%E3%83%A2%E3%83%87%E3%83%AB_M/M/c" target="_blank" rel="noopener">同「待ち行列モデル M/M/c」</a>　<a href="http://ns1.shudo-u.ac.jp/~iyori/files_or2/or212.pdf" target="_blank" rel="noopener">広島修道大学「システム科学入門Ⅱ 第１２回資料」</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// =====================================================================================
+// Queue model: the grills are c servers of an M/M/c queue (all numbers are model values)
+// =====================================================================================
+const T_GRILL = 11;                  // min: mean time one grill needs for one order
+const ORDER_RATE = 0.5;              // orders per seat per hour at the peak (turnover held constant)
+const RHO_TH = 0.85;                 // guide line: the wait starts to jump
+const WQ_LIMIT = 30;                 // min: beyond this the wait is over the limit
+const WQ_CAP = 90;                   // min: shown value is capped; at ρ ≥ 1 the queue keeps growing
+const SEATS_MIN = 12, SEATS_MAX = 64, GRILLS_MIN = 2, GRILLS_MAX = 6;
+const FAST = 540, FAST_MIN = FAST / 60;   // time-lapse: 9 minutes of the shop per second on screen
+const PEAK_MIN = 60;
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+const mod = (a, n) => ((a % n) + n) % n;
+const hash01 = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+/** Erlang C: probability that an arriving order has to wait (c grills, offered load a = λ/μ). */
+function erlangC(c, a) {
+  if (!(a > 0)) return 0;
+  if (a >= c) return 1;
+  let term = 1, sum = 1;
+  for (let k = 1; k < c; k++) { term *= a / k; sum += term; }
+  const last = (term * (a / c)) / (1 - a / c);
+  return last / (sum + last);
+}
+const statsCache = new Map();
+/** λ, μ, ρ = λ/(cμ), Wq = C(c, λ/μ)/(cμ − λ) and the verdict for a seat count and number of grills. */
+function queueStats(seats, c) {
+  const key = seats * 10 + c;
+  let r = statsCache.get(key);
+  if (r) return r;
+  const lam = ORDER_RATE * seats;                 // orders per hour
+  const mu = 60 / T_GRILL;                        // orders per hour per grill
+  const a = lam / mu, rho = a / c;
+  const overflow = rho >= 1;
+  const C = erlangC(c, a);
+  const wq = overflow ? Infinity : (C / (c * mu - lam)) * 60;   // minutes
+  const lq = overflow ? Infinity : (lam * wq) / 60;              // Little: Lq = λ·Wq
+  const verdict = overflow || wq >= WQ_LIMIT ? 'fail' : rho >= RHO_TH ? 'busy' : 'ok';
+  r = { seats, c, lam, mu, a, rho, C, wq, lq, overflow, verdict };
+  statsCache.set(key, r);
+  return r;
+}
+/** Wq in minutes as a function of ρ for c grills (the graph). */
+const waitAtRho = (c, rho) => (rho >= 1 ? Infinity : (erlangC(c, c * rho) * T_GRILL) / (c * (1 - rho)));
+/** The largest seat count whose mean wait still rounds to 6 minutes or less. */
+function recommendedSeats(c) { let best = SEATS_MIN; for (let s = SEATS_MIN; s <= SEATS_MAX; s++) if (queueStats(s, c).wq < 6.5) best = s; return best; }
+
+// =====================================================================================
+// Discrete-event simulation of the particles (fixed seeds → deterministic).
+// For ρ < 0.96 we play a steady-state stretch of the queue for the current seats and grills;
+// changing the seats switches to the stretch of the new configuration. For ρ ≥ 0.96 the run
+// starts from the queue on screen and simply goes on (the queue keeps growing when ρ ≥ 1).
+// =====================================================================================
+const WARM = 3000, SPAN = 720, TR_LEN = 1440;
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const TRAJ = new Map();
+function getTraj(seats, c, mode, q0) {
+  const key = `${mode}:${seats}:${c}:${q0}`;
+  let T = TRAJ.get(key);
+  if (T) return T;
+  if (mode === 'ss') {
+    // choose the first seeded stretch whose time-averaged queue agrees with Little's law (Lq = λ·Wq) within 25 %
+    const want = queueStats(seats, c).lq;
+    let best = null, bestErr = Infinity;
+    for (let v = 0; v < 16; v++) {
+      const cand = simulate(seats, c, mode, q0, v);
+      let sum = 0;
+      for (let th = WARM; th < WARM + SPAN; th += 1) sum += queueAt(cand, th);
+      const err = Math.abs(sum / SPAN - want);
+      if (err < bestErr) { best = cand; bestErr = err; }
+      if (err <= 0.25 * want + 0.3) break;
+    }
+    T = best;
+  } else T = simulate(seats, c, mode, q0, 0);
+  T.key = key;
+  TRAJ.set(key, T);
+  return T;
+}
+function simulate(seats, c, mode, q0, variant) {
+  const lam = (ORDER_RATE * seats) / 60, mu = 1 / T_GRILL;       // per minute
+  const rng = mulberry32(seats * 7919 + c * 104729 + q0 * 131 + variant * 7777 + (mode === 'ss' ? 17 : 91));
+  const expo = rate => -Math.log(1 - rng() * 0.9999999) / rate;
+  const LEN = mode === 'ss' ? WARM + SPAN + 30 : TR_LEN;
+  const arr = [], st = [], en = [], gr = [];
+  const free = new Float64Array(c);
+  function addOrder(a) {
+    let g = 0;
+    for (let k = 1; k < c; k++) if (free[k] < free[g]) g = k;
+    const s = Math.max(a, free[g]), e = s + expo(mu);
+    free[g] = e; arr.push(a); st.push(s); en.push(e); gr.push(g);
+  }
+  if (mode === 'tr') {
+    for (let g = 0; g < c; g++) { const e = expo(mu); free[g] = e; arr.push(0); st.push(0); en.push(e); gr.push(g); }
+    for (let k = 0; k < q0; k++) addOrder(0);
+  }
+  for (let t = expo(lam); t < LEN; t += expo(lam)) addOrder(t);
+  const n = arr.length;
+  const A = Float64Array.from(arr), ST = Float64Array.from(st), EN = Float64Array.from(en), GR = Int8Array.from(gr);
+  const byEnd = Int32Array.from(Array.from({ length: n }, (_, i) => i).sort((i, j) => EN[i] - EN[j]));
+  const endSorted = Float64Array.from(byEnd, i => EN[i]);
+  const byGrill = Array.from({ length: c }, () => []);
+  for (let i = 0; i < n; i++) byGrill[GR[i]].push(i);
+  return { key: '', mode, seats, c, n, A, ST, EN, GR, byEnd, endSorted, byGrill: byGrill.map(l => Int32Array.from(l)), grillStarts: byGrill.map(l => Float64Array.from(l, i => ST[i])) };
+}
+const upperBound = (arr, x) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] <= x) lo = m + 1; else hi = m; } return lo; };
+const queueAt = (T, th) => upperBound(T.A, th) - upperBound(T.ST, th);
+function grillBusyAt(T, g, th) {
+  const l = T.grillStarts[g];
+  if (!l) return -1;
+  const k = upperBound(l, th) - 1;
+  if (k < 0) return -1;
+  const i = T.byGrill[g][k];
+  return T.EN[i] > th ? i : -1;
+}
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#0c0d10', 0.0011);
+const camera = new THREE.PerspectiveCamera(36, 1, 1, 5000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.12; controls.maxPolarAngle = 1.35;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.45, 0.9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uRed: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uRed; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      float v = smoothstep(0.3, 1.2, length(q));
+      c.rgb *= mix(1.0, 0.66, v);
+      c.rgb += vec3(0.22, 0.02, 0.0) * uRed * v;
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#8e8a84');
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.3, 2.2, 2.05), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.y = 3; env.add(top);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#2a2622', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.5;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 11;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const plankTex = canvasTex(1024, 1024, (x, w, h) => {
+  const n = 12, ph = h / n;
+  for (let i = 0; i < n; i++) {
+    const v = 0.86 + rnd() * 0.26;
+    x.fillStyle = `rgb(${Math.round(118 * v)},${Math.round(84 * v)},${Math.round(56 * v)})`;
+    x.fillRect(0, i * ph, w, ph);
+    for (let g = 0; g < 18; g++) {
+      x.strokeStyle = `rgba(52,32,18,${0.05 + rnd() * 0.09})`; x.lineWidth = 0.6 + rnd() * 1.2;
+      const y0 = i * ph + 3 + rnd() * (ph - 6), amp = rnd() * 2.2, f = 0.004 + rnd() * 0.01;
+      x.beginPath(); x.moveTo(0, y0); for (let xx = 0; xx <= w; xx += 32) x.lineTo(xx, y0 + Math.sin(xx * f + g) * amp); x.stroke();
+    }
+    x.fillStyle = 'rgba(30,18,10,0.6)'; x.fillRect(0, i * ph, w, 2);
+    const off = rnd() * w; x.fillRect(off, i * ph, 2, ph); x.fillRect((off + w / 2) % w, i * ph, 2, ph);
+  }
+}, { repeat: [3, 2] });
+const tileTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#2b2d31'; x.fillRect(0, 0, w, h);
+  const n = 8, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 70 + rnd() * 12; x.fillStyle = `rgb(${v},${v + 2},${v + 5})`; x.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
+}, { repeat: [10, 3] });
+const plasterTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#ece8e0'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const a = rnd() * 0.05; x.fillStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(120,110,96,${a})`; x.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); }
+}, { repeat: [4, 1] });
+const tatamiTex = canvasTex(256, 512, (x, w, h) => {
+  x.fillStyle = '#b8b07a'; x.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 3) { x.fillStyle = `rgba(${90 + rnd() * 30},${88 + rnd() * 20},${40},${0.18 + rnd() * 0.12})`; x.fillRect(0, y, w, 1); }
+  x.fillStyle = '#2b2a27'; x.fillRect(0, 0, 14, h); x.fillRect(w - 14, 0, 14, h);
+});
+const stoneTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#3a3c40'; x.fillRect(0, 0, w, h);
+  let y = 0;
+  while (y < h) { const rh = 40 + rnd() * 30; let xx = -rnd() * 60; while (xx < w) { const rw = 50 + rnd() * 70, v = 70 + rnd() * 26; x.fillStyle = `rgb(${v},${v + 1},${v + 4})`; x.fillRect(xx + 2, y + 2, rw - 4, rh - 4); xx += rw; } y += rh; }
+}, { repeat: [7, 2] });
+const tableTex = canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = '#a37a50'; x.fillRect(0, 0, w, h);
+  for (let g = 0; g < 40; g++) { x.strokeStyle = `rgba(70,44,22,${0.06 + rnd() * 0.1})`; x.lineWidth = 0.6 + rnd(); const y0 = rnd() * h; x.beginPath(); x.moveTo(0, y0); for (let xx = 0; xx <= w; xx += 16) x.lineTo(xx, y0 + Math.sin(xx * 0.03 + g) * 2); x.stroke(); }
+});
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b7bbc0'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2200; i++) { const y = rnd() * h, l = 40 + rnd() * 220, a = 0.012 + rnd() * 0.024; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y); x.stroke(); }
+}, { repeat: [2, 1] });
+const coalTex = canvasTex(256, 128, (x, w, h) => {
+  x.fillStyle = '#050302'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) { const cx = rnd() * w, cy = rnd() * h, r = 7 + rnd() * 8; x.fillStyle = `rgb(${10 + rnd() * 14},${8 + rnd() * 8},${6})`; x.beginPath(); x.ellipse(cx, cy, r, r * 0.7, rnd() * 3, 0, Math.PI * 2); x.fill(); }
+  for (let i = 0; i < 46; i++) { const r = 3 + rnd() * 6, cx = rnd() * w, cy = rnd() * h; const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, `rgba(255,${150 + rnd() * 70},${60 + rnd() * 40},1)`); g.addColorStop(0.5, 'rgba(255,90,20,0.55)'); g.addColorStop(1, 'rgba(120,20,0,0)'); x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2); }
+});
+const boardCanvas = document.createElement('canvas'); boardCanvas.width = 512; boardCanvas.height = 256;
+const boardTex = new THREE.CanvasTexture(boardCanvas); boardTex.colorSpace = THREE.SRGBColorSpace;
+
+// =====================================================================================
+// Layout of the shop (1 unit ≈ 10 cm). A general example, not a real shop.
+// =====================================================================================
+const AISLE_X = 18, PASS_Z = -24, DOOR_Z = 53;
+const GRILL_Z = -54, GRILL_X = k => -35 + 14 * k;
+const PLATE_P = new THREE.Vector3(62, 11, -41);
+const TABLE_COLS = [-30, -6, 42, 66], TABLE_ROWS = [-10, 10, 30];
+const TATAMI_X = -63, TATAMI_ZS = [-11, 5, 21, 37];
+const CROSS_Z = [-20, 0, 20, 40];
+const SEATS = [];
+TATAMI_ZS.forEach((tz, ti) => { for (const [dx, dz] of [[-3, -5.4], [3, -5.4], [-3, 5.4], [3, 5.4]]) SEATS.push({ x: TATAMI_X + dx, z: tz + dz, y: 6.4, table: ti, tatami: true }); });
+TABLE_ROWS.forEach((rz, r) => TABLE_COLS.forEach((cx, ci) => { for (const [dx, dz] of [[-3.6, -6.4], [3.6, -6.4], [-3.6, 6.4], [3.6, 6.4]]) SEATS.push({ x: cx + dx, z: rz + dz, y: 7.6, table: 4 + r * 4 + ci, tatami: false }); }));
+SEATS.forEach(s => { s.cz = CROSS_Z.reduce((b, z) => (Math.abs(z - s.z) < Math.abs(b - s.z) ? z : b), CROSS_Z[0]); });
+const EDGE_Z0 = -21, EDGE_Z1 = 49;
+const edgeZ = seats => EDGE_Z0 + ((seats - SEATS_MIN) / (SEATS_MAX - SEATS_MIN)) * (EDGE_Z1 - EDGE_Z0);
+const seatsFromZ = z => clamp(Math.round(SEATS_MIN + ((z - EDGE_Z0) / (EDGE_Z1 - EDGE_Z0)) * (SEATS_MAX - SEATS_MIN)), SEATS_MIN, SEATS_MAX);
+// seats that are occupied at the peak (a fixed pattern, for the seated dots)
+const OCCUPIED = SEATS.map((s, i) => hash01(i * 3.1 + 0.7) < 0.72);
+
+// the waiting line: in front of the grills, through the pass, down the aisle, out of the door
+const QPTS = [[4, -41], [14, -37], [18, -30], [18, PASS_Z], [18, 50], [18, 60], [40, 63.5], [74, 63.5], [82, 70], [82, 102]];
+const QCUM = [0];
+for (let i = 1; i < QPTS.length; i++) QCUM.push(QCUM[i - 1] + Math.hypot(QPTS[i][0] - QPTS[i - 1][0], QPTS[i][1] - QPTS[i - 1][1]));
+const Q_PASS = QCUM[3], Q_DOOR = QCUM[4] + 1, Q_LEN = QCUM[QCUM.length - 1];
+const K_KITCHEN = 5, K_DOOR = 13;
+/** arc position of the k-th waiting order: five in front of the grills, eight in the aisle, then outside. */
+function tokArc(k) {
+  if (k < K_KITCHEN) return (Q_PASS * k) / K_KITCHEN;
+  if (k < K_DOOR) return Q_PASS + ((Q_DOOR - Q_PASS) * (k - K_KITCHEN)) / (K_DOOR - K_KITCHEN);
+  return Q_DOOR + (k - K_DOOR) * 5.8;
+}
+const QCAP = (() => { let k = 0; while (tokArc(k + 1) <= Q_LEN) k++; return k + 1; })();
+function qPoint(s, out) {
+  s = clamp(s, 0, Q_LEN);
+  let i = 1; while (i < QCUM.length - 1 && QCUM[i] < s) i++;
+  const u = (s - QCUM[i - 1]) / Math.max(1e-6, QCUM[i] - QCUM[i - 1]);
+  out.x = lerp(QPTS[i - 1][0], QPTS[i][0], u); out.z = lerp(QPTS[i - 1][1], QPTS[i][1], u);
+  out.dx = QPTS[i][0] - QPTS[i - 1][0]; out.dz = QPTS[i][1] - QPTS[i - 1][1];
+  return out;
+}
+
+// paths of the moving particles (cached polylines)
+const pathCache = new Map();
+function makePath(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  return { pts, cum, total: Math.max(1e-6, cum[cum.length - 1]) };
+}
+function pathAt(p, u, out) {
+  const s = clamp(u, 0, 1) * p.total;
+  let i = 1; while (i < p.cum.length - 1 && p.cum[i] < s) i++;
+  const v = (s - p.cum[i - 1]) / Math.max(1e-6, p.cum[i] - p.cum[i - 1]);
+  return out.lerpVectors(p.pts[i - 1], p.pts[i], v);
+}
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+function seatApproach(s, y) {
+  return s.tatami ? [V3(AISLE_X, y, s.cz), V3(-46, y, s.cz), V3(s.x, y + 3, s.z)] : [V3(AISLE_X, y, s.cz), V3(s.x, y, s.cz), V3(s.x, y, s.z)];
+}
+function getPath(kind, a, b = 0) {
+  const key = `${kind}:${a}:${b}`;
+  let p = pathCache.get(key);
+  if (p) return p;
+  const s = SEATS[a];
+  if (kind === 'in') p = makePath([V3(AISLE_X - 3, 2.4, 104), V3(AISLE_X - 3, 2.4, 60), V3(AISLE_X, 2.4, DOOR_Z), ...seatApproach(s, 2.4), V3(s.x, s.y - 0.6, s.z)]);
+  else if (kind === 'order') p = makePath([V3(s.x, s.y + 2, s.z), V3(s.x, 10, s.cz), V3(AISLE_X, 10, s.cz), V3(AISLE_X, 10, PASS_Z), V3(15, 8, -31), V3(10, 5, -37)]);
+  else if (kind === 'out') p = makePath([V3(s.x, s.y - 0.6, s.z), ...seatApproach(s, 2.4).reverse(), V3(AISLE_X + 3, 2.4, DOOR_Z), V3(AISLE_X + 3, 2.4, 60), V3(-18, 2.4, 104)]);
+  else if (kind === 'plate') p = makePath([V3(GRILL_X(b), 12, GRILL_Z), V3(GRILL_X(b), 14, -44), PLATE_P.clone().setY(13)]);
+  else if (kind === 'serve') p = makePath([PLATE_P.clone().setY(12), V3(36, 12, -30), V3(AISLE_X, 12, PASS_Z), V3(AISLE_X, 12, s.cz), V3(s.x, 12, s.cz), V3(s.x, s.y + 2.4, s.z)]);
+  pathCache.set(key, p);
+  return p;
+}
+
+// =====================================================================================
+// Build the model
+// =====================================================================================
+const layerBase = new THREE.Group(), layerPrep = new THREE.Group(), layerGrill = new THREE.Group(), layerPlate = new THREE.Group(), layerFlow = new THREE.Group(), layerSeats = new THREE.Group();
+scene.add(layerBase, layerPrep, layerGrill, layerPlate, layerFlow, layerSeats);
+const LAYERS = [
+  { g: layerPrep, dy: 14, name: '仕込みと蒸し場' },
+  { g: layerGrill, dy: 36, name: '焼き台' },
+  { g: layerPlate, dy: 58, name: '盛り付け台' },
+  { g: layerFlow, dy: 80, name: '配膳の動線' },
+  { g: layerSeats, dy: 102, name: '客席' },
+];
+const mesh = (geo, mat, x, y, z, parent, { cast = true, receive = true } = {}) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = receive; parent.add(m); return m; };
+const bgMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'varying vec3 vP; void main(){ float g = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0); gl_FragColor = vec4(mix(vec3(0.035, 0.036, 0.042), vec3(0.11, 0.105, 0.1), pow(g, 1.6)), 1.0); }',
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), bgMat));
+const woodDark = new THREE.MeshStandardMaterial({ color: '#3b2a1e', roughness: 0.6 });
+const plasterMat = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#f3efe7', roughness: 0.9, transparent: true });
+const capMat = new THREE.MeshStandardMaterial({ color: '#2e2219', roughness: 0.55, transparent: true });
+const steelMat = new THREE.MeshStandardMaterial({ color: '#cfd3d8', map: brushedTex, metalness: 0.85, roughness: 0.34, envMapIntensity: 1.1 });
+const steelDark = new THREE.MeshStandardMaterial({ color: '#8c9097', metalness: 0.8, roughness: 0.4 });
+{
+  // model base, floors, street
+  mesh(new RoundedBoxGeometry(186, 8, 178, 3, 1.5), new THREE.MeshStandardMaterial({ color: '#1c1916', roughness: 0.7 }), 0, -4.01, 17, layerBase, { cast: false });
+  const dining = mesh(new THREE.PlaneGeometry(162, 77), new THREE.MeshStandardMaterial({ map: plankTex, color: '#ffffff', roughness: 0.62 }), 0, 0.02, 14.5, layerBase, { cast: false });
+  dining.rotation.x = -Math.PI / 2;
+  const kitchen = mesh(new THREE.PlaneGeometry(162, 39), new THREE.MeshStandardMaterial({ map: tileTex, color: '#ffffff', roughness: 0.45, metalness: 0.05 }), 0, 0.02, -43.5, layerBase, { cast: false });
+  kitchen.rotation.x = -Math.PI / 2;
+  const street = mesh(new THREE.PlaneGeometry(186, 50), new THREE.MeshStandardMaterial({ map: stoneTex, color: '#a4a29e', roughness: 0.85 }), 0, 0.02, 80.5, layerBase, { cast: false });
+  street.rotation.x = -Math.PI / 2;
+  mesh(new THREE.BoxGeometry(186, 0.8, 1.2), new THREE.MeshStandardMaterial({ color: '#57595e', roughness: 0.7 }), 0, 0.4, 56, layerBase, { cast: false });
+}
+// cut-away walls (white plaster with a dark wooden cap)
+const walls = new THREE.Group();
+layerBase.add(walls);
+function wall(x0, z0, x1, z1, h = 12) {
+  const len = Math.hypot(x1 - x0, z1 - z0), ang = Math.atan2(z1 - z0, x1 - x0);
+  const w = mesh(new THREE.BoxGeometry(len, h, 2.2), plasterMat, (x0 + x1) / 2, h / 2, (z0 + z1) / 2, walls);
+  w.rotation.y = -ang;
+  const c = mesh(new THREE.BoxGeometry(len + 0.6, 0.9, 2.8), capMat, (x0 + x1) / 2, h + 0.45, (z0 + z1) / 2, walls);
+  c.rotation.y = -ang;
+}
+wall(-81, -63, 81, -63, 14); wall(-81, -63, -81, 53); wall(81, -63, 81, 53); wall(-81, 53, 10, 53); wall(26, 53, 81, 53);
+// pass counter between the kitchen and the dining room, with an opening in line with the aisle
+{
+  for (const [x0, x1] of [[-80, 11], [25, 80]]) {
+    mesh(new THREE.BoxGeometry(x1 - x0, 9, 4), plasterMat, (x0 + x1) / 2, 4.5, PASS_Z, walls);
+    mesh(new THREE.BoxGeometry(x1 - x0 + 0.6, 0.8, 5.2), steelMat, (x0 + x1) / 2, 9.4, PASS_Z, walls);
+  }
+}
+// entrance: posts, lintel and a plain white noren (no shop name)
+const noren = new THREE.Group();
+{
+  for (const x of [9.2, 26.8]) mesh(new THREE.BoxGeometry(1.8, 30, 1.8), woodDark, x, 15, 54.5, layerBase);
+  mesh(new THREE.BoxGeometry(20.6, 1.8, 2.2), woodDark, 18, 29.4, 54.5, layerBase);
+  const fabric = new THREE.MeshStandardMaterial({ color: '#f5f3ee', roughness: 0.85, side: THREE.DoubleSide });
+  for (let i = 0; i < 4; i++) { const n = mesh(new THREE.PlaneGeometry(3.9, 10), fabric, 12.15 + i * 3.9 + (i > 1 ? 0.3 : 0), 23.2, 55.9, noren, { receive: false }); n.userData.i = i; }
+  layerBase.add(noren);
+}
+// kitchen: grills along the back wall
+const grillParts = [];
+{
+  mesh(new THREE.BoxGeometry(92, 11, 0.8), steelMat, 1, 5.5, -61.8, layerGrill, { cast: false });
+  const coalMats = [];
+  for (let k = 0; k < GRILLS_MAX; k++) {
+    const g = new THREE.Group();
+    g.position.set(GRILL_X(k), 0, GRILL_Z);
+    layerGrill.add(g);
+    const bodyMat = steelMat.clone();
+    mesh(new RoundedBoxGeometry(12, 8, 8, 3, 0.6), bodyMat, 0, 4, 0, g);
+    const coalMat = new THREE.MeshStandardMaterial({ color: '#0d0806', emissive: '#ffffff', emissiveMap: coalTex, emissiveIntensity: 0.9, roughness: 0.95 });
+    coalMats.push(coalMat);
+    mesh(new THREE.BoxGeometry(10, 0.6, 5.6), coalMat, 0, 8.2, 0, g, { cast: false });
+    const barMat = new THREE.MeshStandardMaterial({ color: '#4a4c50', metalness: 0.8, roughness: 0.45 });
+    for (let b = 0; b < 8; b++) mesh(new THREE.BoxGeometry(0.22, 0.22, 6.2), barMat, -4.2 + b * 1.2, 9.1, 0, g, { cast: false });
+    grillParts.push({ g, bodyMat, coalMat, barMat });
+  }
+}
+const grillLight = new THREE.PointLight('#ff9a40', 0, 90, 1.6);
+grillLight.position.set(1, 22, -50);
+layerGrill.add(grillLight);
+// plating table with lacquer boxes (重箱)
+const juMat = new THREE.MeshStandardMaterial({ color: '#141212', roughness: 0.25, metalness: 0.1 });
+const juRim = new THREE.MeshStandardMaterial({ color: '#8e2a22', roughness: 0.4 });
+{
+  mesh(new RoundedBoxGeometry(24, 7.6, 12, 3, 0.5), steelMat, 62, 3.8, -41, layerPlate);
+  for (const [x, z, n] of [[54, -44, 2], [58.5, -44, 1], [66, -38, 3], [70, -44, 2]]) {
+    for (let k = 0; k < n; k++) { mesh(new RoundedBoxGeometry(3.6, 1.5, 3.6, 2, 0.25), juMat, x, 8.4 + k * 1.55, z, layerPlate); mesh(new THREE.BoxGeometry(3.7, 0.25, 3.7), juRim, x, 8.6 + k * 1.55, z, layerPlate, { cast: false }); }
+  }
+}
+// prep and steaming corner
+const steamSprites = [];
+{
+  mesh(new RoundedBoxGeometry(24, 7.6, 11, 3, 0.5), steelMat, -64, 3.8, -55.5, layerPrep);
+  mesh(new THREE.BoxGeometry(8, 1.2, 6), steelDark, -70, 7.4, -55.5, layerPrep, { cast: false });
+  mesh(new THREE.BoxGeometry(9, 0.8, 5), new THREE.MeshStandardMaterial({ color: '#f1efe9', roughness: 0.6 }), -59, 8, -55.5, layerPrep);
+  mesh(new RoundedBoxGeometry(13, 7, 11, 3, 0.5), new THREE.MeshStandardMaterial({ color: '#3a3d42', metalness: 0.5, roughness: 0.5 }), -62, 3.5, -38, layerPrep);
+  const wood = new THREE.MeshStandardMaterial({ color: '#b08a5c', roughness: 0.7 });
+  const rim = new THREE.MeshStandardMaterial({ color: '#7a5a38', roughness: 0.7 });
+  for (let k = 0; k < 3; k++) { mesh(new THREE.CylinderGeometry(4.4, 4.4, 2.2, 28), wood, -62, 8.2 + k * 2.3, -38, layerPrep); mesh(new THREE.TorusGeometry(4.4, 0.25, 6, 28), rim, -62, 9.2 + k * 2.3, -38, layerPrep, { cast: false }).rotation.x = Math.PI / 2; }
+  mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.6, 28), rim, -62, 14.9, -38, layerPrep);
+  const sMat = new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, opacity: 0, depthWrite: false });
+  for (let i = 0; i < 6; i++) { const s = new THREE.Sprite(sMat.clone()); s.userData.ph = i / 6; layerPrep.add(s); steamSprites.push(s); }
+}
+// dining: tatami platform, low tables and cushions; wooden tables and chairs
+const seatObjs = SEATS.map(() => ({ meshes: [] }));
+const tableObjs = [];
+const liveWood = new THREE.MeshStandardMaterial({ map: tableTex, color: '#ffffff', roughness: 0.55 });
+const liveChair = new THREE.MeshStandardMaterial({ color: '#4a3526', roughness: 0.6 });
+const liveCushion = new THREE.MeshStandardMaterial({ color: '#2f3a5a', roughness: 0.85 });
+const ghostMat = new THREE.MeshStandardMaterial({ color: '#5d544b', roughness: 0.9, transparent: true, opacity: 0.2, depthWrite: false });
+{
+  const plat = mesh(new THREE.BoxGeometry(31, 4, 66), new THREE.MeshStandardMaterial({ color: '#4a3526', roughness: 0.6 }), TATAMI_X, 2, 13, layerSeats);
+  plat.castShadow = false;
+  for (let i = 0; i < 4; i++) { const t = mesh(new THREE.PlaneGeometry(29, 15.8), new THREE.MeshStandardMaterial({ map: tatamiTex, color: '#ffffff', roughness: 0.9 }), TATAMI_X, 4.02, TATAMI_ZS[i], layerSeats, { cast: false }); t.rotation.x = -Math.PI / 2; t.rotation.z = Math.PI / 2; }
+  TATAMI_ZS.forEach((tz, ti) => {
+    const top = mesh(new RoundedBoxGeometry(11, 1, 7.4, 2, 0.3), liveWood, TATAMI_X, 7.2, tz, layerSeats);
+    const leg = mesh(new THREE.BoxGeometry(9, 2.6, 5.6), liveChair, TATAMI_X, 5.3, tz, layerSeats);
+    tableObjs.push({ meshes: [top, leg], live: [liveWood, liveChair] });
+  });
+  SEATS.forEach((s, i) => {
+    if (s.tatami) {
+      const c = mesh(new RoundedBoxGeometry(4, 0.7, 4, 2, 0.3), liveCushion, s.x, 4.4, s.z + (s.z > TATAMI_ZS[s.table] ? 0.8 : -0.8), layerSeats, { cast: false });
+      seatObjs[i].meshes.push(c); seatObjs[i].live = [liveCushion];
+    } else {
+      const back = s.z > TABLE_ROWS[Math.floor((s.table - 4) / 4)] ? 1 : -1;
+      const seatM = mesh(new RoundedBoxGeometry(4.2, 0.8, 4.2, 2, 0.3), liveChair, s.x, 4.3, s.z + back * 0.6, layerSeats);
+      const backM = mesh(new THREE.BoxGeometry(4.2, 5, 0.7), liveChair, s.x, 6.6, s.z + back * 2.6, layerSeats);
+      const legs = mesh(new THREE.BoxGeometry(3.4, 3.9, 3.4), liveChair, s.x, 1.95, s.z + back * 0.6, layerSeats);
+      seatObjs[i].meshes.push(seatM, backM, legs); seatObjs[i].live = [liveChair, liveChair, liveChair];
+    }
+  });
+  TABLE_ROWS.forEach(rz => TABLE_COLS.forEach(cx => {
+    const top = mesh(new RoundedBoxGeometry(13.6, 1.1, 9.2, 2, 0.35), liveWood, cx, 7.4, rz, layerSeats);
+    const leg = mesh(new THREE.CylinderGeometry(0.9, 1.3, 6.9, 12), liveChair, cx, 3.45, rz, layerSeats);
+    tableObjs.push({ meshes: [top, leg], live: [liveWood, liveChair] });
+  }));
+}
+// the draggable edge of the seating area
+const edge = new THREE.Group();
+layerSeats.add(edge);
+const edgeLineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 1.15, 1.25), transparent: true, opacity: 0.55, depthWrite: false });
+{
+  mesh(new THREE.BoxGeometry(122, 0.25, 0.5), edgeLineMat, 15, 0.4, 0, edge, { cast: false, receive: false });
+  const grip = mesh(new RoundedBoxGeometry(7, 2.2, 4, 3, 0.9), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 0.35, roughness: 0.4 }), 76.5, 1.3, 0, edge);
+  for (const dx of [-1.2, 0, 1.2]) mesh(new THREE.BoxGeometry(0.3, 0.2, 2.6), new THREE.MeshBasicMaterial({ color: '#606468' }), 76.5 + dx, 2.45, 0, edge, { cast: false, receive: false });
+  grip.userData.grip = true;
+}
+const edgePick = new THREE.Mesh(new THREE.BoxGeometry(132, 18, 14), new THREE.MeshBasicMaterial({ visible: false }));
+edgePick.position.set(16, 6, 0);
+edge.add(edgePick);
+// kitchen display board (shows the mean wait from the formula)
+const board = new THREE.Group();
+{
+  mesh(new THREE.BoxGeometry(0.8, 8, 0.8), woodDark, 36, 13, PASS_Z, board);
+  mesh(new RoundedBoxGeometry(17, 8.6, 1, 2, 0.3), new THREE.MeshStandardMaterial({ color: '#111214', roughness: 0.4 }), 36, 20, PASS_Z, board);
+  const face = mesh(new THREE.PlaneGeometry(16, 8), new THREE.MeshBasicMaterial({ map: boardTex, toneMapped: false }), 36, 20, PASS_Z + 0.52, board, { cast: false, receive: false });
+  face.renderOrder = 2;
+  layerBase.add(board);
+}
+// service paths (配膳の動線): faint dashed guides on the floor
+const flowLines = new THREE.Group();
+layerFlow.add(flowLines);
+const flowMat = new THREE.LineDashedMaterial({ color: '#bfe0ff', dashSize: 2.2, gapSize: 1.6, transparent: true, opacity: 0.26, depthWrite: false });
+function flowLine(pts, y = 0.35) {
+  const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, y, z))), flowMat);
+  l.computeLineDistances(); flowLines.add(l);
+}
+flowLine([[AISLE_X, 104], [AISLE_X, PASS_Z], [AISLE_X, -30], [8, -40]]);
+for (const z of CROSS_Z) flowLine([[-46, z], [74, z]]);
+flowLine([[62, -35], [36, -30], [AISLE_X, PASS_Z]]);
+flowLine([[GRILL_X(0), -45], [GRILL_X(5), -45], [56, -41]]);
+// the lane where the waiting line forms
+const laneMat = new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 1.2, gapSize: 1.4, transparent: true, opacity: 0.22, depthWrite: false });
+const lane = new THREE.Line(new THREE.BufferGeometry().setFromPoints(QPTS.map(([x, z]) => new THREE.Vector3(x, 0.45, z))), laneMat);
+lane.computeLineDistances();
+layerFlow.add(lane);
+// light
+scene.add(new THREE.HemisphereLight('#fff4e6', '#40362e', 0.95));
+const keyLight = new THREE.DirectionalLight('#fff1dd', 2.1);
+keyLight.position.set(-90, 200, 120);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+Object.assign(keyLight.shadow.camera, { left: -130, right: 130, top: 130, bottom: -130, near: 50, far: 500 });
+keyLight.shadow.bias = -0.0004; keyLight.shadow.normalBias = 0.4; keyLight.shadow.radius = 3;
+keyLight.target.position.set(0, 0, 10);
+scene.add(keyLight, keyLight.target);
+const fill = new THREE.DirectionalLight('#cfe0ff', 0.35);
+fill.position.set(120, 80, -60);
+scene.add(fill);
+
+// Exploded view: one grill three times larger, with coals, grate and an eel fillet on skewers
+const grillX3 = new THREE.Group();
+{
+  const s = new THREE.Group();
+  mesh(new RoundedBoxGeometry(12, 8, 8, 3, 0.6), steelMat, 0, 4, 0, s);
+  mesh(new THREE.BoxGeometry(10, 0.6, 5.6), new THREE.MeshStandardMaterial({ color: '#1b0f09', emissive: '#ffffff', emissiveMap: coalTex, emissiveIntensity: 1.2, roughness: 0.9 }), 0, 8.2, 0, s, { cast: false });
+  const bar = new THREE.MeshStandardMaterial({ color: '#4a4c50', metalness: 0.8, roughness: 0.45 });
+  for (let b = 0; b < 8; b++) mesh(new THREE.BoxGeometry(0.22, 0.22, 6.2), bar, -4.2 + b * 1.2, 9.1, 0, s, { cast: false });
+  const fillet = mesh(new RoundedBoxGeometry(8, 0.5, 2.4, 2, 0.2), new THREE.MeshStandardMaterial({ color: '#b86b2a', emissive: '#ff8a1e', emissiveIntensity: 0.35, roughness: 0.4 }), 0, 9.6, 0, s);
+  fillet.castShadow = false;
+  for (const x of [-2.6, 0, 2.6]) mesh(new THREE.CylinderGeometry(0.08, 0.08, 9, 6), new THREE.MeshStandardMaterial({ color: '#d9c7a0' }), x, 9.9, 0, s, { cast: false }).rotation.x = Math.PI / 2;
+  s.scale.setScalar(3);
+  grillX3.add(s);
+  grillX3.position.set(-96, 70, 34);
+  grillX3.visible = false;
+  scene.add(grillX3);
+}
+
+// =====================================================================================
+// Glowing particles: dots (instanced), halos (points), lacquer boxes, rings, flashes
+// =====================================================================================
+const DOT_MAX = 520;
+const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshBasicMaterial({ color: '#ffffff' }), DOT_MAX);
+dots.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(DOT_MAX * 3), 3);
+dots.frustumCulled = false;
+scene.add(dots);
+const haloPos = new Float32Array(DOT_MAX * 3), haloCol = new Float32Array(DOT_MAX * 3), haloSize = new Float32Array(DOT_MAX);
+const haloGeo = new THREE.BufferGeometry();
+haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
+haloGeo.setAttribute('color', new THREE.BufferAttribute(haloCol, 3));
+haloGeo.setAttribute('size', new THREE.BufferAttribute(haloSize, 1));
+const haloUniforms = { uTex: { value: glowTex }, uScale: { value: 600 } };
+const halos = new THREE.Points(haloGeo, new THREE.ShaderMaterial({
+  uniforms: haloUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `attribute float size; attribute vec3 color; varying vec3 vC; uniform float uScale;
+    void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * uScale / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform sampler2D uTex; varying vec3 vC; void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(vC * t.a, 1.0); }`,
+}));
+halos.frustumCulled = false;
+scene.add(halos);
+const BOX_MAX = 60;
+const boxes = new THREE.InstancedMesh(new RoundedBoxGeometry(2.6, 1.2, 2.6, 2, 0.2), new THREE.MeshStandardMaterial({ color: '#171414', roughness: 0.3, emissive: '#ffffff', emissiveIntensity: 0.12 }), BOX_MAX);
+boxes.frustumCulled = false;
+scene.add(boxes);
+const seatedDots = new THREE.InstancedMesh(new THREE.SphereGeometry(1.25, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 0.64, 0.86) }), SEATS.length);
+seatedDots.frustumCulled = false;
+layerSeats.add(seatedDots);
+const trkRing = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.22, 8, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.5, 1.5), transparent: true, depthWrite: false }));
+trkRing.rotation.x = Math.PI / 2;
+scene.add(trkRing);
+const progMats = [];
+const progRings = Array.from({ length: GRILLS_MAX }, (_, k) => {
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, uniforms: { uProg: { value: 0 }, uOp: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uProg; uniform float uOp; varying vec2 vUv;
+      void main(){ vec2 p = vUv - 0.5; float r = length(p); float a = atan(p.x, p.y) / 6.2831853 + 0.5;
+        float ring = smoothstep(0.5, 0.46, r) * smoothstep(0.36, 0.4, r);
+        float on = step(a, uProg);
+        vec3 c = mix(vec3(0.35, 0.3, 0.26), vec3(1.6, 0.85, 0.3), on);
+        gl_FragColor = vec4(c, ring * uOp * (0.35 + 0.65 * on)); }`,
+  });
+  progMats.push(m);
+  const r = mesh(new THREE.PlaneGeometry(8, 8), m, GRILL_X(k), 9.6, GRILL_Z, layerGrill, { cast: false, receive: false });
+  r.rotation.x = -Math.PI / 2;
+  return r;
+});
+const flashPool = Array.from({ length: 24 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); s.visible = false; scene.add(s); return s; });
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), sval: $('sval'), lval: $('lval'), gval: $('gval'), rval: $('rval'), wval: $('wval'), stateTag: $('stateTag'),
+  rmeter: $('rmeter'), rfill: document.querySelector('#rmeter .fill'), thLine: $('thLine'),
+  steps: [...document.querySelectorAll('#steps li')], counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'),
+};
+ui.thLine.style.left = `${RHO_TH * 100}%`;
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+const CUST_T = 1.3, ORDER_T = 0.9, LEAVE_T = 1.3, LA_S = CUST_T + ORDER_T;     // display seconds
+const DONE_A = 0.5, DONE_B = 0.4, DONE_C = 1.1, DONE_D = 0.45, DONE_T = DONE_A + DONE_B + DONE_C + DONE_D, FLASH_T = 0.4;
+function freshState(seats = 24, grills = 4) {
+  return {
+    seats, grills, tau: 0, t: 0, speed: 'fast', spdPrev: 0,
+    traj: null, theta: 0, arrCur: 0, doneCur: 0,
+    qv: 0, qTarget: 0, tok: [], qTint: 0,
+    gOrder: [-1, -1, -1, -1, -1, -1], gGlow: [0, 0, 0, 0, 0, 0],
+    anims: [], animId: 0, trk: null, trkNext: 0, phase: -1,
+    peak: { on: false, el: 0, ended: false }, peakUsed: false,
+    thrArmed: true, thrFlash: 0, verdict: 'ok', failT: -1,
+    exploded: false, explode: 0, camera: 'overview',
+    events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0,
+  };
+}
+let S = freshState();
+const trajOf = tr => getTraj(tr.seats, tr.grills, tr.mode, tr.q0);
+// where each configuration starts in its stretch; the demo's four configurations start at busy-enough moments
+const PHASE_OVERRIDE = { '30:4': 484, '33:4': 250, '39:4': 631, '41:4': 182 };
+const phaseOverride = (seats, c) => (DEMO_ACTIVE ? PHASE_OVERRIDE[`${seats}:${c}`] : undefined);
+const phaseOffset = (seats, c) => phaseOverride(seats, c) ?? (seats * 37 + c * 101) % SPAN;
+function thetaOf(tau) { const tr = S.traj; return tr.mode === 'ss' ? WARM + mod(tau + tr.off, SPAN) : Math.min(TR_LEN, tau - tr.tSwitch); }
+/** τ-window → windows in the trajectory's own time (steady stretches wrap around). */
+function thetaWindows(ta, tb) {
+  if (tb <= ta) return [];
+  const tr = S.traj;
+  if (tr.mode === 'tr') return [[ta - tr.tSwitch, Math.min(TR_LEN, tb - tr.tSwitch)]];
+  if (tb - ta >= SPAN) return [[WARM, WARM + SPAN]];
+  const a = WARM + mod(ta + tr.off, SPAN), b = a + (tb - ta);
+  return b <= WARM + SPAN ? [[a, b]] : [[a, WARM + SPAN], [WARM, b - SPAN]];
+}
+const spdOf = () => (S.speed === 'fast' ? FAST_MIN : 1 / 60);    // shop minutes per display second
+function switchTraj() {
+  const Q = queueStats(S.seats, S.grills);
+  const mode = Q.rho >= 0.96 ? 'tr' : 'ss';
+  const q0 = mode === 'tr' ? Math.round(S.qv) : 0;
+  let off = phaseOffset(S.seats, S.grills);
+  if (mode === 'ss' && Q.verdict !== 'ok' && phaseOverride(S.seats, S.grills) === undefined) {
+    // a busy configuration starts at a moment of its stretch where the queue is at least its mean (Little's law)
+    const T = getTraj(S.seats, S.grills, 'ss', 0), lq = Q.lq, base = mod(S.tau + off, SPAN);
+    const qAt = d => queueAt(T, WARM + mod(base + d, SPAN));
+    let pick = -1, first = -1;
+    for (let d = 0; d < SPAN && pick < 0; d++) {
+      const q = qAt(d);
+      if (q < Math.ceil(lq)) continue;
+      if (first < 0) first = d;
+      if (q > 1.6 * lq + 1) continue;
+      let sum = 0; for (let k = 0; k < 30; k++) sum += qAt(d + k);
+      if (sum / 30 >= 0.8 * lq && sum / 30 <= 1.6 * lq + 1) pick = d;
+    }
+    if (pick < 0) pick = Math.max(0, first);
+    off = mod(off + pick, SPAN);
+  }
+  S.traj = { seats: S.seats, grills: S.grills, mode, q0, off, tSwitch: S.tau };
+  S.theta = thetaOf(S.tau);
+  S.arrCur = S.tau + LA_S * spdOf();
+  S.doneCur = S.tau;
+  S.trk = null;
+}
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+const seatFor = (T, i) => Math.floor(hash01(i * 1.618 + T.seats * 0.37 + T.c * 5.1) * S.seats) % S.seats;
+function spawnArrivals(T, x, y) {
+  const i0 = upperBound(T.A, x), i1 = upperBound(T.A, y);
+  for (let i = i0; i < i1; i++) {
+    if (T.mode === 'tr' && T.A[i] <= 0) continue;
+    const seat = seatFor(T, i), n = 1 + Math.floor(hash01(i * 7.7 + 3.3) * 3);
+    const id = ++S.animId;
+    S.anims.push({ k: 1, id, t0: S.t, seat, n, i, key: T.key });
+    const leave = Math.floor(hash01(i * 3.3 + 9.1) * S.seats);
+    S.anims.push({ k: 2, id: ++S.animId, t0: S.t + 0.3, seat: leave, n: 1 + Math.floor(hash01(i * 5.1) * 3) });
+    if (!S.trk && S.t >= S.trkNext) S.trk = { i, key: T.key, t0: S.t, seat, stage: 0, done: false };
+  }
+}
+function spawnCompletions(T, x, y) {
+  const j0 = upperBound(T.endSorted, x), j1 = upperBound(T.endSorted, y);
+  for (let j = j0; j < j1; j++) {
+    const i = T.byEnd[j];
+    const g = T.GR[i];
+    if (g >= S.grills) continue;
+    S.anims.push({ k: 3, id: ++S.animId, t0: S.t, grill: g, seat: seatFor(T, i), i, key: T.key });
+    S.anims.push({ k: 4, id: ++S.animId, t0: S.t, grill: g });
+  }
+}
+const animLife = a => (a.k === 1 ? LA_S : a.k === 2 ? LEAVE_T + 0.3 : a.k === 3 ? DONE_T : FLASH_T);
+function startPeak() { S.peak = { on: true, el: 0, ended: false }; S.peakUsed = true; logEvent('peak'); }
+function endPeak(Q) {
+  S.peak = { on: false, el: PEAK_MIN, ended: true };
+  if (Q.verdict === 'ok') { logEvent('done'); showBubble('ok'); sound('ok'); }
+  else { logEvent('peakEnd'); if (Q.verdict === 'busy') showBubble('busy'); }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'err' ? 3.4 : 4.2); }
+function judge(Q) {
+  const v = Q.verdict;
+  if (Q.rho >= RHO_TH && S.thrArmed) { S.thrArmed = false; S.thrFlash = 1; logEvent('threshold'); if (!S.peakUsed) startPeak(); }
+  if (Q.rho < RHO_TH - 0.04) S.thrArmed = true;
+  if (v === 'fail' && S.verdict !== 'fail') { S.failT = S.t; showBubble('err'); sound('err'); logEvent('fail'); if (!DEMO_ACTIVE) setCamera('fail'); }
+  if (v !== 'fail' && S.verdict === 'fail') { logEvent('recover'); if (S.bubble === 'err') S.bubbleUntil = Math.min(S.bubbleUntil, S.t + 0.3); if (!DEMO_ACTIVE) setCamera('overview'); }
+  if (v === 'fail' && S.bubble === 'err') S.bubbleUntil = Math.max(S.bubbleUntil, S.t + 0.4);
+  S.verdict = v;
+  // the seats go back to a sensible number a few seconds after the failure (not in the demo, which scripts it)
+  if (!DEMO_ACTIVE && v === 'fail' && S.t - S.failT > 4) { S.seats = recommendedSeats(S.grills); tapPlan = null; }
+}
+/** Advance by dt display seconds (the shop clock runs time-lapsed). quiet: no judging (pre-warm). */
+function stepState(dt, quiet = false) {
+  S.t += dt;
+  const Q = queueStats(S.seats, S.grills);
+  if (!S.traj || S.traj.seats !== S.seats || S.traj.grills !== S.grills) switchTraj();
+  const spd = spdOf();
+  if (spd !== S.spdPrev) { S.arrCur = S.tau + LA_S * spd; S.spdPrev = spd; }
+  S.tau += dt * spd;
+  const T = trajOf(S.traj);
+  const th = thetaOf(S.tau);
+  if (S.traj.mode === 'ss' && th < S.theta) S.trk = null;       // wrapped around the stretch
+  S.theta = th;
+  const aTo = S.tau + LA_S * spd;
+  if (aTo > S.arrCur) { for (const [x, y] of thetaWindows(S.arrCur, aTo)) spawnArrivals(T, x, y); S.arrCur = aTo; }
+  if (S.tau > S.doneCur) { for (const [x, y] of thetaWindows(S.doneCur, S.tau)) spawnCompletions(T, x, y); S.doneCur = S.tau; }
+  if (!quiet) {
+    if (S.peak.on) { S.peak.el += dt * spd; if (S.peak.el >= PEAK_MIN) endPeak(Q); }
+    judge(Q);
+  }
+  // the waiting line on screen follows the simulated queue (a little smoothed)
+  S.qTarget = Math.min(QCAP, queueAt(T, th));
+  const rate = S.qTarget > S.qv ? 14 : 12;
+  S.qv += clamp(S.qTarget - S.qv, -rate * dt, rate * dt);
+  const n = Math.round(S.qv);
+  while (S.tok.length > n) S.tok.shift();
+  while (S.tok.length < n) S.tok.push(tokArc(S.tok.length) + 9);
+  for (let k = 0; k < S.tok.length; k++) S.tok[k] += (tokArc(k) - S.tok[k]) * Math.min(1, dt * 6.5);
+  const tintTarget = Q.verdict === 'fail' ? 1 : smooth01((Q.rho - 0.8) / 0.07) * 0.7;
+  S.qTint += (tintTarget - S.qTint) * Math.min(1, dt * 3);
+  for (let g = 0; g < GRILLS_MAX; g++) {
+    S.gOrder[g] = g < S.grills ? grillBusyAt(T, g, th) : -1;
+    S.gGlow[g] = clamp(S.gGlow[g] + ((S.gOrder[g] >= 0 ? 1 : 0) - S.gGlow[g] > 0 ? dt * 8 : -dt * 6), 0, 1);
+  }
+  S.anims = S.anims.filter(a => S.t - a.t0 < animLife(a));
+  // the marked order: ①〜⑥
+  if (S.trk) {
+    const tr = S.trk, age = S.t - tr.t0;
+    if (tr.key !== T.key) S.trk = null;
+    else if (age < CUST_T) tr.stage = 0;
+    else if (age < LA_S) tr.stage = 1;
+    else if (th < T.ST[tr.i]) tr.stage = 2;
+    else if (th < T.EN[tr.i]) tr.stage = 3;
+    else {
+      const d = S.anims.find(a => a.k === 3 && a.i === tr.i && a.key === tr.key);
+      if (d) { tr.stage = S.t - d.t0 < DONE_A + DONE_B ? 4 : 5; tr.done = true; }
+      else if (tr.done || th - T.EN[tr.i] > 30) { S.trk = null; S.trkNext = S.t + 0.5; }
+    }
+  }
+  S.phase = S.trk ? S.trk.stage : -1;
+  S.thrFlash = Math.max(0, S.thrFlash - dt * 1.1);
+  S.explode += clamp((S.exploded ? 1 : 0) - S.explode, -dt * 1.2, dt * 1.2);
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, Q.lam, S.qv]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 20; }
+}
+function newSim(seats, grills, speed = 'fast') {
+  S = freshState(seats, grills);
+  S.speed = speed;
+  for (let k = 0; k < 360; k++) stepState(1 / 120, true);     // start with customers already on the move
+  S.anims.forEach(a => (a.t0 -= S.t));
+  if (S.trk) S.trk.t0 -= S.t;
+  S.trkNext = 0; S.t = 0; S.hist = []; S.histNext = 0; S.events = [];
+  S.qv = S.qTarget; S.tok = Array.from({ length: Math.round(S.qv) }, (_, k) => tokArc(k));
+  S.verdict = queueStats(seats, grills).verdict;
+  S.thrArmed = queueStats(seats, grills).rho < RHO_TH;
+}
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14, type = 'sine') {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') { tone(2093, t0, 1.0, 0.16); tone(5230, t0, 0.35, 0.04); }
+  else { tone(150, t0, 0.12, 0.1, 'square'); tone(150, t0 + 0.2, 0.45, 0.1, 'square'); }
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-18, 238, 116], tgt: [4, 0, -17] },
+  kitchen: { pos: [26, 146, 58], tgt: [12, 0, -30] },
+  grill: { pos: [8, 110, 26], tgt: [6, 4, -42] },
+  dining: { pos: [34, 186, 128], tgt: [4, 0, 0] },
+  entrance: { pos: [92, 120, 176], tgt: [38, 0, 50] },
+  fail: { pos: [56, 196, 200], tgt: [28, 0, 26] },
+  exploded: { pos: [-128, 132, 222], tgt: [0, 60, -6] },
+};
+const CAMS_PORTRAIT = {
+  overview: { pos: [0, 380, 250], tgt: [4, 0, 2] },
+  kitchen: { pos: [18, 220, 100], tgt: [10, 0, -32] },
+  grill: { pos: [4, 150, 40], tgt: [2, 4, -44] },
+  dining: { pos: [-4, 330, 230], tgt: [6, 0, 6] },
+  entrance: { pos: [60, 200, 280], tgt: [36, 0, 52] },
+  fail: { pos: [40, 360, 360], tgt: [24, 0, 30] },
+  exploded: { pos: [-260, 250, 300], tgt: [0, 44, -4] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = (innerWidth / innerHeight < 0.8 && CAMS_PORTRAIT[name]) || CAMS[name];
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const BLUE = new THREE.Color(0.62, 0.86, 1.45), SEATED = new THREE.Color(0.5, 0.64, 0.86), AMBER = new THREE.Color(1.7, 0.72, 0.16);
+const WHITE = new THREE.Color(1.9, 1.9, 1.9), RED_SOFT = new THREE.Color(1.6, 0.46, 0.3), ERR = new THREE.Color(1.8, 0.16, 0.12), QBASE = new THREE.Color(0.95, 0.98, 1.1);
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpC = new THREE.Color(), qp = {};
+let nDots = 0, nBoxes = 0;
+function pushDot(x, y, z, r, col, halo = 6, haloK = 0.4) {
+  r *= 1.2;
+  if (nDots >= DOT_MAX) return;
+  tmpM.compose(tmpV2.set(x, y, z), tmpQ.identity(), tmpS.setScalar(r));
+  dots.setMatrixAt(nDots, tmpM); dots.setColorAt(nDots, col);
+  haloPos[nDots * 3] = x; haloPos[nDots * 3 + 1] = y; haloPos[nDots * 3 + 2] = z;
+  haloCol[nDots * 3] = col.r * haloK; haloCol[nDots * 3 + 1] = col.g * haloK; haloCol[nDots * 3 + 2] = col.b * haloK;
+  haloSize[nDots] = halo;
+  nDots++;
+}
+function pushBox(x, y, z, rotY) {
+  if (nBoxes >= BOX_MAX) return;
+  tmpM.compose(tmpV2.set(x, y, z), tmpQ.setFromAxisAngle(tmpS.set(0, 1, 0), rotY), tmpS.setScalar(1));
+  boxes.setMatrixAt(nBoxes++, tmpM);
+}
+let flashN = 0;
+function pushFlash(x, y, z, size, op) { if (flashN >= flashPool.length) return; const f = flashPool[flashN++]; f.visible = true; f.position.set(x, y, z); f.scale.setScalar(size); f.material.opacity = op; }
+let lastBoard = '', lastSeatsDrawn = -1, lastGrillsDrawn = -1;
+function drawBoard() {
+  const Q = queueStats(S.seats, S.grills);
+  const x = boardCanvas.getContext('2d'), w = 512, h = 256;
+  x.fillStyle = '#0b0c0e'; x.fillRect(0, 0, w, h);
+  const fail = Q.verdict === 'fail';
+  x.fillStyle = '#9ea3aa'; x.font = '500 34px "Noto Sans JP"'; x.textAlign = 'left'; x.textBaseline = 'middle';
+  x.fillText('平均の待ち時間', 28, 52);
+  x.fillStyle = fail ? '#ff6a5c' : '#f2f4f7'; x.font = '500 92px "JetBrains Mono"';
+  const w8 = Q.overflow ? '90+' : String(Math.max(0, Math.round(Q.wq)));
+  x.fillText(w8, 28, 150);
+  const mw = x.measureText(w8).width;
+  x.font = '700 40px "Noto Sans JP"'; x.fillText('分', 38 + mw, 162);
+  x.fillStyle = '#9ea3aa'; x.font = '500 30px "Noto Sans JP"'; x.fillText(`稼働率 ${Math.round(Q.rho * 100)}%`, 300, 150);
+  x.fillStyle = fail ? '#ff6a5c' : Q.verdict === 'busy' ? '#ffb3a3' : '#a9d4ff'; x.fillRect(28, 222, (w - 56) * Math.min(1, Q.rho), 8);
+  boardTex.needsUpdate = true;
+}
+function applyScene(time) {
+  const e = ease(S.explode);
+  const Q = queueStats(S.seats, S.grills);
+  // exploded layers
+  for (const L of LAYERS) L.g.position.y = L.dy * e;
+  const flowY = LAYERS[3].dy * e, grillY = LAYERS[1].dy * e, seatY = LAYERS[4].dy * e;
+  plasterMat.opacity = capMat.opacity = 1 - 0.85 * e;
+  plasterMat.depthWrite = capMat.depthWrite = e < 0.5;
+  noren.visible = e < 0.6;
+  board.visible = e < 0.6;
+  flowMat.opacity = 0.26 + 0.5 * e;
+  laneMat.opacity = 0.2 + 0.25 * clamp(S.qTint / 0.7, 0, 1);
+  laneMat.color.setRGB(1, lerp(1, 0.55, clamp(S.qTint, 0, 1)), lerp(1, 0.45, clamp(S.qTint, 0, 1)));
+  grillX3.visible = e > 0.3;
+  grillX3.scale.setScalar(Math.max(0.001, smooth01((e - 0.3) / 0.7)));
+  grillX3.rotation.y = 0.5 + Math.sin(time * 0.3) * 0.15;
+  // noren sway, steam
+  noren.children.forEach(n => (n.rotation.x = Math.sin(time * 1.3 + n.userData.i) * 0.05));
+  steamSprites.forEach(s => { const u = (time * 0.25 + s.userData.ph) % 1; s.position.set(-62 + Math.sin(u * 6 + s.userData.ph * 9) * 1.5, 15 + u * 16, -38); s.scale.setScalar(5 + u * 9); s.material.opacity = 0.07 * Math.sin(u * Math.PI); });
+  // tables and chairs: live up to the seat count, ghosted beyond it
+  if (lastSeatsDrawn !== S.seats) {
+    lastSeatsDrawn = S.seats;
+    SEATS.forEach((s, i) => seatObjs[i].meshes.forEach((m, k) => { const live = i < S.seats; m.material = live ? seatObjs[i].live[k] : ghostMat; m.castShadow = live; }));
+    tableObjs.forEach((t, ti) => { const live = SEATS.some((s, i) => s.table === ti && i < S.seats); t.meshes.forEach((m, k) => { m.material = live ? t.live[k] : ghostMat; m.castShadow = live; }); });
+    let n = 0;
+    SEATS.forEach((s, i) => { if (i < S.seats && OCCUPIED[i]) { tmpM.makeTranslation(s.x, s.y, s.z); seatedDots.setMatrixAt(n++, tmpM); } });
+    seatedDots.count = n; seatedDots.instanceMatrix.needsUpdate = true;
+  }
+  edge.position.z = edgeZ(S.seats);
+  edgeLineMat.opacity = 0.35 + 0.25 * Math.sin(time * 2.4) ** 2;
+  // grills
+  if (lastGrillsDrawn !== S.grills) {
+    lastGrillsDrawn = S.grills;
+    grillParts.forEach((p, k) => { const on = k < S.grills; p.bodyMat.color.set(on ? '#cfd3d8' : '#6b6e73'); p.barMat.color.set(on ? '#4a4c50' : '#35373a'); });
+  }
+  let busy = 0;
+  grillParts.forEach((p, k) => {
+    const on = k < S.grills;
+    p.coalMat.emissiveIntensity = on ? 1.1 + 0.9 * S.gGlow[k] + 0.15 * Math.sin(time * 5 + k) : 0.04;
+    busy += S.gGlow[k];
+  });
+  grillLight.intensity = 300 + 260 * busy;
+  // particles
+  nDots = 0; nBoxes = 0; flashN = 0;
+  const T = trajOf(S.traj);
+  const th = S.theta;
+  for (let g = 0; g < GRILLS_MAX; g++) {
+    const i = S.gOrder[g], gl = S.gGlow[g];
+    const prog = i >= 0 ? clamp((th - T.ST[i]) / Math.max(1e-6, T.EN[i] - T.ST[i]), 0, 1) : 1;
+    progMats[g].uniforms.uProg.value = prog;
+    progMats[g].uniforms.uOp.value = gl * (1 - e * 0.3);
+    if (gl > 0.02) pushDot(GRILL_X(g), 10.4 + grillY, GRILL_Z, 1.25 * gl, tmpC.copy(AMBER).multiplyScalar(0.85 + 0.2 * Math.sin(time * 6 + g)), 9, 0.45);
+  }
+  // waiting line
+  const tint = S.qTint;
+  const qc = tmpC.copy(QBASE).lerp(RED_SOFT, clamp(tint / 0.7, 0, 1));
+  if (Q.verdict === 'fail') qc.lerp(ERR, 0.6 + 0.4 * Math.sin(time * 6) ** 2);
+  const qcol = qc.clone();
+  for (let k = 0; k < S.tok.length; k++) {
+    qPoint(S.tok[k], qp);
+    const outside = S.tok[k] > Q_DOOR - 2;
+    const bob = Math.sin(time * 3 + k) * 0.25;
+    if (outside) {
+      const L = Math.hypot(qp.dx, qp.dz) || 1, nx = -qp.dz / L, nz = qp.dx / L;
+      pushDot(qp.x + nx * 1.6, 2.8 + bob + flowY, qp.z + nz * 1.6, 1.15, qcol, 6, 0.34);
+      pushDot(qp.x - nx * 1.6, 2.8 - bob + flowY, qp.z - nz * 1.6, 1.15, qcol, 6, 0.34);
+    } else pushDot(qp.x, 3.4 + bob + flowY, qp.z, 1.45, qcol, 8, 0.4);
+  }
+  // moving customers, orders and served boxes
+  for (const a of S.anims) {
+    const u = S.t - a.t0;
+    if (a.k === 1) {
+      if (u < CUST_T) {
+        const p = getPath('in', a.seat), v = ease(u / CUST_T);
+        for (let m = 0; m < a.n; m++) { pathAt(p, v - m * 0.035, tmpV); pushDot(tmpV.x + (m - (a.n - 1) / 2) * 1.2, tmpV.y + flowY, tmpV.z, 1.05, BLUE, 6, 0.28); }
+      } else {
+        const p = getPath('order', a.seat), v = ease((u - CUST_T) / ORDER_T);
+        pathAt(p, v, tmpV);
+        pushDot(tmpV.x, tmpV.y + flowY, tmpV.z, 0.95, tmpC.copy(BLUE).multiplyScalar(1.15), 8, 0.42);
+      }
+    } else if (a.k === 2) {
+      if (u < 0) continue;
+      const p = getPath('out', a.seat), v = ease(clamp(u / LEAVE_T, 0, 1));
+      for (let m = 0; m < a.n; m++) { pathAt(p, v - m * 0.03, tmpV); pushDot(tmpV.x + (m - (a.n - 1) / 2) * 1.2, tmpV.y + flowY, tmpV.z, 0.95, tmpC.copy(BLUE).multiplyScalar(0.75), 5, 0.2); }
+    } else if (a.k === 3) {
+      if (u < DONE_A) { pathAt(getPath('plate', 0, a.grill), ease(u / DONE_A), tmpV); pushDot(tmpV.x, tmpV.y + flowY, tmpV.z, 1.0, WHITE, 8, 0.4); }
+      else if (u < DONE_A + DONE_B) { tmpV.copy(PLATE_P).setY(10.4); pushBox(tmpV.x + (a.id % 3 - 1) * 2.2, tmpV.y + flowY, tmpV.z + ((a.id >> 2) % 2) * 2, 0.3 * (a.id % 5)); pushDot(tmpV.x, tmpV.y + 2 + flowY, tmpV.z, 0.6, WHITE, 7, 0.35); }
+      else if (u < DONE_A + DONE_B + DONE_C) { pathAt(getPath('serve', a.seat), ease((u - DONE_A - DONE_B) / DONE_C), tmpV); pushBox(tmpV.x, tmpV.y + flowY, tmpV.z, 0.4); pushDot(tmpV.x, tmpV.y + 1.4 + flowY, tmpV.z, 0.55, WHITE, 7, 0.32); }
+      else { const s = SEATS[a.seat], f = 1 - (u - DONE_A - DONE_B - DONE_C) / DONE_D; pushFlash(s.x, s.y + 2 + flowY, s.z, 9 * f + 3, 0.55 * f); }
+    } else if (a.k === 4) {
+      const f = 1 - u / FLASH_T;
+      pushFlash(GRILL_X(a.grill), 11 + grillY, GRILL_Z, 5 + 6 * (1 - f), 0.6 * f);
+    }
+  }
+  for (let i = flashN; i < flashPool.length; i++) flashPool[i].visible = false;
+  dots.count = nDots; dots.instanceMatrix.needsUpdate = true; if (dots.instanceColor) dots.instanceColor.needsUpdate = true;
+  haloGeo.setDrawRange(0, nDots);
+  haloGeo.attributes.position.needsUpdate = true; haloGeo.attributes.color.needsUpdate = true; haloGeo.attributes.size.needsUpdate = true;
+  boxes.count = nBoxes; boxes.instanceMatrix.needsUpdate = true;
+  // the marked order's ring
+  const ringAt = ringTarget();
+  trkRing.visible = !!ringAt && e < 0.5;
+  if (ringAt) { trkRing.position.copy(ringAt); const s = 1 + 0.12 * Math.sin(time * 5); trkRing.scale.setScalar(s); }
+  // board
+  const key = `${S.seats}:${S.grills}`;
+  if (key !== lastBoard) { lastBoard = key; drawBoard(); }
+  gradePass.uniforms.uRed.value = Q.verdict === 'fail' ? 0.5 + 0.3 * Math.sin(time * 4) : 0;
+  ui.imageTag.classList.toggle('show', S.camera === 'kitchen' || S.camera === 'grill' || S.explode > 0.3);
+}
+function ringTarget() {
+  const tr = S.trk;
+  if (!tr) return null;
+  const T = trajOf(S.traj);
+  const e = ease(S.explode), flowY = LAYERS[3].dy * e, grillY = LAYERS[1].dy * e;
+  const age = S.t - tr.t0;
+  if (tr.stage === 0) { pathAt(getPath('in', tr.seat), ease(age / CUST_T), tmpV); return tmpV.clone().setY(tmpV.y + flowY); }
+  if (tr.stage === 1) { pathAt(getPath('order', tr.seat), ease((age - CUST_T) / ORDER_T), tmpV); return tmpV.clone().setY(tmpV.y + flowY); }
+  if (tr.stage === 2) {
+    const k = clamp(tr.i - upperBound(T.ST, S.theta), 0, Math.max(0, S.tok.length - 1));
+    if (!S.tok.length) return null;
+    qPoint(S.tok[k], qp);
+    return tmpV.set(qp.x, 3.4 + flowY, qp.z).clone();
+  }
+  if (tr.stage === 3) return tmpV.set(GRILL_X(T.GR[tr.i]), 10.4 + grillY, GRILL_Z).clone();
+  const d = S.anims.find(a => a.k === 3 && a.i === tr.i && a.key === tr.key);
+  if (!d) return null;
+  const u = S.t - d.t0;
+  if (u < DONE_A) pathAt(getPath('plate', 0, d.grill), ease(u / DONE_A), tmpV);
+  else if (u < DONE_A + DONE_B) tmpV.copy(PLATE_P).setY(10.4);
+  else pathAt(getPath('serve', d.seat), ease(clamp((u - DONE_A - DONE_B) / DONE_C, 0, 1)), tmpV);
+  return tmpV.clone().setY(tmpV.y + flowY);
+}
+
+// =====================================================================================
+// Graph (utilisation → mean wait) and the record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const G_WMAX = 90;
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 34, r: w - 10, t: 14, b: h - 24 });
+let graphGrills = -1;
+function drawGraphStatic() {
+  graphGrills = S.grills;
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = r => g.l + r * (g.r - g.l), Y = m => g.b - (clamp(m, 0, G_WMAX) / G_WMAX) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (const r of [0, 0.5, 1]) x.fillText(`${r * 100}%`, X(r), g.b + 12);
+  x.textAlign = 'right';
+  for (const m of [0, 30, 60, 90]) x.fillText(`${m}`, g.l - 5, Y(m) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('稼働率', g.r - 34, g.b + 22); x.fillText('平均の待ち時間（分）', g.l + 4, g.t - 3);
+  // limit line
+  x.setLineDash([2, 4]); x.strokeStyle = 'rgba(255,84,72,0.55)';
+  x.beginPath(); x.moveTo(g.l, Y(WQ_LIMIT)); x.lineTo(g.r, Y(WQ_LIMIT)); x.stroke();
+  x.fillStyle = 'rgba(255,150,140,0.8)'; x.fillText('待ちの限界（模型の値）', g.l + 6, Y(WQ_LIMIT) - 4);
+  // 85% guide line
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.7)';
+  x.beginPath(); x.moveTo(X(RHO_TH), g.t); x.lineTo(X(RHO_TH), g.b); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#c4c2bd'; x.textAlign = 'right'; x.fillText('85%', X(RHO_TH) - 4, g.b - 6);
+  // the curve
+  const grad = x.createLinearGradient(0, g.t, 0, g.b); grad.addColorStop(0, 'rgba(255,140,120,0.28)'); grad.addColorStop(1, 'rgba(169,212,255,0.02)');
+  x.fillStyle = grad; x.beginPath(); x.moveTo(X(0), g.b);
+  let last = 0;
+  for (let r = 0; r <= 0.999; r += 0.0025) { const m = waitAtRho(S.grills, r); x.lineTo(X(r), Y(m)); last = r; if (m >= G_WMAX) break; }
+  x.lineTo(X(last), g.b); x.closePath(); x.fill();
+  x.strokeStyle = '#a9d4ff'; x.lineWidth = 1.8; x.beginPath();
+  for (let r = 0; r <= 0.999; r += 0.0025) { const m = waitAtRho(S.grills, r); r === 0 ? x.moveTo(X(r), Y(m)) : x.lineTo(X(r), Y(m)); if (m >= G_WMAX) break; }
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas) || graphGrills !== S.grills) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, graphCanvas.width, graphCanvas.height); x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const Q = queueStats(S.seats, S.grills);
+  const px = g.l + clamp(Q.rho, 0, 1) * (g.r - g.l), py = g.b - (clamp(Q.overflow ? G_WMAX : Q.wq, 0, G_WMAX) / G_WMAX) * (g.b - g.t);
+  x.fillStyle = Q.verdict === 'fail' ? '#ff5448' : Q.verdict === 'busy' ? '#ffb3a3' : '#ffffff';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 30, t = 6, b = h - 6;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  x.fillStyle = '#8d8b86'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('40件', l - 3, t + 7); x.fillText('0', l - 3, b); x.textAlign = 'left'; x.fillText('30件', r + 3, t + 7); x.fillText('0', r + 3, b);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  x.strokeStyle = '#a9d4ff'; x.lineWidth = 1.6; x.beginPath();
+  H.forEach((p, i) => { const y = b - clamp(p[1] / 40, 0, 1) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+  x.strokeStyle = '#ff9d8a'; x.beginPath();
+  H.forEach((p, i) => { const y = b - clamp(p[2] / 30, 0, 1) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const exY = i => LAYERS[i].dy * ease(S.explode);
+const LABELS = [
+  { id: 'seats', text: '客席', cls: 'key', pri: 97, mode: 'normal', anchor: () => new THREE.Vector3(-6, 9, -10) },
+  { id: 'grills', text: '焼き台', cls: 'key amber', pri: 98, mode: 'normal', anchor: () => new THREE.Vector3(GRILL_X(Math.max(0, S.grills - 1)) , 10, GRILL_Z) },
+  { id: 'orders', text: '注文の粒', cls: 'key blue', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(AISLE_X, 10, -12) },
+  { id: 'queue', text: '待ちの列', cls: '', pri: 93, mode: 'normal', anchor: () => { qPoint(S.tok[0] ?? 0, qp); return new THREE.Vector3(qp.x, 4, qp.z); }, dyn: () => (S.tok.length >= 2 ? (S.verdict === 'fail' ? '' : '待ちの列') : '') },
+  { id: 'outside', text: '入口の外まで伸びた列', cls: 'warn', pri: 99, mode: 'normal', anchor: () => { qPoint(S.tok[S.tok.length - 1] ?? 0, qp); return new THREE.Vector3(qp.x, 4, qp.z); }, dyn: () => (S.tok.length > K_DOOR + 1 ? '入口の外まで伸びた列' : '') },
+  { id: 'plate', text: '盛り付け台', cls: '', pri: 80, mode: 'normal', anchor: () => new THREE.Vector3(62, 10, -41) },
+  { id: 'board', text: '厨房の表示板', cls: '', pri: 78, mode: 'normal', anchor: () => new THREE.Vector3(36, 24.5, PASS_Z) },
+  { id: 'door', text: '入口', cls: '', pri: 84, mode: 'normal', anchor: () => new THREE.Vector3(18, 30, 54.5) },
+  { id: 'edge', text: '客席の端（ドラッグで席数を変える）', cls: '', pri: 90, mode: 'normal', anchor: () => new THREE.Vector3(76.5, 2.6, edgeZ(S.seats)) },
+  { id: 'prep', text: '仕込みと蒸し場', cls: '', pri: 60, mode: 'normal', anchor: () => new THREE.Vector3(-62, 15, -40) },
+  { id: 'tatami', text: '小上がり', cls: '', pri: 62, mode: 'normal', anchor: () => new THREE.Vector3(TATAMI_X, 8, 21) },
+  // exploded
+  { id: 'xseats', text: '客席', cls: 'key', pri: 95, mode: 'x', anchor: () => new THREE.Vector3(-6, 9 + exY(4), 10) },
+  { id: 'xflow', text: '配膳の動線', cls: 'blue', pri: 94, mode: 'x', anchor: () => new THREE.Vector3(AISLE_X, 1 + exY(3), 30) },
+  { id: 'xplate', text: '盛り付け台', cls: '', pri: 93, mode: 'x', anchor: () => new THREE.Vector3(62, 9 + exY(2), -41) },
+  { id: 'xgrill', text: '焼き台', cls: 'amber', pri: 96, mode: 'x', anchor: () => new THREE.Vector3(GRILL_X(2), 10 + exY(1), GRILL_Z) },
+  { id: 'xprep', text: '仕込みと蒸し場', cls: '', pri: 92, mode: 'x', anchor: () => new THREE.Vector3(-62, 16 + exY(0), -40) },
+  { id: 'x3', text: '焼き台1台分（3倍に拡大）', cls: 'key amber', pri: 97, mode: 'x', anchor: () => grillX3.localToWorld(new THREE.Vector3(0, 32, 0)) },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false, text = L.text;
+    if (L.dyn) { text = L.dyn(); if (L.el.textContent !== text) { L.el.textContent = text; L.size = null; } }
+    if (L.mode === mode && text) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        for (const [dx, dy] of [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]]) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const fmtWait = Q => (Q.overflow ? '90分以上' : Q.wq < 0.5 ? '1分未満' : `${Math.round(Math.min(WQ_CAP, Q.wq))}分`);
+function updateUI() {
+  const Q = queueStats(S.seats, S.grills);
+  ui.sval.innerHTML = `${S.seats}<span class="unit">席</span>`;
+  ui.lval.innerHTML = `${(Q.lam).toFixed(Q.lam % 1 ? 1 : 0)}<span class="unit">件</span>`;
+  ui.gval.innerHTML = `${S.grills}<span class="unit">台</span>`;
+  ui.rval.innerHTML = `${Math.round(Q.rho * 100)}<span class="unit">%</span>`;
+  ui.rfill.style.width = `${(Math.min(1, Q.rho) * 100).toFixed(1)}%`;
+  ui.rmeter.classList.toggle('busy', Q.verdict === 'busy');
+  ui.rmeter.classList.toggle('fail', Q.verdict === 'fail');
+  ui.thLine.classList.toggle('flash', S.thrFlash > 0.05 && Math.sin(S.t * 30) > -0.2);
+  const w = Q.overflow ? '90<span class="unit">分以上</span>' : Q.wq < 0.5 ? '1<span class="unit">分未満</span>' : `${Math.round(Math.min(WQ_CAP, Q.wq))}<span class="unit">分</span>`;
+  if (ui.wval.dataset.v !== w) { ui.wval.innerHTML = w; ui.wval.dataset.v = w; }
+  ui.wval.classList.toggle('fail', Q.verdict === 'fail');
+  const tag = Q.overflow ? '列が伸び続ける' : Q.verdict === 'fail' ? '限界を越えた' : Q.verdict === 'busy' ? '混雑' : Q.rho >= 0.6 ? '適正' : '余裕あり';
+  if (ui.stateTag.textContent !== tag) ui.stateTag.textContent = tag;
+  ui.stateTag.className = `tag ${Q.verdict === 'fail' ? 'fail' : Q.verdict === 'busy' ? 'busy' : 'ok'}`;
+  if (document.activeElement !== ui.range) ui.range.value = S.seats;
+  ui.steps.forEach((li, i) => { li.classList.toggle('active', i === S.phase); li.classList.toggle('done', S.phase >= 0 && i < S.phase); });
+  ui.counter.textContent = S.peak.on || S.peak.ended ? `ピーク 経過 ${Math.floor(Math.min(PEAK_MIN, S.peak.el))}分` : 'ピーク前';
+  ui.stateText.textContent = Q.overflow ? '列が伸び続ける状態です' : Q.verdict === 'fail' ? '待ち時間が限界を越えました' : Q.verdict === 'busy' ? '待ちの列が急に伸びています' : Q.rho >= 0.6 ? '焼き台に少し余裕があります' : '席を増やしてください';
+  ui.realnote.classList.toggle('show', S.peak.ended);
+  ui.speedTag.textContent = S.speed === 'fast' ? `早回し表示（約${FAST}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  document.querySelectorAll('[data-act=tap]').forEach(b => b.classList.toggle('on', S.peak.on));
+  document.querySelectorAll('[data-grills]').forEach(b => b.classList.toggle('on', +b.dataset.grills === S.grills));
+  const b = ui.bubble;
+  if (S.bubble) {
+    const kind = S.bubble;
+    const html = kind === 'err'
+      ? (Q.overflow ? '列が伸び続ける状態<small>稼働率が100%以上では、待ちの列は限りなく伸びます（表示は90分で頭打ち）</small>' : `平均の待ち時間 ${fmtWait(Q)}<small>焼き台が追いつかず、待ちの列が入口の外まで伸びています（模型の値）</small>`)
+      : kind === 'ok' ? `チン　平均の待ち時間 ${fmtWait(Q)}<small>焼き台に少し余裕を残すと、待ち時間は短く安定します（模型の値）</small>`
+      : `平均の待ち時間 ${fmtWait(Q)}<small>焼き台に余裕がなく、待ちの列が長くなっています（模型の値）</small>`;
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${kind}`;
+    const e = ease(S.explode);
+    const p = screenOf(new THREE.Vector3(36, 26 + e * 10, PASS_Z));
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: seat-edge drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragging = null, tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setSeatsUser(n) { S.seats = clamp(Math.round(n), SEATS_MIN, SEATS_MAX); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (S.explode < 0.2 && raycaster.intersectObject(edgePick, false).length) { dragging = true; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+});
+canvas.addEventListener('pointermove', e => {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (dragging) { const hit = raycaster.ray.intersectPlane(floorPlane, tmpV); if (hit) setSeatsUser(seatsFromZ(hit.z)); return; }
+  canvas.style.cursor = S.explode < 0.2 && raycaster.intersectObject(edgePick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setSeatsUser(S.seats + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setSeatsUser(S.seats + 1); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setSeatsUser(S.seats - 1); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setSeatsUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.grills) setGrills(+btn.dataset.grills);
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** ピーク再生: play one peak hour with the current seats and grills (time-lapsed). */
+function tap() { startPeak(); S.bubble = null; if (!DEMO_ACTIVE && S.camera !== 'overview') setCamera('overview'); stepState(0); }
+function setGrills(n) { S.grills = clamp(Math.round(n), GRILLS_MIN, GRILLS_MAX); stepState(0); }
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '鰻は注文を受けてから焼くので、焼き台が店の心臓です'],
+  [3, 7, '注文の粒は、焼き台の空きを待って順番に焼かれます'],
+  [7, 12, '席を増やすと、焼き台の稼働率が上がっていきます'],
+  [12, 14, 'この模型では、稼働率が8割を越えたあたりで、待ちの列が急に伸び始めます'],
+  [14, 18.5, '待ち時間は少しずつではなく、崖のように増えます'],
+  [18.5, 23, '焼き台に少しの余裕を残すと、待ち時間は短く安定します'],
+  [23, 27, '席を増やしすぎると、売上より先に待ち時間が増えます'],
+  [27, 30, 'だから出店では、席数と焼き台の数を一緒に決めます'],
+];
+const DEMO_SEATS0 = 30, DEMO_OK = 33, DEMO_PEAK = 39, DEMO_FAIL = 41;
+function demoSeats(t) {
+  if (t < 7) return DEMO_SEATS0;
+  if (t < 12.2) { const u = seg(t, 7, 12.2); return lerp(DEMO_SEATS0, 37.5, u * u * (1.8 - 0.8 * u)); }
+  if (t < 13.2) return lerp(37.5, DEMO_PEAK, ease(seg(t, 12.2, 13.2)));
+  if (t < 17.9) return DEMO_PEAK;
+  if (t < 18.3) return lerp(DEMO_PEAK, DEMO_OK, ease(seg(t, 17.9, 18.3)));
+  if (t < 23.2) return DEMO_OK;
+  if (t < 23.35) return lerp(DEMO_OK, DEMO_FAIL, seg(t, 23.2, 23.35));
+  if (t < 26.0) return DEMO_FAIL;
+  if (t < 26.4) return lerp(DEMO_FAIL, DEMO_OK, ease(seg(t, 26.0, 26.4)));
+  return DEMO_OK;
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'grill'], [7, 'dining'], [11.4, 'kitchen'], [18.3, 'overview'], [23, 'entrance'], [23.6, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'fail' ? 1.2 : 1.5)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * 0.05;
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  S.seats = Math.round(demoSeats(t));
+  S.exploded = t >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { newSim(DEMO_SEATS0, 4, 'fast'); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 50 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  haloUniforms.uScale.value = (h * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift(); applyScene(time);
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld(); updateUI(); layoutLabels(); drawGraph(); drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  const Q = queueStats(S.seats, S.grills);
+  return {
+    ready: window.__lab.ready,
+    seats: S.seats,
+    grills: S.grills,
+    ordersPerHour: +Q.lam.toFixed(2),
+    serviceRatePerGrill: +Q.mu.toFixed(4),
+    utilization: +Q.rho.toFixed(4),
+    utilizationPercent: Math.round(Q.rho * 100),
+    waitProbability: +Q.C.toFixed(4),
+    waitMinutes: Q.overflow ? null : +Q.wq.toFixed(3),
+    waitShown: fmtWait(Q),
+    queueMean: Q.overflow ? null : +Q.lq.toFixed(3),
+    overflow: Q.overflow,
+    verdict: Q.verdict,
+    success: Q.verdict === 'ok',
+    failure: Q.verdict === 'fail',
+    aboveGuideLine: Q.rho >= RHO_TH,
+    queueOnScreen: S.tok.length,
+    queueSimulated: S.qTarget,
+    peakRunning: S.peak.on,
+    peakMinutes: +S.peak.el.toFixed(2),
+    peakEnded: S.peak.ended,
+    phase: S.phase,
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setSeats(n) { DEMO_ACTIVE = false; markInteraction(); setSeatsUser(n); return getState(); },
+  setGrills(n) { DEMO_ACTIVE = false; markInteraction(); setGrills(n); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); return getState(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  waitMinutes: (seats, grills = 4) => { const Q = queueStats(clamp(Math.round(seats), SEATS_MIN, SEATS_MAX), clamp(Math.round(grills), GRILLS_MIN, GRILLS_MAX)); return Q.overflow ? null : +Q.wq.toFixed(3); },
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+  lookFrom(pos, tgt) { camAnim.t = 1; camera.position.set(...pos); controls.target.set(...tgt); controls.update(); },
+};
+(async function init() {
+  newSim(DEMO_SEATS0, 4, 'fast');
+  resize();
+  setCamera('overview', true);
+  await fontsReady;
+  drawGraphStatic(); drawBoard();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
