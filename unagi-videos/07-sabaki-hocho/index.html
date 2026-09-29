@@ -1,0 +1,1800 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>鰻を捌くとき、包丁の中で何が起きているか</title>
+<meta name="description" content="鰻を捌くとき、刃先に集まる圧力と、背骨に対する刃の角度が骨と身の分かれ方を決める仕組みを、刃の角度の操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #07080a;
+    --ink: #f2f1ee;
+    --sub: #c4c3bf;
+    --muted: #8c8b87;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --press: #bfe0ff;
+    --amber: #ffb04a;
+    --flesh: #f2c4b8;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.2vw, 60px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  #title.small .big-br { display: none; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(20, 22, 26, 0.68), rgba(9, 10, 12, 0.58)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 34px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; }
+  #mmeter .fill { background: linear-gradient(90deg, rgba(242, 196, 184, 0.25), var(--flesh)); box-shadow: 0 0 14px rgba(242, 196, 184, 0.4); }
+  #mmeter.bad .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.3), var(--err)); box-shadow: 0 0 16px rgba(255, 84, 72, 0.5); }
+  #ameter .fill { position: absolute; top: -3px; bottom: -3px; width: 3px; border-radius: 2px; background: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.7); }
+  #ameter .band { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, 0.16); border-left: 1px dashed rgba(255, 255, 255, 0.7); border-right: 1px dashed rgba(255, 255, 255, 0.7); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .th-label.l { right: 5px; }
+  .meter .th-label.c { left: 50%; translate: -50% 0; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; white-space: nowrap; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.bad { color: #ffd6d2; border-color: var(--err); }
+  #mval.bad { color: #ffb3ac; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps li.fail { border-color: var(--err); background: rgba(255, 84, 72, 0.12); color: #ffd6d2; }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #loupe { position: fixed; right: 396px; top: 24px; width: 236px; padding: 12px 14px 10px; }
+  #loupe canvas { width: 100%; height: 262px; display: block; }
+  #loupe .k { display: block; }
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 620px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(580px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 6, 8, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 8, 10, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 8, 10, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.press { border-color: rgba(191, 224, 255, 0.85); color: #e3f1ff; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.84); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #loupe, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #loupe, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 20px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 12px; letter-spacing: 0.02em; padding-right: 84px; white-space: nowrap; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    #loupe { display: none; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 10.5px; white-space: normal; width: calc(100vw - 24px); text-align: center; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="まな板の上の鰻と鰻裂き包丁、刃先に集まる圧力の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>鰻を捌くとき、<br class="big-br" />包丁の中で何が起きているか</h1>
+  <p class="lead">鰻を捌く職人の手元では、力ではなく角度がものを言います。刃を背骨にぴたりと沿わせると、骨に身を残さず開けます。刃の角度を変えて、その一点を探してみてください。</p>
+</header>
+<div id="imageTag">体の構造は模式図、刃の力の分布は模型による計算のイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">お手本</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">刃の角度（背骨の面に対する傾き）</span><span class="big-num" id="aval">+5.0<span class="unit">°</span></span></div>
+  <div class="meter" id="ameter">
+    <div class="band" id="aband"></div>
+    <div class="fill"></div>
+    <span class="th-label c" style="bottom: calc(100% + 5px)">背骨の面</span>
+    <div class="ticks" id="aticks"></div>
+  </div>
+  <div class="row" style="margin-top: -8px"><span class="k" style="font-size: 10.5px">← 背骨に向かう</span><span class="k" style="font-size: 10.5px">背骨から離れる →</span></div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">骨に残る身の量（模型の値）</span></div>
+  <div class="row" style="margin-top: 6px"><span class="tag" id="stateTag">身が残る</span><span class="big-num" id="mval">45<span class="unit">g</span></span></div>
+  <div class="meter" id="mmeter" style="margin-top: 16px"><div class="fill"></div><div class="th" id="thClean"><span class="th-label l">きれいに開ける範囲</span></div><div class="ticks" id="mticks"></div></div>
+  <div class="row"><span class="k">刃先の圧力（模型の値）</span><span class="mid-num" id="pval">5<span class="unit">MPa</span></span></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k" style="margin-top: 8px">刃の角度のずれと、骨に残る身の量（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">角度がわずかにずれるだけで、残る身は急に増えます</p>
+    </div>
+  </div>
+</section>
+
+<section id="loupe" class="panel">
+  <span class="k">刃先の拡大図（模型による計算のイメージ）</span>
+  <canvas id="loupeCanvas"></canvas>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">捌きの工程</span><span class="k" id="speedTag">スロー表示（約10倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>留める</b><small>目打ちで頭をまな板に留める</small></li>
+    <li><span class="n">②</span><b>入れる</b><small>背から刃を入れる</small></li>
+    <li><span class="n">③</span><b>沿わせる</b><small>背骨に沿って刃を進める</small></li>
+    <li><span class="n">④</span><b>開く</b><small>身を開く</small></li>
+    <li><span class="n">⑤</span><b>外す</b><small>背骨を外す</small></li>
+    <li><span class="n">⑥</span><b>整える</b><small>ヒレを落とす</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">刃の角度を背骨の面に合わせてください</span><span id="counter">経過 0.00秒</span></div>
+  <p id="realnote">生きた鰻を捌くのは難しく、熟練を要する仕事です</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">刃先の圧力と、刃の角度のずれ（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--press)"></i>刃先の圧力</span><span><i style="background: #d8d6d0"></i>角度のずれ</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">お手本</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="edge">刃先</button>
+    <button class="btn sm" data-cam="section">体の断面</button>
+    <button class="btn sm" data-cam="craftsman">職人の目線</button>
+  </div>
+  <label class="slider"><span>背骨へ</span><input type="range" id="range" min="-6" max="6" step="0.05" value="5" aria-label="刃の角度（背骨の面に対する傾き）" /><span>離す</span></label>
+</section>
+
+<div id="notes">力と角度は原理を示すための模型の値です。体の構造は模式図で、刃の力の分布は模型による計算のイメージです。刃の動きは目で見える速さに落とした模式表示です。</div>
+<div id="hint">包丁の柄を左右にドラッグして刃の角度を変える（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>関西の捌き方を記した記録では、目打ちで鰻の頭をまな板に留めて固定してから包丁を入れ、内臓と背骨を取り除きます。関東では背から開き、内臓と背骨を取り去ります。生きた鰻を捌くことは難しく、熟練を要するとされています。<span class="src"><a href="https://www.jstage.jst.go.jp/article/aquaculturesci1953/39/2/39_2_229/_article/-char/ja/" target="_blank" rel="noopener">水産増殖 39巻2号「関西鰻蒲焼論」</a>　<a href="https://www.jstage.jst.go.jp/article/aquaculturesci1953/39/2/39_2_228/_article/-char/ja/" target="_blank" rel="noopener">水産増殖 39巻2号「関東（江戸）風蒲焼き考-特に調理方法について」</a>　<a href="https://www.jstage.jst.go.jp/article/cookeryscience1968/12/2/12_85/_article/-char/ja/" target="_blank" rel="noopener">調理科学 12巻2号「ウナギ」</a></span></li>
+    <li>堺で作られている包丁の種類をまとめた一覧（1983年度の堺の刃物業界団体のカタログによる）には、鰻裂き包丁として大阪型・京都型・名古屋型・東京型が載っています。<span class="src"><a href="https://www.jstage.jst.go.jp/article/jshit/10/1/10_1/_article/-char/ja/" target="_blank" rel="noopener">技術と文明 10巻1号「伝統技術の現況について（5）堺庖丁」</a></span></li>
+    <li>関東では鰻を背開きに、関西では腹開きにして、骨と内臓を取ります。<span class="src"><a href="https://www.maff.go.jp/j/keikaku/syokubunka/k_ryouri/search_menu/menu/34_24_tokyo.html" target="_blank" rel="noopener">農林水産省「うちの郷土料理」鰻のかば焼き 東京都</a></span></li>
+    <li>厚生労働省の労働災害統計（令和7年、死亡または休業4日以上）では、水産食料品製造業の857人のうち「切れ・こすれ」が145人で、「転倒」「はさまれ・巻き込まれ」に次いで多い事故の型でした。同省の「職場のあんぜんサイト」には、冷凍の魚を包丁で切っていて包丁が滑り、刃が手に当たりそうになった事例が載っており、押え方や切り方の教育とともに、保護手袋を使わせることが対策に挙げられています。<span class="src"><a href="https://anzeninfo.mhlw.go.jp/user/anzen/tok/anst00.html" target="_blank" rel="noopener">厚生労働省 職場のあんぜんサイト「労働災害統計」</a>　<a href="https://anzeninfo.mhlw.go.jp/hiyari/hiy_0293.html" target="_blank" rel="noopener">同「ヒヤリ・ハット事例　冷凍鰹のカット中、包丁が滑り手に触れそうになった」</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+
+// =====================================================================================
+// Model (all values are model values; the principles: p = F / A, and the drift of the
+// blade from the backbone = distance advanced × tan Δθ, integrated along the cut)
+// =====================================================================================
+const L_CUT = 48;                         // cm, from behind the head toward the tail
+const X0 = -22, X1 = X0 + L_CUT;          // the cut along the body (x)
+const RHO = 1.05;                         // g/cm³
+const H_BAND = 1.0;                       // cm, height of the flesh band along the backbone
+const D_MAX = 1.2;                        // cm, the most flesh that can stay on the bone (half width there)
+const D0 = 0.03;                          // cm, gap between blade and backbone at the start
+const D_FAIL = 0.6;                       // cm, thicker than this: "身が骨に厚く残る"
+const TOL = 0.6;                          // deg, the band where the blade stays on the bone
+const A_MIN = -6, A_MAX = 6;              // deg, the angle scale (0 = the backbone plane)
+const R_BONE = 0.2;                       // cm, backbone radius (about 0.4 cm thick)
+const F_REST = 4, F_PUSH = 18, F_HIT = 30;   // N
+const EDGE_W = 0.004, EDGE_L = 1.5;       // cm: edge width 0.04 mm, contact length 1.5 cm
+const P_FLESH = 2, P_BONE = 80;           // MPa, what the flesh / the backbone can take
+const T_IN = 0.06, T_STROKE = 0.42, T_OPEN = 0.14, T_LIFT = 0.25, T_TRIM = 0.15;   // model seconds
+const SLOW = 10;                          // slow motion while cutting
+const V_CUT = L_CUT / T_STROKE;           // cm/s
+const DEG = Math.PI / 180;
+const tanDeg = a => Math.tan(clamp(a, -80, 80) * DEG);
+/** p = F / (edge width × contact length), in MPa */
+const pressureMPa = (F, wCm = EDGE_W, lCm = EDGE_L) => F / Math.max(1e-12, wCm * 1e-2 * lCm * 1e-2) / 1e6;
+/**
+ * Flesh left on the bone from here to the end of the cut, for a constant angle a (deg),
+ * current gap d (cm) and remaining length R (cm): ∫ min(max(d + s·tanΔθ, 0), D_MAX) ds.
+ * Toward the bone the blade rides along it inside the band; beyond the band it meets the
+ * backbone, cannot cut it (P_BONE), and everything after that point stays uncut.
+ */
+function restIntegral(d, a, R) {
+  R = Math.max(0, R); d = clamp(d, 0, D_MAX);
+  if (R <= 0) return { area: 0, hit: -1 };
+  const t = tanDeg(a);
+  if (Math.abs(t) < 1e-9) return { area: d * R, hit: -1 };
+  if (t > 0) {
+    const sCap = (D_MAX - d) / t;
+    if (sCap >= R) return { area: d * R + (t * R * R) / 2, hit: -1 };
+    return { area: d * sCap + (t * sCap * sCap) / 2 + D_MAX * (R - sCap), hit: -1 };
+  }
+  const u = -t, s0 = d / u;
+  if (s0 >= R) return { area: d * R - (u * R * R) / 2, hit: -1 };
+  if (a >= -TOL) return { area: (d * s0) / 2, hit: -1 };
+  return { area: (d * s0) / 2 + D_MAX * (R - s0), hit: s0 };
+}
+const grams = area => RHO * H_BAND * area;
+const predictLeftover = a => grams(restIntegral(D0, a, L_CUT).area);
+const M_TH = predictLeftover(TOL);        // "きれいに開ける範囲" on the meter
+const M_MAX = grams(D_MAX * L_CUT);
+const NBIN = 96;
+const PHASES = [{ label: '留める' }, { label: '入れる' }, { label: '沿わせる' }, { label: '開く' }, { label: '外す' }, { label: '整える' }];
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#0e1014', 0.0022);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 3000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.15; controls.maxPolarAngle = 1.62;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.45, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uFlash: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uFlash; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c.rgb *= mix(0.74, 1.0, 1.0 - smoothstep(0.25, 1.15, length(q)));
+      c.rgb = mix(c.rgb, vec3(1.0), uFlash * (1.0 - 0.6 * smoothstep(0.1, 0.9, length(q))));
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  // a cool, early-morning room for reflections
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#8e98a6');
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.3, 2.4, 2.6), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.y = 3; env.add(top);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.8, 2.2), side: THREE.DoubleSide }));
+  win.position.set(0, 1.2, -4); env.add(win);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#262a30', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.5;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 71;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.28, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#c3c8ce'; x.fillRect(0, 0, w, h);
+  const n = 8, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 228 + rnd() * 12; x.fillStyle = `rgb(${v},${v + 2},${v + 5})`; x.fillRect(i * s + 3, j * s + 3, s - 6, s - 6); }
+}, { repeat: [10, 5] });
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b8bcc2'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.026; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [4, 2] });
+// a well-used plain-wood board: fine grain, softened knife marks, a slight grey wear in the middle
+const woodTex = canvasTex(1024, 512, (x, w, h) => {
+  x.fillStyle = '#e7dcc8'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 220; i++) {
+    const y0 = rnd() * h, amp = 2 + rnd() * 5, a = 0.05 + rnd() * 0.09;
+    x.strokeStyle = `rgba(${150 + rnd() * 30},${120 + rnd() * 20},${80 + rnd() * 20},${a})`; x.lineWidth = 0.6 + rnd() * 1.6;
+    x.beginPath(); for (let X = 0; X <= w; X += 16) { const Y = y0 + Math.sin(X * 0.004 + i) * amp + Math.sin(X * 0.013 + i * 3) * amp * 0.3; X ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
+  }
+  const g = x.createRadialGradient(w * 0.46, h * 0.5, 30, w * 0.46, h * 0.5, w * 0.42);
+  g.addColorStop(0, 'rgba(120,112,100,0.16)'); g.addColorStop(1, 'rgba(120,112,100,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { const x0 = w * (0.18 + rnd() * 0.6), y0 = h * (0.25 + rnd() * 0.5), l = 10 + rnd() * 50, an = (rnd() - 0.5) * 0.5; x.strokeStyle = `rgba(90,80,70,${0.05 + rnd() * 0.07})`; x.lineWidth = 0.7; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + Math.cos(an) * l, y0 + Math.sin(an) * l); x.stroke(); }
+});
+// cut-resistant glove: a plain grey knit
+const knitTex = canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = '#a3aab2'; x.fillRect(0, 0, w, h);
+  for (let j = 0; j < h; j += 4) for (let i = 0; i < w; i += 6) { const v = 140 + rnd() * 40; x.fillStyle = `rgba(${v},${v + 4},${v + 10},0.55)`; x.beginPath(); x.ellipse(i + ((j / 4) % 2) * 3, j + 2, 2.6, 1.6, 0.5, 0, Math.PI * 2); x.fill(); }
+}, { repeat: [3, 3] });
+
+// =====================================================================================
+// Early-morning cutting room: tiled wall with a window glow, stainless bench, running tap
+// =====================================================================================
+const parts = {};
+{
+  const bg = new THREE.Mesh(new THREE.SphereGeometry(1500, 32, 16), new THREE.MeshBasicMaterial({ color: '#12151a', side: THREE.BackSide, fog: false }));
+  scene.add(bg);
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(420, 200), new THREE.MeshStandardMaterial({ map: tileTex, color: '#dde2e8', roughness: 0.32, envMapIntensity: 0.5 }));
+  wall.position.set(0, 60, -46); scene.add(wall);
+  // a frosted window high on the wall: cool morning light
+  const winMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `varying vec2 vUv;
+      void main(){
+        vec2 q = abs(vUv - 0.5) * 2.0;
+        float edge = smoothstep(1.0, 0.86, max(q.x, q.y));
+        float bar = step(0.985, fract(vUv.x * 3.0)) * 0.5;
+        vec3 c = mix(vec3(0.72, 0.82, 0.98), vec3(0.95, 0.97, 1.0), vUv.y) * (1.25 - bar);
+        gl_FragColor = vec4(c, edge * 0.92);
+      }`,
+  });
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(96, 34), winMat);
+  win.position.set(-40, 92, -45.5); scene.add(win);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: '#50555d', roughness: 0.55, metalness: 0.1 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -86; scene.add(floor);
+}
+const benchMat = new THREE.MeshStandardMaterial({ color: '#c9cdd2', map: brushedTex, metalness: 0.8, roughness: 0.46, envMapIntensity: 0.9 });
+{
+  const top = new THREE.Mesh(new RoundedBoxGeometry(170, 3, 84, 3, 1.0), benchMat);
+  top.position.set(0, -1.5, -4); scene.add(top);
+  const lip = new THREE.Mesh(new RoundedBoxGeometry(170, 7, 2, 2, 0.6), benchMat);
+  lip.position.set(0, 1.5, -45); scene.add(lip);
+  const legMat = new THREE.MeshStandardMaterial({ color: '#b6bac0', metalness: 0.85, roughness: 0.35 });
+  for (const [x, z] of [[-80, -40], [80, -40], [-80, 32], [80, 32]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(4, 84, 4), legMat); l.position.set(x, -45, z); scene.add(l); }
+}
+// running tap at the back right, water falling into a small basin in the bench
+const waterUniforms = { uTime: { value: 0 } };
+{
+  const chrome = new THREE.MeshStandardMaterial({ color: '#e4e7ea', metalness: 0.95, roughness: 0.14 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 18, 20), chrome); post.position.set(66, 9, -42); scene.add(post);
+  const arc = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.7, 12, 32, Math.PI), chrome); arc.rotation.y = Math.PI / 2; arc.position.set(66, 18, -37.5); scene.add(arc);
+  const basin = new THREE.Mesh(new RoundedBoxGeometry(22, 0.6, 16, 2, 0.3), new THREE.MeshStandardMaterial({ color: '#5d636b', metalness: 0.8, roughness: 0.3 }));
+  basin.position.set(66, 0.35, -33); scene.add(basin);
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.34, 17.6, 16, 1, true), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, uniforms: waterUniforms,
+    vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        vec3 N = normalize(vN), V = normalize(vV);
+        float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 1.6);
+        float streak = 0.5 + 0.5 * sin(vUv.y * 60.0 + uTime * 22.0 + sin(vUv.x * 12.0) * 2.0);
+        vec3 c = mix(vec3(0.72, 0.84, 0.96), vec3(1.0), streak * 0.5 + f * 0.5);
+        gl_FragColor = vec4(c, (0.18 + 0.5 * f) * (0.8 + 0.2 * streak));
+      }`,
+  }));
+  water.position.set(66, 9.4, -33); scene.add(water);
+  const splash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#d8ecff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+  splash.scale.set(3.2, 1.3, 1); splash.position.set(66, 1.0, -33); scene.add(splash);
+}
+// the cutting board: well-used plain wood
+const boardGroup = new THREE.Group();
+scene.add(boardGroup);
+{
+  const b = new THREE.Mesh(new RoundedBoxGeometry(76, 3, 30, 3, 0.7), new THREE.MeshStandardMaterial({ map: woodTex, color: '#a89c8a', roughness: 0.86, envMapIntensity: 0.35 }));
+  b.position.set(0, 1.5, 0); boardGroup.add(b);
+}
+parts.board = { obj: boardGroup, from: boardGroup.position.clone(), off: new THREE.Vector3(0, -6, 0) };
+scene.add(new THREE.HemisphereLight('#eef3fb', '#5f646c', 0.75));
+const keyLight = new THREE.DirectionalLight('#f4f8ff', 1.15);
+keyLight.position.set(-70, 140, 60); scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight('#c8dcff', 0.55);
+rimLight.position.set(60, 40, -90); scene.add(rimLight);
+
+// =====================================================================================
+// The eel: a semi-transparent schematic body (1 unit = 1 cm, 60 cm long) lying on its belly.
+// Two halves split by the plane of the cut; they open about the belly line (背開き).
+// =====================================================================================
+const EEL_X0 = -30, EEL_X1 = 30, BELLY_Y = 3.05, HINGE_Y = 3.1;
+function eelR(x) {             // half height
+  if (x <= EEL_X0) return 0.0;
+  if (x < -26) return 1.25 * Math.sqrt((x + 30) / 4);
+  if (x < -20) return lerp(1.25, 1.5, smooth01((x + 26) / 6));
+  if (x < 10) return 1.5 + 0.06 * Math.sin(((x + 20) / 30) * Math.PI);
+  if (x < EEL_X1) return lerp(1.5, 0.04, Math.pow((x - 10) / 20, 1.3));
+  return 0.04;
+}
+const eelS = x => eelR(x) * lerp(0.86, 0.34, smooth01((x - 8) / 22));   // half width; the tail is flattened
+const eelYc = x => BELLY_Y + eelR(x);
+const eelTop = x => BELLY_Y + 2 * eelR(x);
+const boneY = x => eelYc(x) + 0.28 * eelR(x);
+const BONE_X0 = -24, BONE_X1 = 28.5;
+
+// Opening about the belly line: behind the blade the halves part a little; in ④ they open flat.
+const openU = { uCutX: { value: X0 - 10 }, uOpenAll: { value: 0 }, uGap: { value: 0.07 }, uX0: { value: X0 }, uX1: { value: X1 }, uHingeY: { value: HINGE_Y } };
+const OPEN_GLSL = `
+uniform float uCutX; uniform float uOpenAll; uniform float uGap; uniform float uX0; uniform float uX1; uniform float uHingeY; uniform float uSide; uniform vec3 uLift;
+float openAmount(float x) {
+  float inCut = smoothstep(uX0 - 1.0, uX0 + 1.5, x) * (1.0 - smoothstep(uX1 - 1.5, uX1 + 1.0, x));
+  float behind = 1.0 - smoothstep(uCutX - 5.0, uCutX, x);
+  return inCut * max(behind * uGap, uOpenAll);
+}
+mat3 openRot(float x) { float a = uSide * openAmount(x) * 1.53; float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+vec3 openXform(vec3 p) { return openRot(p.x) * (p - vec3(0.0, uHingeY, 0.0)) + vec3(0.0, uHingeY, 0.0) + uLift; }
+`;
+/** Let a built-in material follow the opening (and an extra offset for lifting / the exploded view). */
+function patchOpen(mat, side, lift) {
+  const own = { uSide: { value: side }, uLift: { value: lift } };
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, openU, own);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\n' + OPEN_GLSL)
+      .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = openRot(position.x) * vec3(normal);\n#ifdef USE_TANGENT\nvec3 objectTangent = vec3(tangent.xyz);\n#endif')
+      .replace('#include <begin_vertex>', 'vec3 transformed = openXform(vec3(position));');
+  };
+  mat.customProgramCacheKey = () => 'open-v1';
+  return own;
+}
+function patchOpenLine(mat, side, lift) {
+  const own = { uSide: { value: side }, uLift: { value: lift } };
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, openU, own);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + OPEN_GLSL).replace('#include <begin_vertex>', 'vec3 transformed = openXform(vec3(position));');
+  };
+  mat.customProgramCacheKey = () => 'open-line-v1';
+  return own;
+}
+const eel = new THREE.Group();
+scene.add(eel);
+function gridGeo(NX, NA, fn, flip) {
+  const pos = new Float32Array((NX + 1) * (NA + 1) * 3), uv = new Float32Array((NX + 1) * (NA + 1) * 2), idx = [];
+  for (let i = 0; i <= NX; i++) for (let j = 0; j <= NA; j++) {
+    const k = i * (NA + 1) + j, p = fn(i / NX, j / NA);
+    pos.set(p, k * 3); uv.set([i / NX, j / NA], k * 2);
+  }
+  for (let i = 0; i < NX; i++) for (let j = 0; j < NA; j++) {
+    const a = i * (NA + 1) + j, b = a + NA + 1, c = a + 1, d = b + 1;
+    if (flip) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+// skin: a translucent shell, darker on the back, paler on the belly, with a cool rim
+const skinUniforms = side => ({ uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 }, uRim: { value: 0.8 } });
+function skinMaterial(side) {
+  const own = skinUniforms(side);
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: Object.assign({}, openU, own),
+    vertexShader: OPEN_GLSL + `
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){
+        vUv = uv;
+        vec3 p = openXform(position);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vN = normalize(normalMatrix * (openRot(position.x) * normal)); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform float uAlpha; uniform float uRim; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){
+        vec3 N = normalize(vN), V = normalize(vV);
+        float ndv = abs(dot(N, V));
+        float f = pow(1.0 - clamp(ndv, 0.0, 1.0), 2.2);
+        float back = smoothstep(0.02, 0.4, vUv.y);
+        vec3 base = mix(vec3(0.62, 0.63, 0.58), vec3(0.05, 0.065, 0.08), back);
+        float lit = 0.6 + 0.4 * clamp(dot(N, normalize(vec3(-0.3, 0.85, 0.45))), 0.0, 1.0);
+        vec3 c = base * lit + vec3(0.55, 0.68, 0.84) * f * uRim;
+        gl_FragColor = vec4(c, (mix(0.34, 0.58, back) + 0.32 * f) * uAlpha);
+      }`,
+  });
+  return { m, own };
+}
+const halves = [+1, -1].map(side => {
+  const geo = gridGeo(220, 18, (u, v) => {
+    const x = lerp(EEL_X0, EEL_X1, u), a = lerp(-Math.PI / 2, Math.PI / 2, v);
+    return [x, eelYc(x) + eelR(x) * Math.sin(a), side * eelS(x) * Math.cos(a)];
+  }, side < 0);
+  const { m, own } = skinMaterial(side);
+  const shell = new THREE.Mesh(geo, m); shell.renderOrder = 6; eel.add(shell);
+  // the cut face: pale flesh with W-shaped muscle bands, revealed where the blade has passed
+  const capOwn = { uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 } };
+  const capGeo = gridGeo(220, 1, (u, v) => { const x = lerp(EEL_X0, EEL_X1, u); return [x, lerp(BELLY_Y + 0.02, eelTop(x) - 0.02, v), 0]; }, side > 0);
+  const cap = new THREE.Mesh(capGeo, new THREE.ShaderMaterial({
+    transparent: true, side: THREE.DoubleSide, uniforms: Object.assign({}, openU, capOwn),
+    vertexShader: OPEN_GLSL + `varying vec3 vP; varying vec2 vUv; void main(){ vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(openXform(position), 1.0); }`,
+    fragmentShader: `uniform float uCutX; uniform float uX0; uniform float uX1; uniform float uAlpha; varying vec3 vP; varying vec2 vUv;
+      void main(){
+        float reveal = step(uX0, vP.x) * step(vP.x, min(uX1, uCutX));
+        if (reveal < 0.5) discard;
+        float yy = vUv.y - 0.55;
+        float m = fract((vP.x + 1.6 * abs(yy)) / 1.15);
+        float band = smoothstep(0.0, 0.07, m) * (1.0 - smoothstep(0.9, 1.0, m));
+        vec3 c = mix(vec3(0.74, 0.5, 0.46), vec3(0.93, 0.76, 0.7), band);
+        c = mix(c, vec3(0.86, 0.66, 0.6), smoothstep(0.35, 0.0, abs(yy - 0.08)) * 0.3);
+        gl_FragColor = vec4(c, 0.9 * uAlpha);
+      }`,
+  }));
+  cap.renderOrder = 5; eel.add(cap);
+  return { side, shell, own, cap, capOwn };
+});
+// backbone: a white rod with vertebral ridges (it stays with the near half: the cut runs on its far side)
+const boneLift = new THREE.Vector3();
+const boneMat = new THREE.MeshStandardMaterial({ color: '#efe8da', roughness: 0.45, emissive: '#ffffff', emissiveIntensity: 0 });
+patchOpen(boneMat, +1, boneLift);
+const bone = new THREE.Mesh((() => {
+  const NX = 520, NA = 12;
+  return gridGeo(NX, NA, (u, v) => {
+    const x = lerp(BONE_X0, BONE_X1, u), a = v * Math.PI * 2;
+    const ridge = Math.pow(0.5 + 0.5 * Math.cos((2 * Math.PI * x) / 0.62), 6);
+    const taper = smooth01((x - BONE_X0) / 1.5) * smooth01((BONE_X1 - x) / 3);
+    const rr = R_BONE * (0.75 + 0.35 * ridge) * (0.4 + 0.6 * taper);
+    return [x, boneY(x) + rr * Math.cos(a), rr * Math.sin(a)];
+  }, true);
+})(), boneMat);
+eel.add(bone);
+// belly bones (腹骨): thin curved lines from the backbone toward the belly, near half
+const ribMat = new THREE.LineBasicMaterial({ color: '#f3eee4', transparent: true, opacity: 0.55 });
+patchOpenLine(ribMat, +1, boneLift);
+const ribs = (() => {
+  const pts = [];
+  for (let x = -21.2; x <= -5; x += 1.15) {
+    let prev = null;
+    for (let k = 0; k <= 8; k++) {
+      const t = k / 8, xx = x + 0.9 * t, yb = boneY(x), r = eelR(xx);
+      const p = new THREE.Vector3(xx, lerp(yb - 0.15, BELLY_Y + 0.45, t), 0.12 + Math.sin(t * Math.PI * 0.55) * eelS(xx) * 0.78);
+      if (prev) pts.push(prev, p);
+      prev = p;
+    }
+  }
+  return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), ribMat);
+})();
+eel.add(ribs);
+// flesh left on the bone: a strip on the far side of the backbone, thickness = the recorded gap d(x)
+const sleeveMat = new THREE.MeshStandardMaterial({ color: '#f1b9a9', roughness: 0.55, transparent: true, opacity: 0.92, emissive: '#3a1008', emissiveIntensity: 0.25 });
+patchOpen(sleeveMat, +1, boneLift);
+const sleeveGeo = new THREE.BufferGeometry();
+{
+  const pos = new Float32Array((NBIN + 1) * 4 * 3), idx = [];
+  for (let i = 0; i < NBIN; i++) for (let f = 0; f < 4; f++) {
+    const a = i * 4 + f, b = i * 4 + ((f + 1) % 4), c = a + 4, d = b + 4;
+    idx.push(a, c, b, b, c, d);
+  }
+  sleeveGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  sleeveGeo.setIndex(idx);
+}
+const sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
+sleeve.frustumCulled = false;
+eel.add(sleeve);
+// fins (背ビレ・尻ビレ): translucent membranes with rays
+const finOwn = { uSide: { value: -1 }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 } };
+const finMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: Object.assign({}, openU, finOwn),
+  vertexShader: OPEN_GLSL + `varying vec2 vUv; varying float vX; void main(){ vUv = uv; vX = position.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(openXform(position), 1.0); }`,
+  fragmentShader: `uniform float uAlpha; varying vec2 vUv; varying float vX;
+    void main(){
+      float rim = smoothstep(0.8, 1.0, vUv.y);
+      vec3 c = mix(vec3(0.1, 0.12, 0.14), vec3(0.36, 0.42, 0.48), rim);
+      gl_FragColor = vec4(c, (0.4 - 0.22 * vUv.y + 0.2 * rim) * uAlpha);
+    }`,
+});
+const fins = new THREE.Group();
+{
+  const finH = x => 0.42 * smooth01((x + 6) / 5) * (0.35 + 0.65 * smooth01((30 - x) / 6)) + 0.1 * smooth01((x - 24) / 6);
+  const dorsal = new THREE.Mesh(gridGeo(160, 1, (u, v) => { const x = lerp(-6, 29.8, u); return [x, eelTop(x) - 0.05 + v * finH(x), 0]; }), finMat);
+  const anal = new THREE.Mesh(gridGeo(150, 1, (u, v) => { const x = lerp(-1, 29.8, u); return [x, BELLY_Y - 0.02, -eelS(x) * 0.4 - v * finH(x) * 0.9]; }), finMat);
+  fins.add(dorsal, anal);
+  eel.add(fins);
+}
+// exploded view only: the flesh as its own translucent body, and the position of the internal organs
+const fleshOwn = { uSide: { value: 1 }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 0 } };
+const fleshBody = new THREE.Mesh(gridGeo(200, 24, (u, v) => {
+  const x = lerp(-26.5, 29.5, u), a = v * Math.PI * 2, k = 0.84;
+  return [x, eelYc(x) + eelR(x) * k * Math.sin(a), eelS(x) * k * Math.cos(a)];
+}, true), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: Object.assign({}, openU, fleshOwn),
+  vertexShader: `uniform vec3 uLift; varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vP = position; vec4 mv = modelViewMatrix * vec4(position + uLift, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uAlpha; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 1.8);
+      float m = fract((vP.x + 1.6 * abs(vP.y - 4.6)) / 1.15);
+      float band = smoothstep(0.0, 0.08, m) * (1.0 - smoothstep(0.9, 1.0, m));
+      vec3 c = mix(vec3(0.84, 0.62, 0.58), vec3(0.98, 0.88, 0.84), band * 0.7 + f * 0.3);
+      gl_FragColor = vec4(c, (0.28 + 0.45 * f) * uAlpha);
+    }`,
+}));
+fleshBody.renderOrder = 7;
+eel.add(fleshBody);
+const organOwn = { uAlpha: { value: 0 }, uLift: { value: new THREE.Vector3() } };
+const organs = new THREE.Mesh(new THREE.CapsuleGeometry(0.62, 12, 8, 24), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: organOwn,
+  vertexShader: `uniform vec3 uLift; varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); mv.xyz += (viewMatrix * vec4(uLift, 0.0)).xyz; vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uAlpha; varying vec3 vN; varying vec3 vV;
+    void main(){ vec3 N = normalize(vN), V = normalize(vV); float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 1.6);
+      float dash = step(0.5, fract(gl_FragCoord.x * 0.06 + gl_FragCoord.y * 0.06));
+      vec3 c = vec3(0.86, 0.84, 0.76); gl_FragColor = vec4(c, (0.12 + 0.5 * f * (0.6 + 0.4 * dash)) * uAlpha); }`,
+}));
+organs.rotation.z = Math.PI / 2; organs.position.set(-14, 3.85, 0.1);
+organs.renderOrder = 7;
+eel.add(organs);
+
+// =====================================================================================
+// Knife (鰻裂き包丁): a short pointed blade, edge facing the direction of travel, tip down
+// in the body; the handle is what you drag. Local frame: tip at the origin, edge along +Y
+// at X = 0 (facing +X), spine at X = -BLADE_W, thickness along Z.
+// =====================================================================================
+const BLADE_LEN = 13, BLADE_W = 3.0, KNIFE_TILT = 12 * DEG;
+const knifeYaw = new THREE.Group(); scene.add(knifeYaw);
+const knifeTilt = new THREE.Group(); knifeYaw.add(knifeTilt);
+knifeTilt.rotation.z = KNIFE_TILT;
+const bladeTex = canvasTex(512, 64, (x, w, h) => {
+  x.fillStyle = '#b9bec5'; x.fillRect(0, 0, w, h);
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(235,240,246,0.9)'); g.addColorStop(0.2, 'rgba(235,240,246,0.55)'); g.addColorStop(0.24, 'rgba(90,96,104,0.35)'); g.addColorStop(0.3, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { x.strokeStyle = `rgba(${rnd() > 0.5 ? '255,255,255' : '40,44,50'},${0.03 + rnd() * 0.05})`; x.lineWidth = 0.6; const y0 = rnd() * h; x.beginPath(); x.moveTo(rnd() * w, y0); x.lineTo(rnd() * w, y0 + (rnd() - 0.5) * 2); x.stroke(); }
+});
+{
+  const width = Y => BLADE_W * Math.pow(smooth01(Y / 4.4), 0.75);
+  const thick = w => 0.012 + 0.23 * Math.pow(w, 1.25);
+  const steel = new THREE.MeshStandardMaterial({ map: bladeTex, color: '#d9dde2', metalness: 0.85, roughness: 0.42, envMapIntensity: 0.45 });
+  for (const s of [1, -1]) knifeTilt.add(new THREE.Mesh(gridGeo(70, 8, (u, v) => { const Y = u * BLADE_LEN; return [-v * width(Y), Y, (s * thick(v)) / 2]; }, s < 0), steel));
+  knifeTilt.add(new THREE.Mesh(gridGeo(70, 1, (u, v) => { const Y = u * BLADE_LEN; return [-width(Y), Y, lerp(thick(1) / 2, -thick(1) / 2, v)]; }), steel));
+  const collar = new THREE.Mesh(new RoundedBoxGeometry(3.3, 1.2, 1.6, 2, 0.3), new THREE.MeshStandardMaterial({ color: '#2b2d31', metalness: 0.6, roughness: 0.4 }));
+  collar.position.set(-1.5, BLADE_LEN + 0.55, 0); knifeTilt.add(collar);
+  const handle = new THREE.Mesh(new RoundedBoxGeometry(2.3, 11.5, 1.75, 3, 0.6), new THREE.MeshStandardMaterial({ color: '#cfae80', roughness: 0.62 }));
+  handle.position.set(-1.45, BLADE_LEN + 6.9, 0); knifeTilt.add(handle);
+}
+const knifePick = new THREE.Mesh(new THREE.BoxGeometry(6, 15, 5), new THREE.MeshBasicMaterial({ visible: false }));
+knifePick.position.set(-1.45, BLADE_LEN + 6.4, 0); knifeTilt.add(knifePick);
+// pressure at the edge: blue-white points along the part of the edge in the body
+const PRESS_N = 18;
+const pressDots = Array.from({ length: PRESS_N }, (_, i) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#bfe0ff', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  s.position.set(0.05, 0.15 + (i / (PRESS_N - 1)) * 2.9, 0); s.renderOrder = 12; knifeTilt.add(s); return s;
+});
+const pressTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#dcefff', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+pressTip.position.set(0.05, 1.0, 0); pressTip.renderOrder = 12; knifeTilt.add(pressTip);
+parts.knife = { obj: knifeYaw, from: new THREE.Vector3(), off: new THREE.Vector3(8, 14, 16) };
+
+// eel pick (目打ち): iron spike through the head into the board
+const pick = new THREE.Group();
+{
+  const iron = new THREE.MeshStandardMaterial({ color: '#4d5157', metalness: 0.8, roughness: 0.45 });
+  const spike = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.03, 9.2, 12), iron); spike.position.y = 4.6; pick.add(spike);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.14, 8, 24), iron); ring.rotation.x = Math.PI / 2; ring.position.y = 9.2; pick.add(ring);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.84, 5.2, 18), new THREE.MeshStandardMaterial({ color: '#b99466', roughness: 0.6 }));
+  grip.position.y = 11.9; pick.add(grip);
+  pick.position.set(-28.1, 0.6, 0); pick.rotation.z = -0.06;
+  scene.add(pick);
+}
+parts.pick = { obj: pick, from: pick.position.clone(), off: new THREE.Vector3(-6, 16, 10) };
+
+// left hand in a cut-resistant glove, holding the body on the near side ahead of the blade
+const hand = new THREE.Group();
+scene.add(hand);
+const HAND_X = 15;
+const gloveMat = new THREE.MeshStandardMaterial({ map: knitTex, color: '#dfe4ea', roughness: 0.92, transparent: true, opacity: 0.9 });
+const handTargets = [];
+{
+  const cap = (a, b, r) => {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, d.length()), 6, 14), gloveMat);
+    m.position.copy(A).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); hand.add(m); return m;
+  };
+  const x0 = HAND_X - 3.2, yc = eelYc(HAND_X), r = eelR(HAND_X), s = eelS(HAND_X);
+  // fingers lie along the body on its upper near side, the thumb lower down
+  [[62, 4.4], [40, 4.9], [18, 4.6], [-4, 4.0]].forEach(([deg, len], k) => {
+    const a = deg * DEG, n = new THREE.Vector3(0, Math.sin(a) / r, Math.cos(a) / s).normalize();
+    const p = new THREE.Vector3(0, yc + r * Math.sin(a), s * Math.cos(a)).addScaledVector(n, 0.62);
+    cap([x0, p.y, p.z], [x0 + len * 0.85, p.y - 0.05, p.z], 0.42);
+    handTargets.push(new THREE.Vector3(x0 + len * 0.55, p.y, p.z));
+  });
+  cap([x0 - 1.0, yc - 0.8, s + 1.2], [x0 + 2.0, yc - 1.05, s + 0.8], 0.5);                   // thumb
+  const palm = new THREE.Mesh(new RoundedBoxGeometry(3.4, 3.6, 1.7, 3, 0.75), gloveMat);
+  palm.position.set(x0 - 1.1, yc + 0.6, s + 1.35); palm.rotation.x = 0.4; hand.add(palm);
+  cap([x0 - 2.6, yc + 1.0, s + 2.0], [x0 - 4.0, yc + 2.4, s + 4.4], 1.25);                       // cuff
+}
+parts.hand = { obj: hand, from: new THREE.Vector3(), off: new THREE.Vector3(10, 10, 14) };
+
+// the cross-section at the blade: skin, flesh, backbone, the blade, and the flesh left on the bone
+const sectionU = { uTipY: { value: 6 }, uYc: { value: 4.5 }, uR: { value: 1.5 }, uS: { value: 1.3 }, uBoneY: { value: 4.9 }, uBladeZ: { value: -0.23 }, uBelly: { value: BELLY_Y }, uAlpha: { value: 1 }, uHit: { value: 0 }, uPress: { value: 0.3 } };
+const section = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 6.6), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: sectionU,
+  vertexShader: 'varying vec3 vW; void main(){ vW = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.0); }',
+  fragmentShader: `uniform float uTipY; uniform float uYc; uniform float uR; uniform float uS; uniform float uBoneY; uniform float uBladeZ; uniform float uBelly; uniform float uAlpha; uniform float uHit; uniform float uPress; varying vec3 vW;
+    void main(){
+      vec2 q = vec2(vW.z / max(uS, 0.05), (vW.y - uYc) / max(uR, 0.05));
+      float e = length(q);
+      float aa = fwidth(e) * 1.5;
+      float inside = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, e);
+      float ring = smoothstep(0.9, 0.95, e) * inside;
+      vec3 c = vec3(0.96, 0.86, 0.82); float a = inside * 0.3;
+      c = mix(c, vec3(0.3, 0.36, 0.44), ring); a = max(a, ring * 0.85);
+      float edgeGlow = (1.0 - smoothstep(0.0, 0.08, abs(e - 1.0))) * 0.5; a = max(a, edgeGlow * 0.5); c = mix(c, vec3(0.75, 0.85, 1.0), edgeGlow * (1.0 - inside));
+      // flesh left on the bone: between the far surface of the backbone and the blade
+      float left = step(uBladeZ, vW.z) * step(vW.z, -0.2) * (1.0 - smoothstep(0.45, 0.5, abs(vW.y - uBoneY))) * inside;
+      float hatch = step(0.5, fract((vW.y + vW.z) * 6.0));
+      c = mix(c, mix(vec3(0.95, 0.62, 0.52), vec3(1.0, 0.78, 0.68), hatch), left); a = max(a, left * 0.85);
+      // backbone
+      float db = length(vec2(vW.z, vW.y - uBoneY));
+      float boneM = 1.0 - smoothstep(0.19, 0.23, db);
+      c = mix(c, vec3(0.98, 0.96, 0.92), boneM); a = max(a, boneM);
+      // the blade: a thin line from the back down to near the belly
+      float bl = (1.0 - smoothstep(0.018, 0.05, abs(vW.z - uBladeZ))) * step(uTipY, vW.y) * step(vW.y, uYc + uR * 1.35);
+      vec3 bladeCol = mix(vec3(0.62, 0.7, 0.8), vec3(1.0, 0.33, 0.28), uHit);
+      c = mix(c, bladeCol, bl); a = max(a, bl * 0.8);
+      // pressure where the edge meets the flesh (or the bone)
+      float pg = 0.7 * exp(-pow(length(vec2(vW.z - uBladeZ, vW.y - (uTipY + 0.12))) / 0.22, 2.0)) * uPress;
+      c += mix(vec3(0.6, 0.8, 1.0), vec3(1.0, 0.4, 0.3), uHit) * pg; a = max(a, pg);
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(c, a * uAlpha);
+    }`,
+}));
+section.rotation.y = Math.PI / 2;
+section.renderOrder = 9;
+scene.add(section);
+
+// the path cut so far (amber), and the path the blade would take at the current angle (dashed)
+const pathGeo = new THREE.BufferGeometry();
+pathGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((NBIN + 1) * 2 * 3), 3));
+{
+  const idx = [];
+  for (let i = 0; i < NBIN; i++) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  pathGeo.setIndex(idx);
+}
+const pathMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.85, 0.3), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+const path = new THREE.Mesh(pathGeo, pathMat);
+path.frustumCulled = false; path.renderOrder = 10;
+scene.add(path);
+const PREV_N = 64;
+const previewGeo = new THREE.BufferGeometry();
+previewGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PREV_N * 3), 3));
+const preview = new THREE.Line(previewGeo, new THREE.LineDashedMaterial({ color: '#ffb04a', dashSize: 0.8, gapSize: 0.55, transparent: true, opacity: 0.85, depthTest: false }));
+preview.frustumCulled = false; preview.renderOrder = 11;
+scene.add(preview);
+const hitMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ff5448', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+hitMark.scale.set(2.4, 2.4, 1); hitMark.renderOrder = 12; scene.add(hitMark);
+// white flash along the backbone when the blade lines up with it
+const flashMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.25, 1.3, 1.35), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+patchOpen(flashMat, +1, boneLift);
+const boneFlash = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(Array.from({ length: 40 }, (_, i) => { const x = lerp(X0 - 1, X1 + 1, i / 39); return new THREE.Vector3(x, boneY(x), 0); })), 160, 0.3, 10), flashMat);
+boneFlash.renderOrder = 11;
+scene.add(boneFlash);
+// red skid trajectory: where the blade goes when it glances off the backbone
+const skidMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, depthTest: false, uniforms: { uGrow: { value: 0 }, uTime: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uGrow; uniform float uTime; varying vec2 vUv;
+    void main(){
+      if (vUv.x > uGrow) discard;
+      float dash = step(0.42, fract(vUv.x * 14.0 - uTime * 1.6));
+      gl_FragColor = vec4(vec3(1.0, 0.33, 0.28) * (1.4 + 0.4 * dash), 0.55 + 0.4 * dash);
+    }`,
+});
+const skid = new THREE.Mesh(new THREE.BufferGeometry(), skidMat);
+skid.renderOrder = 13; skid.visible = false; scene.add(skid);
+const skidHead = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.6, 16), new THREE.MeshBasicMaterial({ color: '#ff5448', depthTest: false, transparent: true }));
+skidHead.renderOrder = 13; skidHead.visible = false; scene.add(skidHead);
+const warnRing = new THREE.Mesh(new THREE.RingGeometry(2.3, 2.65, 48), new THREE.MeshBasicMaterial({ color: '#ff5448', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthTest: false }));
+warnRing.renderOrder = 13; scene.add(warnRing);
+let skidKey = '';
+function buildSkid(xHit) {
+  const x = clamp(xHit, X0, X1), target = handTargets[3];
+  const pts = [
+    new THREE.Vector3(x, boneY(x) + 0.1, -0.22),
+    new THREE.Vector3(x + 1.6, boneY(x) + 0.55, 0.05),
+    new THREE.Vector3(lerp(x, target.x, 0.45), eelTop(lerp(x, target.x, 0.45)) - 0.4, lerp(0.2, target.z, 0.5)),
+    target.clone(),
+  ];
+  const curve = new THREE.CatmullRomCurve3(pts);
+  skid.geometry.dispose();
+  skid.geometry = new THREE.TubeGeometry(curve, 120, 0.15, 8);
+  skid.userData.curve = curve;
+}
+
+// exploded view only: the blade's edge in section, 20 times larger (the last 3 mm of the blade)
+const edgeX = new THREE.Group();
+{
+  const shp = new THREE.Shape();
+  shp.moveTo(-0.04, 0); shp.lineTo(0.04, 0); shp.lineTo(0.55, 6); shp.lineTo(-0.55, 6); shp.closePath();
+  const wedge = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth: 3.2, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: '#b9bec5', metalness: 0.75, roughness: 0.42, envMapIntensity: 0.45 }));
+  wedge.position.z = -1.6; edgeX.add(wedge);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#bfe0ff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.9 }));
+  glow.material.opacity = 0.55; glow.scale.set(1.3, 1.3, 1); glow.position.set(0, 0.05, 0); edgeX.add(glow);
+  const flesh = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.5, 3.4), new THREE.MeshStandardMaterial({ color: '#f0cfc6', roughness: 0.6, transparent: true, opacity: 0.7 }));
+  flesh.position.set(0, -0.3, 0); edgeX.add(flesh);
+  edgeX.position.set(34, 16, 12); edgeX.rotation.set(0, -0.5, 0);
+  edgeX.visible = false;
+  scene.add(edgeX);
+}
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), aval: $('aval'), afill: document.querySelector('#ameter .fill'), mval: $('mval'), mmeter: $('mmeter'), mfill: document.querySelector('#mmeter .fill'),
+  stateTag: $('stateTag'), pval: $('pval'), steps: [...document.querySelectorAll('#steps li')], counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'), imageTag: $('imageTag'), hint: $('hint'),
+};
+const aPct = a => ((clamp(a, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * 100;
+const mPct = m => (clamp(m, 0, M_MAX) / M_MAX) * 100;
+$('aband').style.left = `${aPct(-TOL)}%`; $('aband').style.width = `${aPct(TOL) - aPct(-TOL)}%`;
+$('aticks').innerHTML = [-6, -3, 0, 3, 6].map(v => `<span style="left:${aPct(v)}%">${v > 0 ? '+' : ''}${v}°</span>`).join('');
+$('thClean').style.left = `${mPct(M_TH)}%`;
+$('mticks').innerHTML = [0, 20, 40, 60].map(v => `<span style="left:${mPct(v)}%">${v}${v === 60 ? 'g' : ''}</span>`).join('');
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine: idle → run (② 入れる, ③ 沿わせる, ④ 開く) → success (⑤ 外す, ⑥ 整える) → done
+//                run → failed (the blade meets the backbone and glances off, or leaves thick flesh)
+// =====================================================================================
+function freshState() {
+  return {
+    dth: 5.0, status: 'idle', phase: 0, tProc: 0, tShown: 0, x: 0, d: D0, acc: 0,
+    depth: 0, open: 0, lift: 0, trim: 0, dAt: new Float32Array(NBIN + 1).fill(-1),
+    inBand: false, flash: 0, failT: -1, failKind: '', hitX: -1, skid: 0,
+    force: F_REST, speed: 'slow', exploded: false, explode: 0, camera: 'overview',
+    t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false, hist: [], histNext: 0, fresh: 1, away: 0,
+  };
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+/** A fresh eel on the board; `armed` lets an angle already inside the band start the cut. */
+function resetEel(armed) {
+  Object.assign(S, { status: 'idle', phase: 0, tProc: 0, tShown: 0, x: 0, d: D0, acc: 0, depth: 0, open: 0, lift: 0, trim: 0, failT: -1, failKind: '', hitX: -1, skid: 0, fresh: 0, away: 0 });
+  S.dAt.fill(-1);
+  S.inBand = armed ? false : Math.abs(S.dth) <= TOL;
+}
+function startCut(kind) { S.status = 'run'; S.phase = 1; S.tProc = 0; S.flash = 1; logEvent(kind); }
+function recordBins() { const n = Math.min(NBIN, Math.floor((S.x / L_CUT) * NBIN + 1e-6)); for (let i = 0; i <= n; i++) if (S.dAt[i] < 0) S.dAt[i] = S.d; }
+function fail(kind) {
+  S.status = 'failed'; S.failKind = kind; S.failT = S.t;
+  if (kind === 'hit') S.hitX = X0 + S.x;
+  showBubble('err'); sound('err'); logEvent('fail');
+  if (!DEMO_ACTIVE) setCamera('fail');
+}
+function succeed() { S.status = 'success'; showBubble('ok'); sound('ok'); logEvent('success'); }
+/** leftover on the bone for the whole cut, as it stands now (g) */
+function leftoverNow() {
+  if (S.status === 'idle') return predictLeftover(S.dth);
+  if (S.status === 'failed') return grams(S.acc + D_MAX * Math.max(0, L_CUT - S.x));
+  if (S.status === 'run' && S.phase <= 2) return grams(S.acc + restIntegral(S.d, S.dth, L_CUT - S.x).area);
+  return grams(S.acc);
+}
+/** Advance by dt display-seconds; while cutting, model time runs SLOW times slower in slow motion. */
+function stepState(dt) {
+  S.t += dt;
+  const inBand = Math.abs(S.dth) <= TOL + 1e-9;
+  if (S.status === 'idle' && inBand && !S.inBand) startCut('align');
+  if (S.status === 'done' && !inBand) resetEel(false);
+  if (S.status === 'failed' && inBand && S.t - S.failT >= 2.0) { resetEel(false); S.bubble = null; logEvent('restore'); if (!DEMO_ACTIVE) setCamera('overview'); }
+  S.inBand = inBand;
+  const dtm = dt * (S.speed === 'slow' ? 1 / SLOW : 1);
+  if (S.status === 'run') {
+    S.tProc += dtm; S.tShown = S.tProc;
+    if (S.phase === 1) {
+      S.depth = clamp(S.depth + dtm / T_IN, 0, 1);
+      if (S.depth >= 1) { S.phase = 2; S.dAt[0] = S.d; }
+    } else if (S.phase === 2) {
+      const dx = Math.min(V_CUT * dtm, L_CUT - S.x), t = tanDeg(S.dth);
+      let d = S.d + t * dx;
+      if (d < 0 && S.dth < -TOL) {
+        // meets the backbone at a shallow angle: the pressure is below what the bone takes, so it glances off
+        const sHit = clamp(S.d / Math.max(1e-9, -t), 0, dx);
+        S.acc += (S.d * sHit) / 2; S.x += sHit; S.d = 0; recordBins();
+        fail('hit');
+      } else {
+        d = clamp(d, 0, D_MAX);              // inside the band the blade rides along the bone
+        S.acc += ((S.d + d) / 2) * dx; S.x += dx; S.d = d; recordBins();
+        if (S.d > D_FAIL) fail('thick');
+        else if (S.x >= L_CUT - 1e-9) { if (grams(S.acc) <= M_TH) S.phase = 3; else fail('thick'); }
+      }
+    } else if (S.phase === 3) {
+      S.open = clamp(S.open + dtm / T_OPEN, 0, 1);
+      if (S.open >= 1) { S.phase = 4; succeed(); }
+    }
+  } else if (S.status === 'success') {
+    if (S.phase === 4) { S.lift = clamp(S.lift + dtm / T_LIFT, 0, 1); if (S.lift >= 1) S.phase = 5; }
+    else if (S.phase === 5) { S.trim = clamp(S.trim + dtm / T_TRIM, 0, 1); if (S.trim >= 1) { S.status = 'done'; logEvent('done'); } }
+  }
+  const fTarget = S.status === 'run' && S.phase <= 2 ? F_PUSH : S.status === 'failed' ? (S.t - S.failT < 0.5 ? F_HIT : 0) : S.status === 'idle' ? F_REST : 0;
+  S.force += (fTarget - S.force) * Math.min(1, dt * 14);
+  S.away += ((S.phase >= 3 && S.status !== 'failed' ? 1 : 0) - S.away) * Math.min(1, dt * 2.2);
+  S.flash = Math.max(0, S.flash - dt * 1.25);
+  S.fresh = Math.min(1, S.fresh + dt * 2.5);
+  if (S.failKind === 'hit') S.skid = Math.min(1, S.skid + dt / 0.7);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, pressureMPa(S.force), S.dth]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 30; }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleWhy = S.failKind; S.bubbleUntil = S.t + (kind === 'err' ? 3.4 : 4.0); }
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') {
+    // スッ: a short breath of filtered noise
+    const n = audio.createBuffer(1, Math.floor(audio.sampleRate * 0.25), audio.sampleRate), ch = n.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ch.length, 2);
+    const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+    src.buffer = n; f.type = 'highpass'; f.frequency.value = 3800; g.gain.value = 0.22;
+    src.connect(f).connect(g).connect(audio.destination); src.start(t0);
+  } else for (let i = 0; i < 3; i++) tone(3000, t0 + i * 0.12, 0.07, 0.12);
+}
+
+// =====================================================================================
+// Camera presets (the blade and section views follow the blade)
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-24, 30, 62], tgt: [-4, 8.5, 0] },
+  edge: { pos: [0, 0, 0], tgt: [0, 0, 0] },
+  section: { pos: [0, 0, 0], tgt: [0, 0, 0] },
+  craftsman: { pos: [-16, 44, 27], tgt: [-14, 4.5, -0.5] },
+  opened: { pos: [-3, 46, 31], tgt: [-3, 5, 0.5] },
+  fail: { pos: [-12, 60, 86], tgt: [2, 7, 0] },
+  exploded: { pos: [-20, 50, 84], tgt: [2, 12, 3] },
+};
+const CAMS_PORTRAIT = {
+  overview: { pos: [-52, 80, 112], tgt: [-2, 9, 0] },
+  craftsman: { pos: [-16, 74, 44], tgt: [-14, 5, -0.5] },
+  opened: { pos: [1, 96, 60], tgt: [1, 5, 0.5] },
+  fail: { pos: [-16, 96, 132], tgt: [2, 8, 0] },
+  exploded: { pos: [-30, 98, 150], tgt: [3, 15, 2] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+const bladeTip = new THREE.Vector3();
+function presetVectors(name) {
+  const portrait = innerWidth / innerHeight < 0.8;
+  const k = portrait ? 1.6 : 1;
+  if (name === 'edge') {
+    const x = Math.min(bladeTip.x, X1 - 6);
+    return { pos: new THREE.Vector3(x + 7 * k, 8.6 + 3 * (k - 1), 11 * k), tgt: new THREE.Vector3(x - 1.0, 6.2, -0.3) };
+  }
+  if (name === 'section') {
+    const x = Math.min(bladeTip.x, X1 - 3);
+    return { pos: new THREE.Vector3(x + 9.5 * k, 9.2 + 3 * (k - 1), -9.5 * k), tgt: new THREE.Vector3(x - 0.5, 4.8, -0.2) };
+  }
+  const p = (portrait && CAMS_PORTRAIT[name]) || CAMS[name];
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) {
+    // the blade-following views keep following
+    if ((S.camera === 'edge' || S.camera === 'section') && !DEMO_ACTIVE) { const to = presetVectors(S.camera); const d = to.tgt.clone().sub(controls.target); controls.target.add(d); camera.position.add(d); }
+    return;
+  }
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
+const PRESS_COL = new THREE.Color('#bfe0ff'), RED_COL = new THREE.Color('#ff5448');
+function updateBladeTip() {
+  const xTip = X0 + 0.6 + S.x;
+  bladeTip.set(xTip, lerp(eelTop(xTip) + 0.02, BELLY_Y + 0.45, ease(S.depth)), -(R_BONE + S.d));
+}
+function previewPath() {
+  // the path the blade would take from here at the current angle
+  const R = Math.max(0, L_CUT - S.x), t = tanDeg(S.dth), hit = restIntegral(S.d, S.dth, R).hit;
+  const end = hit >= 0 ? hit : R;
+  return { R, t, hit, end };
+}
+function applyScene(time) {
+  const e = ease(S.explode), fresh = S.fresh;
+  for (const p of [parts.board, parts.pick]) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  waterUniforms.uTime.value = time; skidMat.uniforms.uTime.value = time;
+  const running = S.status === 'run' && S.phase <= 2;
+  openU.uCutX.value = S.status === 'idle' ? X0 - 10 : running || S.status === 'failed' ? X0 + S.x : X1 + 10;
+  openU.uOpenAll.value = ease(S.open);
+  openU.uGap.value = S.status === 'failed' ? 0.035 : 0.07;
+  // knife
+  updateBladeTip();
+  const away = ease(S.away);
+  const jolt = S.failKind === 'hit' ? ease(clamp((S.t - S.failT) / 0.25, 0, 1)) : 0;
+  knifeYaw.position.copy(bladeTip).add(tmpV.set(2 * away, 13 * away, 9 * away + 0.35 * jolt)).addScaledVector(parts.knife.off, e);
+  knifeYaw.rotation.y = (S.dth - 2.5 * jolt) * DEG;
+  const p = pressureMPa(S.force), pn = Math.pow(clamp(p / 30, 0, 2), 0.4);
+  const inLen = S.depth > 0 ? (eelTop(bladeTip.x) - bladeTip.y) / Math.cos(KNIFE_TILT) : 0.12;
+  const pc = S.failKind === 'hit' && S.status === 'failed' ? RED_COL : PRESS_COL;
+  pressDots.forEach((d, i) => {
+    const y = d.position.y, on = y < inLen + 0.15 ? 1 : 0;
+    d.material.color.copy(pc);
+    d.material.opacity = on * (0.3 + 0.7 * pn) * (0.35 + 0.4 * Math.exp(-y * 0.45)) * (1 - away) * fresh;
+    d.scale.setScalar(0.5 + 0.35 * pn);
+  });
+  pressTip.material.color.copy(pc);
+  const breathe = 0.85 + 0.15 * Math.sin(time * 4.2);
+  pressTip.material.opacity = (0.45 + 0.2 * pn) * breathe * (1 - away) * fresh; pressTip.scale.setScalar((2.9 + 1.2 * pn) * breathe);
+  // cross-section at the blade
+  const showSection = (S.status === 'idle' || running || S.status === 'failed') && e < 0.6;
+  section.visible = showSection;
+  if (showSection) {
+    section.position.set(bladeTip.x + 0.02, 4.6, 0);
+    sectionU.uTipY.value = bladeTip.y; sectionU.uYc.value = eelYc(bladeTip.x); sectionU.uR.value = eelR(bladeTip.x); sectionU.uS.value = eelS(bladeTip.x);
+    sectionU.uBoneY.value = boneY(bladeTip.x); sectionU.uBladeZ.value = bladeTip.z; sectionU.uHit.value = S.failKind === 'hit' ? 1 : 0;
+    sectionU.uPress.value = pn * (S.depth > 0 ? 1 : 0.5); sectionU.uAlpha.value = fresh * (1 - e);
+  }
+  // the path cut so far (amber ribbon on the back)
+  {
+    const pos = pathGeo.attributes.position.array;
+    let last = -1;
+    for (let i = 0; i <= NBIN; i++) {
+      const x = X0 + (i / NBIN) * L_CUT, d = S.dAt[i];
+      if (d >= 0) last = i;
+      const j = last >= 0 ? last : 0, dj = last >= 0 ? S.dAt[j] : 0, xj = X0 + (j / NBIN) * L_CUT;
+      const xx = d >= 0 ? x : xj, zz = -(R_BONE + (d >= 0 ? d : dj)), yy = eelTop(xx) + 0.04;
+      pos.set([xx, yy, zz - 0.09, xx, yy, zz + 0.09], i * 6);
+    }
+    pathGeo.attributes.position.needsUpdate = true;
+    path.visible = last > 0;
+    pathMat.opacity = fresh * (1 - ease(S.open)) * (1 - e);
+  }
+  // the path ahead at the current angle (dashed), and where it would meet the backbone
+  const showPreview = (S.status === 'idle' || running) && e < 0.5 && S.depth >= 0;
+  preview.visible = showPreview;
+  hitMark.material.opacity = 0;
+  if (showPreview) {
+    const pv = previewPath(), pos = previewGeo.attributes.position.array, x0 = X0 + S.x;
+    for (let k = 0; k < PREV_N; k++) {
+      const sK = (k / (PREV_N - 1)) * pv.end;
+      let d = S.d + pv.t * sK;
+      d = clamp(d, 0, D_MAX);
+      pos.set([x0 + sK, eelTop(x0 + sK) + 0.06, -(R_BONE + d)], k * 3);
+    }
+    previewGeo.attributes.position.needsUpdate = true;
+    preview.computeLineDistances();
+    preview.material.opacity = 0.85 * fresh;
+    if (pv.hit >= 0) {
+      const xh = x0 + pv.hit;
+      hitMark.position.set(xh, boneY(xh) + 0.3, -R_BONE);
+      hitMark.material.opacity = (0.55 + 0.35 * Math.sin(time * 6)) * fresh;
+    }
+  }
+  // backbone: white flash when the blade lines up with it
+  const aligned = S.status === 'idle' && S.inBand ? 0.16 : 0;
+  flashMat.opacity = Math.max(S.flash * 0.75, aligned) * fresh * (1 - e);
+  boneMat.emissiveIntensity = 0.5 * S.flash + 0.3 * ease(S.lift);
+  // flesh left on the bone
+  {
+    const pos = sleeveGeo.attributes.position.array, hb = H_BAND / 2;
+    for (let i = 0; i <= NBIN; i++) {
+      const x = X0 + (i / NBIN) * L_CUT, d = Math.max(0, S.dAt[i]), yb = boneY(x), z0 = -R_BONE * 0.8, z1 = -(R_BONE + d);
+      const hh = hb * smooth01(d / 0.35) * (S.dAt[i] >= 0 ? 1 : 0);
+      pos.set([x, yb - hh, z0, x, yb + hh, z0, x, yb + hh, z1, x, yb - hh, z1], i * 12);
+    }
+    sleeveGeo.attributes.position.needsUpdate = true;
+    sleeveGeo.computeVertexNormals();
+    sleeveMat.opacity = 0.92 * fresh;
+  }
+  // ⑤ the backbone comes out; ⑥ the fins are trimmed
+  const lift = ease(S.lift), trim = ease(S.trim);
+  boneLift.set(0, 4.5 * Math.sin(Math.PI * lift) + 0.25 * lift + 2.2 * e, 7.2 * lift);   // lifted out and laid on the board in front
+  finOwn.uLift.value.set(0, -0.6 * trim + 19 * e, -2.5 * trim - 5 * e);
+  finOwn.uAlpha.value = fresh * (1 - trim);
+  halves.forEach(h => { h.own.uLift.value.set(0, 14 * e, 0); h.own.uAlpha.value = fresh * (1 + 0.5 * e); h.own.uRim.value = 0.8 + 1.4 * e; h.capOwn.uLift.value.set(0, 14 * e, 0); h.capOwn.uAlpha.value = fresh; });
+  fleshOwn.uLift.value.set(0, 7.5 * e, 0); fleshOwn.uAlpha.value = 0.95 * e;
+  organOwn.uLift.value.set(0, 3 * e, 11 * e); organOwn.uAlpha.value = e;
+  ribMat.opacity = 0.55 * fresh;
+  // the hand moves off as the body opens; floats out in the exploded view
+  const o = ease(S.open);
+  hand.position.set(0, 8 * o, 7 * o).addScaledVector(parts.hand.off, e);
+  gloveMat.opacity = 0.9 * fresh;
+  // skid trajectory toward the hand
+  const skidOn = S.status === 'failed' && S.failKind === 'hit';
+  skid.visible = skidHead.visible = skidOn;
+  warnRing.material.opacity = 0;
+  if (skidOn) {
+    const key = S.hitX.toFixed(3);
+    if (key !== skidKey) { skidKey = key; buildSkid(S.hitX); }
+    skidMat.uniforms.uGrow.value = S.skid;
+    const curve = skid.userData.curve;
+    if (curve) {
+      skidHead.visible = S.skid > 0.92;
+      curve.getPointAt(1, skidHead.position); curve.getTangentAt(1, tmpV2);
+      skidHead.quaternion.setFromUnitVectors(tmpV.set(0, 1, 0), tmpV2.normalize());
+      warnRing.position.copy(handTargets[3]).add(hand.position);
+      warnRing.quaternion.copy(camera.quaternion);
+      warnRing.material.opacity = S.skid > 0.9 ? 0.65 + 0.35 * Math.sin(time * 8) : 0;
+    }
+  }
+  edgeX.visible = e > 0.02;
+  edgeX.scale.setScalar(Math.max(0.001, e));
+  ui.imageTag.classList.toggle('show', S.camera === 'edge' || S.camera === 'section' || e > 0.3);
+}
+
+// =====================================================================================
+// Graph (angle → flesh left on the bone), the edge loupe (p = F / A), and the record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope'), loupeCanvas = $('loupeCanvas');
+const graphStatic = document.createElement('canvas');
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 34, r: w - 8, t: 14, b: h - 24 });
+const G_MMAX = 70;
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = a => g.l + ((a - A_MIN) / (A_MAX - A_MIN)) * (g.r - g.l), Y = m => g.b - (clamp(m, 0, G_MMAX) / G_MMAX) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  // the clean-opening band
+  x.fillStyle = 'rgba(255,255,255,0.1)'; x.fillRect(X(-TOL), g.t, X(TOL) - X(-TOL), g.b - g.t);
+  x.setLineDash([3, 3]); x.strokeStyle = 'rgba(255,255,255,0.55)';
+  for (const a of [-TOL, TOL]) { x.beginPath(); x.moveTo(X(a), g.t); x.lineTo(X(a), g.b); x.stroke(); }
+  x.setLineDash([]);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8c8b87'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (const a of [-6, -3, 0, 3, 6]) x.fillText(`${a > 0 ? '+' : ''}${a}°`, X(a), g.b + 12);
+  x.textAlign = 'right';
+  for (const m of [0, 30, 60]) x.fillText(`${m}`, g.l - 5, Y(m) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('骨に残る身 g', g.l + 4, g.t - 3);
+  x.textAlign = 'right'; x.fillText('刃の角度のずれ', g.r, g.b + 22);
+  x.fillStyle = '#c4c3bf'; x.textAlign = 'center'; x.fillText('きれいに開ける範囲', X(0), g.t + 11);
+  // the curve
+  x.strokeStyle = '#f2c4b8'; x.lineWidth = 1.8; x.beginPath();
+  for (let a = A_MIN; a <= A_MAX + 1e-9; a += 0.02) { const px = X(a), py = Y(predictLeftover(a)); a === A_MIN ? x.moveTo(px, py) : x.lineTo(px, py); }
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, graphCanvas.width, graphCanvas.height); x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const px = g.l + ((clamp(S.dth, A_MIN, A_MAX) - A_MIN) / (A_MAX - A_MIN)) * (g.r - g.l), py = g.b - (clamp(predictLeftover(S.dth), 0, G_MMAX) / G_MMAX) * (g.b - g.t);
+  const inBand = Math.abs(S.dth) <= TOL;
+  x.fillStyle = inBand ? '#ffffff' : '#f2c4b8';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+/** The loupe: the edge in section pressing the flesh, and p = F / A for different edge widths. */
+function drawLoupe() {
+  if (!loupeCanvas.offsetParent) return;
+  sizeCanvas(loupeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = loupeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = loupeCanvas.width / s, h = loupeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const hit = S.status === 'failed' && S.failKind === 'hit';
+  const p = pressureMPa(S.force), pn = Math.pow(clamp(p / 30, 0, 2), 0.4);
+  // loupe circle
+  const cx = w / 2, cy = 82, R = 70;
+  x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip();
+  x.fillStyle = '#0c0e12'; x.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+  const surf = cy + 26;
+  const fg = x.createLinearGradient(0, surf, 0, cy + R); fg.addColorStop(0, hit ? '#f4efe6' : '#e9c7bd'); fg.addColorStop(1, hit ? '#b9b3a8' : '#a9807a');
+  x.fillStyle = fg; x.fillRect(cx - R, surf, 2 * R, R);
+  if (hit) { x.fillStyle = '#12151a'; x.font = '10px "Noto Sans JP"'; x.textAlign = 'center'; x.fillText('背骨', cx + 38, surf + 22); }
+  else { x.fillStyle = 'rgba(40,20,18,0.55)'; x.font = '10px "Noto Sans JP"'; x.textAlign = 'center'; x.fillText('身', cx + 42, surf + 22); }
+  const dent = 4 * pn;
+  const tipW = 3;   // the edge width, drawn much larger than scale
+  const bg = x.createLinearGradient(cx - 30, 0, cx + 30, 0); bg.addColorStop(0, '#7f868f'); bg.addColorStop(0.5, '#e3e8ee'); bg.addColorStop(1, '#6c737c');
+  x.fillStyle = bg;
+  x.beginPath(); x.moveTo(cx - 28, cy - R); x.lineTo(cx + 28, cy - R); x.lineTo(cx + tipW / 2, surf + dent); x.lineTo(cx - tipW / 2, surf + dent); x.closePath(); x.fill();
+  const col = hit ? '255,84,72' : '191,224,255';
+  const gl = x.createRadialGradient(cx, surf + dent, 0, cx, surf + dent, 12 + 22 * pn);
+  gl.addColorStop(0, `rgba(${col},${0.95 * Math.min(1, pn)})`); gl.addColorStop(1, `rgba(${col},0)`);
+  x.fillStyle = gl; x.beginPath(); x.arc(cx, surf + dent, 12 + 22 * pn, 0, Math.PI * 2); x.fill();
+  // force arrow
+  x.strokeStyle = 'rgba(255,255,255,0.8)'; x.fillStyle = 'rgba(255,255,255,0.8)'; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(cx, cy - R + 12); x.lineTo(cx, cy - 18); x.stroke();
+  x.beginPath(); x.moveTo(cx - 5, cy - 24); x.lineTo(cx + 5, cy - 24); x.lineTo(cx, cy - 16); x.closePath(); x.fill();
+  x.font = '11px "JetBrains Mono"'; x.textAlign = 'left'; x.fillText(`F ${S.force.toFixed(0)} N`, cx + 8, cy - 34);
+  x.restore();
+  x.strokeStyle = 'rgba(255,255,255,0.45)'; x.lineWidth = 1; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.stroke();
+  // numbers
+  x.fillStyle = '#c4c3bf'; x.font = '11px "Noto Sans JP"'; x.textAlign = 'left';
+  x.fillText('刃先の幅 0.04mm × 当たる長さ 1.5cm', 4, cy + R + 16);
+  x.fillStyle = hit ? '#ffb3ac' : '#e3f1ff'; x.font = '500 13px "JetBrains Mono"';
+  x.fillText(`圧力 p = F / A = ${p.toFixed(0)} MPa`, 4, cy + R + 33);
+  // p against the edge width, for the same force
+  const gl0 = 8, gr = w - 6, gt = cy + R + 44, gb = h - 16;
+  const W0 = 0.01, W1 = 1.0, P0 = 0.5, P1 = 300;
+  const GX = wmm => gl0 + (Math.log(wmm / W0) / Math.log(W1 / W0)) * (gr - gl0), GY = pm => gb - (Math.log(clamp(pm, P0, P1) / P0) / Math.log(P1 / P0)) * (gb - gt);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.beginPath(); x.moveTo(gl0, gt); x.lineTo(gl0, gb); x.lineTo(gr, gb); x.stroke();
+  x.setLineDash([3, 3]);
+  for (const [pm, label] of [[P_BONE, '背骨の限界'], [P_FLESH, '身が切れる限界']]) { x.strokeStyle = 'rgba(255,255,255,0.45)'; x.beginPath(); x.moveTo(gl0, GY(pm)); x.lineTo(gr, GY(pm)); x.stroke(); x.fillStyle = '#8c8b87'; x.font = '9.5px "Noto Sans JP"'; x.textAlign = 'right'; x.fillText(label, gr, GY(pm) - 3); }
+  x.setLineDash([]);
+  const F = Math.max(S.force, 0.5);
+  x.strokeStyle = '#bfe0ff'; x.lineWidth = 1.6; x.beginPath();
+  for (let k = 0; k <= 60; k++) { const wmm = W0 * Math.pow(W1 / W0, k / 60), pm = pressureMPa(F, wmm / 10); k ? x.lineTo(GX(wmm), GY(pm)) : x.moveTo(GX(wmm), GY(pm)); }
+  x.stroke();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(GX(EDGE_W * 10), GY(p), 3.8, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#8c8b87'; x.font = '9.5px "Noto Sans JP"'; x.textAlign = 'left';
+  x.fillText('刃先の幅（細い ← → 太い）', gl0 + 2, gb + 11);
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 34, r = w - 30, t = 6, b = h - 6;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  const YA = a => (t + b) / 2 - (clamp(a, A_MIN, A_MAX) / A_MAX) * ((b - t) / 2);
+  x.fillStyle = 'rgba(255,255,255,0.07)'; x.fillRect(l, YA(TOL), r - l, YA(-TOL) - YA(TOL));
+  x.fillStyle = '#8c8b87'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('50MPa', l - 3, t + 7); x.fillText('0', l - 3, b); x.textAlign = 'left'; x.fillText('+6°', r + 3, t + 7); x.fillText('−6°', r + 3, b);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  x.strokeStyle = '#d8d6d0'; x.lineWidth = 1.3; x.beginPath();
+  H.forEach((q, i) => { const y = YA(q[2]); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+  x.strokeStyle = '#bfe0ff'; x.lineWidth = 1.6; x.beginPath();
+  H.forEach((q, i) => { const y = b - (clamp(q[1], 0, 50) / 50) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const handAnchor = () => handTargets[1].clone().add(hand.position).add(tmpV.set(-1.5, 0.8, 0.6));
+const LABELS = [
+  { id: 'eel', text: '鰻（体は半透明の模式図）', cls: 'key', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(2, eelTop(2) + 0.3, 0.6) },
+  { id: 'knife', text: '鰻裂き包丁', cls: 'key', pri: 97, mode: 'normal', anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 9, 0)).clone() },
+  { id: 'press', text: '刃先の圧力', cls: 'press', pri: 98, mode: 'normal', anchor: () => knifeTilt.localToWorld(tmpV.set(0.1, 0.9, 0)).clone(), show: () => S.away < 0.5 },
+  { id: 'bone', text: '背骨', cls: '', pri: 90, mode: 'normal', anchor: () => { const x = 8; return new THREE.Vector3(x, boneY(x), 0).add(boneLift); } },
+  { id: 'path', text: '刃の進む道', cls: 'amber', pri: 88, mode: 'normal', anchor: () => { const x = X0 + S.x + Math.min(10, (L_CUT - S.x) * 0.5); return new THREE.Vector3(x, eelTop(x) + 0.1, -0.4); }, show: () => preview.visible },
+  { id: 'pick', text: '目打ち', cls: '', pri: 86, mode: 'normal', anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
+  { id: 'board', text: 'まな板', cls: '', pri: 72, mode: 'normal', anchor: () => new THREE.Vector3(30, 3, 13) },
+  { id: 'hand', text: '押さえる手', cls: '', pri: 80, mode: 'normal', anchor: handAnchor, show: () => S.open < 0.3 && !(S.status === 'failed' && S.failKind === 'hit') },
+  { id: 'warnHand', text: '刃の進む先に手を置かない', cls: 'warn', pri: 99, mode: 'normal', anchor: () => handTargets[3].clone().add(hand.position), show: () => S.status === 'failed' && S.failKind === 'hit' && S.skid > 0.6 },
+  { id: 'left', text: '骨に残る身', cls: '', pri: 84, mode: 'normal', anchor: () => { const x = X0 + L_CUT * 0.7; return new THREE.Vector3(x, boneY(x), -R_BONE - 0.4).add(boneLift); }, show: () => S.lift > 0.5 },
+  // exploded
+  { id: 'xskin', text: '皮', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(-10, eelTop(-10) + 14 * ease(S.explode), 0.3) },
+  { id: 'xflesh', text: '身', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(4, eelTop(4) + 7.5 * ease(S.explode) - 0.4, 0.4) },
+  { id: 'xbone', text: '背骨', cls: '', pri: 92, mode: 'x', anchor: () => new THREE.Vector3(14, boneY(14), 0).add(boneLift) },
+  { id: 'xribs', text: '腹骨', cls: '', pri: 88, mode: 'x', anchor: () => new THREE.Vector3(-12, 4.0, 0.9).add(boneLift) },
+  { id: 'xfins', text: '背ビレ・尻ビレ', cls: '', pri: 87, mode: 'x', anchor: () => new THREE.Vector3(22, eelTop(22) + 0.5, 0).add(finOwn.uLift.value) },
+  { id: 'xorgan', text: '内臓の位置', cls: '', pri: 86, mode: 'x', anchor: () => new THREE.Vector3(-8, 3.85, 0.1).add(organOwn.uLift.value) },
+  { id: 'xknife', text: '鰻裂き包丁', cls: '', pri: 85, mode: 'x', anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 8, 0)).clone() },
+  { id: 'xpick', text: '目打ち', cls: '', pri: 83, mode: 'x', anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
+  { id: 'xboard', text: 'まな板', cls: '', pri: 80, mode: 'x', anchor: () => boardGroup.localToWorld(tmpV.set(30, 3, 13)).clone() },
+  { id: 'xglove', text: '切創防止の手袋', cls: '', pri: 84, mode: 'x', anchor: handAnchor },
+  { id: 'xedge', text: '刃先の断面（20倍に拡大）', cls: 'press', pri: 95, mode: 'x', anchor: () => edgeX.localToWorld(tmpV.set(0, 6.4, 0)).clone() },
+  { id: 'xnote', text: '体の構造（模式図）', cls: 'key', pri: 96, mode: 'x', anchor: () => new THREE.Vector3(-18, eelTop(-18) + 14 * ease(S.explode) + 1.2, 0) },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', L.cls === 'warn' ? 'rgba(255,84,72,0.85)' : 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', L.cls === 'warn' ? '#ff5448' : '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'loupe', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false;
+    if (L.mode === mode && (!L.show || L.show())) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        for (const [dx, dy] of [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]]) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const fmtAngle = a => `${a > 0.049 ? '+' : a < -0.049 ? '−' : '±'}${Math.abs(a).toFixed(1)}`;
+function updateUI() {
+  const inBand = Math.abs(S.dth) <= TOL;
+  ui.aval.innerHTML = `${fmtAngle(S.dth)}<span class="unit">°</span>`;
+  ui.afill.style.left = `calc(${aPct(S.dth).toFixed(2)}% - 1.5px)`;
+  const m = leftoverNow(), bad = S.status === 'failed' || (S.status !== 'idle' && m > M_TH);
+  ui.mval.innerHTML = `${Math.round(m)}<span class="unit">g</span>`;
+  ui.mval.classList.toggle('bad', bad);
+  ui.mfill.style.width = `${mPct(m).toFixed(1)}%`;
+  ui.mmeter.classList.toggle('bad', bad);
+  let tag, tagCls = 'tag';
+  if (S.status === 'failed') { tag = '角度がずれています'; tagCls += ' bad'; }
+  else if (S.status === 'success' || S.status === 'done') { tag = 'きれいに開けた'; tagCls += ' on'; }
+  else if (S.status === 'run') tag = '捌いている';
+  else if (inBand) { tag = 'きれいに開ける角度'; tagCls += ' on'; }
+  else tag = S.dth < -TOL ? '背骨に当たる' : '身が残る';
+  if (ui.stateTag.textContent !== tag) ui.stateTag.textContent = tag;
+  ui.stateTag.className = tagCls;
+  ui.pval.innerHTML = `${pressureMPa(S.force).toFixed(0)}<span class="unit">MPa</span>`;
+  if (document.activeElement !== ui.range) ui.range.value = S.dth.toFixed(2);
+  const done = S.status === 'done';
+  ui.steps.forEach((li, i) => {
+    li.classList.toggle('active', i === S.phase && S.status !== 'failed');
+    li.classList.toggle('done', i < S.phase || done);
+    li.classList.toggle('fail', S.status === 'failed' && i === S.phase);
+  });
+  ui.counter.textContent = `経過 ${S.tShown.toFixed(2)}秒`;
+  ui.stateText.textContent = S.status === 'failed' ? (S.failKind === 'hit' ? '角度がずれています　刃が背骨に当たって滑りました' : '角度がずれています　身が骨に厚く残りました')
+    : S.status === 'success' || done ? '骨に残った身 わずか　きれいに開けました'
+    : S.status === 'run' ? `${PHASES[S.phase].label}：刃が背骨に沿っています`
+    : inBand ? '刃が背骨の面に沿いました' : '刃の角度を背骨の面に合わせてください';
+  ui.realnote.classList.toggle('show', done);
+  ui.speedTag.textContent = S.speed === 'slow' ? `スロー表示（約${SLOW}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'slow' ? '実時間にする' : 'スローにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? `角度がずれています<small>${S.bubbleWhy === 'hit' ? '刃が背骨に当たって滑りました。刃の進む先に手を置かない' : '身が骨に厚く残りました'}</small>` : `骨に残った身 わずか<small>きれいに開けました（骨に残った身 ${Math.max(1, Math.round(grams(S.acc)))}g、模型の値）</small>`;
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const p = screenOf(tmpV.set(-24, 14, -6).clone());
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const sub = ui.subtitle.classList.contains('show') ? ui.subtitle.getBoundingClientRect().top : innerHeight;
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : Math.min(innerHeight, sub) - r.height - 16;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: drag the knife handle to change the angle; other drags orbit the camera
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null, tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setAngleUser(a) { tapPlan = null; S.dth = clamp(a, A_MIN, A_MAX); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(knifePick, false).length) { dragging = { x: e.clientX, a: S.dth }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) { setAngleUser(dragging.a + (e.clientX - dragging.x) * 0.02); return; }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(knifePick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setAngleUser(S.dth - e.deltaY * 0.003); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setAngleUser(S.dth + 0.1); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setAngleUser(S.dth - 0.1); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setAngleUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'slow' ? 'real' : 'slow';
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** お手本: a fresh eel; the craftsman brings the blade onto the backbone plane and holds it there. */
+function tap() {
+  resetEel(true);
+  tapPlan = { from: S.dth, t: 0 };
+  stepState(0);
+}
+function updateTap(dt) {
+  if (!tapPlan) return;
+  tapPlan.t += dt;
+  S.dth = lerp(tapPlan.from, 0.1, ease(Math.min(1, tapPlan.t / 2.4)));
+  if (S.status === 'done' || S.status === 'failed') tapPlan = null;
+}
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '鰻を捌く職人の手元を、のぞいてみます'],
+  [3, 7, '刃は、細い刃先に力を集めて身を切っています'],
+  [7, 12, 'きれいに開けるかどうかは、力ではなく角度で決まります'],
+  [12, 14, '刃が背骨にぴたりと沿った瞬間、身は骨から離れていきます'],
+  [14, 18.5, '背から刃を入れ、背骨に沿わせて一気に開きます'],
+  [18.5, 23, 'この角度を保てば、骨に残る身はわずかです'],
+  [23, 27, '角度がずれると身が残り、刃が思わぬ方向へ滑ります'],
+  [27, 30, 'だから捌きは、熟練を要する技です'],
+];
+const DEMO_IN = 12.4;   // the angle enters the band here
+function demoAngle(t) {
+  if (t < 7) return 5.0;
+  if (t < DEMO_IN) { const u = seg(t, 7, DEMO_IN); return lerp(5.0, TOL, u * u * (1.8 - 0.8 * u)); }
+  if (t < 23) return lerp(TOL - 0.001, 0.1, ease(seg(t, DEMO_IN, DEMO_IN + 1.1))) + 0.03 * Math.sin((t - DEMO_IN) * 2.1);
+  if (t < 25.9) return lerp(0.1, -3.0, ease(seg(t, 24.0, 24.6)));
+  return lerp(-3.0, 0.1, ease(seg(t, 25.9, 26.3)));
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'edge'], [7, 'craftsman'], [13.2, 'section'], [16.9, 'opened'], [23, 'overview'], [24.3, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  updateBladeTip();
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'fail' ? 1.1 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * (name === 'overview' || name === 'exploded' ? 0.05 : 0.02);
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  S.dth = demoAngle(t);
+  if (t >= 23 && !S.demoNext) { S.demoNext = true; resetEel(false); startCut('start'); }
+  S.exploded = t >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'slow'; S.inBand = false; stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'loupe', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 50 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift(); applyScene(time);
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld(); updateUI(); layoutLabels(); drawGraph(); drawLoupe(); drawScope();
+  gradePass.uniforms.uFlash.value = 0.14 * Math.pow(S.flash, 3);
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt); stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  const m = leftoverNow();
+  return {
+    ready: window.__lab.ready,
+    angle: +S.dth.toFixed(3),
+    inBand: Math.abs(S.dth) <= TOL,
+    bandDeg: TOL,
+    pressureMPa: +pressureMPa(S.force).toFixed(2),
+    pushingPressureMPa: +pressureMPa(F_PUSH).toFixed(2),
+    leftoverG: +m.toFixed(2),
+    predictedLeftoverG: +predictLeftover(S.dth).toFixed(2),
+    cleanLineG: +M_TH.toFixed(2),
+    status: S.status,
+    success: S.status === 'success' || S.status === 'done',
+    failure: S.status === 'failed',
+    failKind: S.failKind,
+    phase: S.phase,
+    phaseLabel: PHASES[S.phase].label,
+    elapsed: +S.tShown.toFixed(3),
+    cutDistanceCm: +S.x.toFixed(2),
+    gapCm: +S.d.toFixed(3),
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setAngle(deg) { DEMO_ACTIVE = false; markInteraction(); setAngleUser(deg); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'slow'; },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  predictLeftover: a => predictLeftover(a),
+  pressure: (F, wMm) => pressureMPa(F, wMm / 10),
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  await fontsReady;
+  drawGraphStatic();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
