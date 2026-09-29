@@ -255,7 +255,7 @@
 </section>
 
 <div id="notes">力と角度は原理を示すための模型の値です。体の構造は模式図で、刃の力の分布は模型による計算のイメージです。刃の動きは目で見える速さに落とした模式表示です。</div>
-<div id="hint">包丁の柄を左右にドラッグして刃の角度を変える（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="hint">包丁の柄を上下にドラッグして刃の角度を変える（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
 <div id="subtitle"></div>
 <div id="bubble"></div>
 
@@ -514,8 +514,13 @@ const rimLight = new THREE.DirectionalLight('#c8dcff', 0.55);
 rimLight.position.set(60, 40, -90); scene.add(rimLight);
 
 // =====================================================================================
-// The eel: a semi-transparent schematic body (1 unit = 1 cm, 60 cm long) lying on its belly.
-// Two halves split by the plane of the cut; they open about the belly line (背開き).
+// The eel: a semi-transparent schematic body (1 unit = 1 cm, 60 cm long).
+// As in 辻調理師専門学校「鰻の裁き方（関東式）」, the eel lies on its side with the head to the right
+// and the back toward the craftsman; the knife goes in flat at the base of the head and runs to
+// the tail (right to left). Everything about the eel and the knife is modelled in a local frame
+// (x: head → tail, y: belly → back, z: across the body) and placed with one rotation:
+// local x → world −x, local y → world +z (toward the craftsman), local z → world up.
+// Two halves split by the plane of the cut; the upper one opens over the belly line (背開き).
 // =====================================================================================
 const EEL_X0 = -30, EEL_X1 = 30, BELLY_Y = 3.05, HINGE_Y = 3.1;
 function eelR(x) {             // half height
@@ -531,22 +536,47 @@ const eelYc = x => BELLY_Y + eelR(x);
 const eelTop = x => BELLY_Y + 2 * eelR(x);
 const boneY = x => eelYc(x) + 0.28 * eelR(x);
 const BONE_X0 = -24, BONE_X1 = 28.5;
+// lying on its flank, the body rests on the board along its whole length: thinner parts sit lower
+const S_REF = (() => { let m = 0; for (let x = EEL_X0; x <= EEL_X1; x += 0.05) m = Math.max(m, eelS(x)); return m; })();
+const sag = x => S_REF - eelS(x);
+const rig = new THREE.Group();
+rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 1).normalize(), Math.PI);
+rig.position.set(0, 3.0 + S_REF + 0.01, -(BELLY_Y + 1.5));
+scene.add(rig);
+rig.updateMatrixWorld(true);
+const RIG_INV = rig.matrixWorld.clone().invert();
+const RIG_QINV = rig.quaternion.clone().invert();
+const toWorld = v => rig.localToWorld(v.clone());
+const SAG_GLSL = `
+float eelRg(float x) {
+  if (x <= -30.0) return 0.0;
+  if (x < -26.0) return 1.25 * sqrt((x + 30.0) / 4.0);
+  if (x < -20.0) return mix(1.25, 1.5, smoothstep(0.0, 1.0, (x + 26.0) / 6.0));
+  if (x < 10.0) return 1.5 + 0.06 * sin(((x + 20.0) / 30.0) * 3.14159265);
+  if (x < 30.0) return mix(1.5, 0.04, pow((x - 10.0) / 20.0, 1.3));
+  return 0.04;
+}
+float eelSg(float x) { return eelRg(x) * mix(0.86, 0.34, smoothstep(0.0, 1.0, (x - 8.0) / 22.0)); }
+float sagAt(float x) { return ${S_REF.toFixed(6)} - eelSg(x); }
+`;
 
 // Opening about the belly line: behind the blade the halves part a little; in ④ they open flat.
-const openU = { uCutX: { value: X0 - 10 }, uOpenAll: { value: 0 }, uGap: { value: 0.07 }, uX0: { value: X0 }, uX1: { value: X1 }, uHingeY: { value: HINGE_Y } };
-const OPEN_GLSL = `
-uniform float uCutX; uniform float uOpenAll; uniform float uGap; uniform float uX0; uniform float uX1; uniform float uHingeY; uniform float uSide; uniform vec3 uLift;
-float openAmount(float x) {
-  float inCut = smoothstep(uX0 - 1.0, uX0 + 1.5, x) * (1.0 - smoothstep(uX1 - 1.5, uX1 + 1.0, x));
+const openU = { uCutX: { value: X0 - 10 }, uOpenAll: { value: 0 }, uGap: { value: 0.07 }, uX0: { value: X0 }, uX1: { value: X1 }, uHingeY: { value: HINGE_Y }, uSagK: { value: 1 } };
+const OPEN_GLSL = SAG_GLSL + `
+uniform float uCutX; uniform float uOpenAll; uniform float uGap; uniform float uX0; uniform float uX1; uniform float uHingeY; uniform float uSide; uniform vec3 uLift; uniform float uSagK;
+float openAngle(float x) {
+  // cut from the base of the head (a clean break there) to the very tip of the tail (尾の先まで開く)
+  float inCut = smoothstep(uX0 - 0.4, uX0 + 0.2, x);
   float behind = 1.0 - smoothstep(uCutX - 5.0, uCutX, x);
-  return inCut * max(behind * uGap, uOpenAll);
+  return inCut * max(behind * uGap * 1.53, uOpenAll * 3.14159265);
 }
-mat3 openRot(float x) { float a = uSide * openAmount(x) * 1.53; float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
-vec3 openXform(vec3 p) { return openRot(p.x) * (p - vec3(0.0, uHingeY, 0.0)) + vec3(0.0, uHingeY, 0.0) + uLift; }
+// the lower half stays on the board; the upper half swings up and over the belly line and lies skin down
+mat3 openRot(float x) { float a = step(0.5, uSide) * openAngle(x); float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+vec3 openXform(vec3 p) { vec3 q = openRot(p.x) * (p - vec3(0.0, uHingeY, 0.0)) + vec3(0.0, uHingeY, 0.0) + uLift; q.z -= sagAt(p.x) * uSagK; return q; }
 `;
 /** Let a built-in material follow the opening (and an extra offset for lifting / the exploded view). */
-function patchOpen(mat, side, lift) {
-  const own = { uSide: { value: side }, uLift: { value: lift } };
+function patchOpen(mat, side, lift, sagK) {
+  const own = { uSide: { value: side }, uLift: { value: lift }, uSagK: sagK || { value: 1 } };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, openU, own);
     sh.vertexShader = sh.vertexShader
@@ -554,20 +584,20 @@ function patchOpen(mat, side, lift) {
       .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = openRot(position.x) * vec3(normal);\n#ifdef USE_TANGENT\nvec3 objectTangent = vec3(tangent.xyz);\n#endif')
       .replace('#include <begin_vertex>', 'vec3 transformed = openXform(vec3(position));');
   };
-  mat.customProgramCacheKey = () => 'open-v1';
+  mat.customProgramCacheKey = () => 'open-v2';
   return own;
 }
-function patchOpenLine(mat, side, lift) {
-  const own = { uSide: { value: side }, uLift: { value: lift } };
+function patchOpenLine(mat, side, lift, sagK) {
+  const own = { uSide: { value: side }, uLift: { value: lift }, uSagK: sagK || { value: 1 } };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, openU, own);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + OPEN_GLSL).replace('#include <begin_vertex>', 'vec3 transformed = openXform(vec3(position));');
   };
-  mat.customProgramCacheKey = () => 'open-line-v1';
+  mat.customProgramCacheKey = () => 'open-line-v2';
   return own;
 }
 const eel = new THREE.Group();
-scene.add(eel);
+rig.add(eel);
 function gridGeo(NX, NA, fn, flip) {
   const pos = new Float32Array((NX + 1) * (NA + 1) * 3), uv = new Float32Array((NX + 1) * (NA + 1) * 2), idx = [];
   for (let i = 0; i <= NX; i++) for (let j = 0; j <= NA; j++) {
@@ -584,7 +614,7 @@ function gridGeo(NX, NA, fn, flip) {
   return g;
 }
 // skin: a translucent shell, darker on the back, paler on the belly, with a cool rim
-const skinUniforms = side => ({ uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 }, uRim: { value: 0.8 } });
+const skinUniforms = side => ({ uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 }, uRim: { value: 0.8 }, uSagK: { value: 1 } });
 function skinMaterial(side) {
   const own = skinUniforms(side);
   const m = new THREE.ShaderMaterial({
@@ -621,7 +651,7 @@ const halves = [+1, -1].map(side => {
   const { m, own } = skinMaterial(side);
   const shell = new THREE.Mesh(geo, m); shell.renderOrder = 6; eel.add(shell);
   // the cut face: pale flesh with W-shaped muscle bands, revealed where the blade has passed
-  const capOwn = { uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 } };
+  const capOwn = { uSide: { value: side }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 }, uSagK: { value: 1 } };
   const capGeo = gridGeo(220, 1, (u, v) => { const x = lerp(EEL_X0, EEL_X1, u); return [x, lerp(BELLY_Y + 0.02, eelTop(x) - 0.02, v), 0]; }, side > 0);
   const cap = new THREE.Mesh(capGeo, new THREE.ShaderMaterial({
     transparent: true, side: THREE.DoubleSide, uniforms: Object.assign({}, openU, capOwn),
@@ -641,10 +671,11 @@ const halves = [+1, -1].map(side => {
   cap.renderOrder = 5; eel.add(cap);
   return { side, shell, own, cap, capOwn };
 });
-// backbone: a white rod with vertebral ridges (it stays with the near half: the cut runs on its far side)
+// backbone: a white rod with vertebral ridges (it stays with the lower half: the blade runs just above it)
 const boneLift = new THREE.Vector3();
+const boneSagK = { value: 1 };          // straightens as the backbone is lifted out and laid on the board
 const boneMat = new THREE.MeshStandardMaterial({ color: '#efe8da', roughness: 0.45, emissive: '#ffffff', emissiveIntensity: 0 });
-patchOpen(boneMat, +1, boneLift);
+patchOpen(boneMat, -1, boneLift, boneSagK);
 const bone = new THREE.Mesh((() => {
   const NX = 520, NA = 12;
   return gridGeo(NX, NA, (u, v) => {
@@ -656,16 +687,16 @@ const bone = new THREE.Mesh((() => {
   }, true);
 })(), boneMat);
 eel.add(bone);
-// belly bones (腹骨): thin curved lines from the backbone toward the belly, near half
+// belly bones (腹骨): thin curved lines from the backbone toward the belly, lower half
 const ribMat = new THREE.LineBasicMaterial({ color: '#f3eee4', transparent: true, opacity: 0.55 });
-patchOpenLine(ribMat, +1, boneLift);
+patchOpenLine(ribMat, -1, boneLift, boneSagK);
 const ribs = (() => {
   const pts = [];
   for (let x = -21.2; x <= -5; x += 1.15) {
     let prev = null;
     for (let k = 0; k <= 8; k++) {
       const t = k / 8, xx = x + 0.9 * t, yb = boneY(x), r = eelR(xx);
-      const p = new THREE.Vector3(xx, lerp(yb - 0.15, BELLY_Y + 0.45, t), 0.12 + Math.sin(t * Math.PI * 0.55) * eelS(xx) * 0.78);
+      const p = new THREE.Vector3(xx, lerp(yb - 0.15, BELLY_Y + 0.45, t), -(0.12 + Math.sin(t * Math.PI * 0.55) * eelS(xx) * 0.78));
       if (prev) pts.push(prev, p);
       prev = p;
     }
@@ -673,9 +704,9 @@ const ribs = (() => {
   return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), ribMat);
 })();
 eel.add(ribs);
-// flesh left on the bone: a strip on the far side of the backbone, thickness = the recorded gap d(x)
+// flesh left on the bone: a strip on the upper side of the backbone, thickness = the recorded gap d(x)
 const sleeveMat = new THREE.MeshStandardMaterial({ color: '#f1b9a9', roughness: 0.55, transparent: true, opacity: 0.92, emissive: '#3a1008', emissiveIntensity: 0.25 });
-patchOpen(sleeveMat, +1, boneLift);
+patchOpen(sleeveMat, -1, boneLift, boneSagK);
 const sleeveGeo = new THREE.BufferGeometry();
 {
   const pos = new Float32Array((NBIN + 1) * 4 * 3), idx = [];
@@ -688,9 +719,10 @@ const sleeveGeo = new THREE.BufferGeometry();
 }
 const sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
 sleeve.frustumCulled = false;
+sleeveMat.side = THREE.DoubleSide;
 eel.add(sleeve);
 // fins (背ビレ・尻ビレ): translucent membranes with rays
-const finOwn = { uSide: { value: -1 }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 } };
+const finOwn = { uSide: { value: -1 }, uLift: { value: new THREE.Vector3() }, uAlpha: { value: 1 }, uSagK: { value: 1 } };
 const finMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: Object.assign({}, openU, finOwn),
   vertexShader: OPEN_GLSL + `varying vec2 vUv; varying float vX; void main(){ vUv = uv; vX = position.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(openXform(position), 1.0); }`,
@@ -705,7 +737,7 @@ const fins = new THREE.Group();
 {
   const finH = x => 0.42 * smooth01((x + 6) / 5) * (0.35 + 0.65 * smooth01((30 - x) / 6)) + 0.1 * smooth01((x - 24) / 6);
   const dorsal = new THREE.Mesh(gridGeo(160, 1, (u, v) => { const x = lerp(-6, 29.8, u); return [x, eelTop(x) - 0.05 + v * finH(x), 0]; }), finMat);
-  const anal = new THREE.Mesh(gridGeo(150, 1, (u, v) => { const x = lerp(-1, 29.8, u); return [x, BELLY_Y - 0.02, -eelS(x) * 0.4 - v * finH(x) * 0.9]; }), finMat);
+  const anal = new THREE.Mesh(gridGeo(150, 1, (u, v) => { const x = lerp(-1, 29.8, u); return [x, BELLY_Y + 0.05 - v * finH(x) * 0.9, 0]; }), finMat);
   fins.add(dorsal, anal);
   eel.add(fins);
 }
@@ -716,7 +748,7 @@ const fleshBody = new THREE.Mesh(gridGeo(200, 24, (u, v) => {
   return [x, eelYc(x) + eelR(x) * k * Math.sin(a), eelS(x) * k * Math.cos(a)];
 }, true), new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, uniforms: Object.assign({}, openU, fleshOwn),
-  vertexShader: `uniform vec3 uLift; varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vP = position; vec4 mv = modelViewMatrix * vec4(position + uLift, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  vertexShader: SAG_GLSL + `uniform vec3 uLift; varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vP = position; vec3 p = position + uLift; p.z -= sagAt(position.x); vec4 mv = modelViewMatrix * vec4(p, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
   fragmentShader: `uniform float uAlpha; varying vec3 vN; varying vec3 vV; varying vec3 vP;
     void main(){
       vec3 N = normalize(vN), V = normalize(vV);
@@ -738,19 +770,21 @@ const organs = new THREE.Mesh(new THREE.CapsuleGeometry(0.62, 12, 8, 24), new TH
       float dash = step(0.5, fract(gl_FragCoord.x * 0.06 + gl_FragCoord.y * 0.06));
       vec3 c = vec3(0.86, 0.84, 0.76); gl_FragColor = vec4(c, (0.12 + 0.5 * f * (0.6 + 0.4 * dash)) * uAlpha); }`,
 }));
-organs.rotation.z = Math.PI / 2; organs.position.set(-14, 3.85, 0.1);
+organs.rotation.z = Math.PI / 2; organs.position.set(-14, 3.85, 0.1 - sag(-14));
 organs.renderOrder = 7;
 eel.add(organs);
 
 // =====================================================================================
-// Knife (鰻裂き包丁): a short pointed blade, edge facing the direction of travel, tip down
-// in the body; the handle is what you drag. Local frame: tip at the origin, edge along +Y
-// at X = 0 (facing +X), spine at X = -BLADE_W, thickness along Z.
+// Knife (鰻裂き包丁): a short pointed blade, edge facing the direction of travel (the tail).
+// In the room it lies nearly flat: the tip goes in at the back toward the belly, the handle comes
+// toward the craftsman and is raised a little. Local frame: tip at the origin, edge along +Y at
+// X = 0 (facing +X), spine at X = -BLADE_W, thickness along Z. The angle to the backbone plane is a
+// turn about the knife's length; the handle is what you drag.
 // =====================================================================================
-const BLADE_LEN = 13, BLADE_W = 3.0, KNIFE_TILT = 12 * DEG;
-const knifeYaw = new THREE.Group(); scene.add(knifeYaw);
+const BLADE_LEN = 13, BLADE_W = 3.0, KNIFE_TILT = 12 * DEG, KNIFE_RAISE = 8 * DEG;
+const knifeYaw = new THREE.Group(); rig.add(knifeYaw);
 const knifeTilt = new THREE.Group(); knifeYaw.add(knifeTilt);
-knifeTilt.rotation.z = KNIFE_TILT;
+knifeTilt.rotation.set(KNIFE_RAISE, 0, KNIFE_TILT);
 const bladeTex = canvasTex(512, 64, (x, w, h) => {
   x.fillStyle = '#b9bec5'; x.fillRect(0, 0, w, h);
   const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(235,240,246,0.9)'); g.addColorStop(0.2, 'rgba(235,240,246,0.55)'); g.addColorStop(0.24, 'rgba(90,96,104,0.35)'); g.addColorStop(0.3, 'rgba(0,0,0,0)');
@@ -778,7 +812,7 @@ const pressDots = Array.from({ length: PRESS_N }, (_, i) => {
 });
 const pressTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#dcefff', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
 pressTip.position.set(0.05, 1.0, 0); pressTip.renderOrder = 12; knifeTilt.add(pressTip);
-parts.knife = { obj: knifeYaw, from: new THREE.Vector3(), off: new THREE.Vector3(8, 14, 16) };
+parts.knife = { obj: knifeYaw, from: new THREE.Vector3(), off: new THREE.Vector3(8, 10, 14) };   // local: left 8, toward the craftsman 10, up 14
 
 // eel pick (目打ち): iron spike through the head into the board
 const pick = new THREE.Group();
@@ -788,14 +822,15 @@ const pick = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.14, 8, 24), iron); ring.rotation.x = Math.PI / 2; ring.position.y = 9.2; pick.add(ring);
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.84, 5.2, 18), new THREE.MeshStandardMaterial({ color: '#b99466', roughness: 0.6 }));
   grip.position.y = 11.9; pick.add(grip);
-  pick.position.set(-28.1, 0.6, 0); pick.rotation.z = -0.06;
+  const headW = toWorld(new THREE.Vector3(-28.1, eelYc(-28.1), -sag(-28.1)));
+  pick.position.set(headW.x, 0.6, headW.z); pick.rotation.z = 0.06;
   scene.add(pick);
 }
-parts.pick = { obj: pick, from: pick.position.clone(), off: new THREE.Vector3(-6, 16, 10) };
+parts.pick = { obj: pick, from: pick.position.clone(), off: new THREE.Vector3(6, 16, 10) };
 
 // left hand in a cut-resistant glove, holding the body on the near side ahead of the blade
 const hand = new THREE.Group();
-scene.add(hand);
+rig.add(hand);
 const HAND_X = 15;
 const gloveMat = new THREE.MeshStandardMaterial({ map: knitTex, color: '#dfe4ea', roughness: 0.92, transparent: true, opacity: 0.9 });
 const handTargets = [];
@@ -817,17 +852,26 @@ const handTargets = [];
   const palm = new THREE.Mesh(new RoundedBoxGeometry(3.4, 3.6, 1.7, 3, 0.75), gloveMat);
   palm.position.set(x0 - 1.1, yc + 0.6, s + 1.35); palm.rotation.x = 0.4; hand.add(palm);
   cap([x0 - 2.6, yc + 1.0, s + 2.0], [x0 - 4.0, yc + 2.4, s + 4.4], 1.25);                       // cuff
+  // the hand rests on the body, which lies lower where it is thinner
+  hand.children.forEach(m => {
+    m.updateMatrix(); m.geometry.applyMatrix4(m.matrix); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.scale.set(1, 1, 1);
+    const pa = m.geometry.attributes.position;
+    for (let i = 0; i < pa.count; i++) pa.setZ(i, pa.getZ(i) - sag(pa.getX(i)));
+    pa.needsUpdate = true;
+  });
+  handTargets.forEach(t => (t.z -= sag(t.x)));
 }
-parts.hand = { obj: hand, from: new THREE.Vector3(), off: new THREE.Vector3(10, 10, 14) };
+parts.hand = { obj: hand, from: new THREE.Vector3(), off: new THREE.Vector3(10, 14, 10) };   // local: left 10, toward the craftsman 14, up 10
 
 // the cross-section at the blade: skin, flesh, backbone, the blade, and the flesh left on the bone
-const sectionU = { uTipY: { value: 6 }, uYc: { value: 4.5 }, uR: { value: 1.5 }, uS: { value: 1.3 }, uBoneY: { value: 4.9 }, uBladeZ: { value: -0.23 }, uBelly: { value: BELLY_Y }, uAlpha: { value: 1 }, uHit: { value: 0 }, uPress: { value: 0.3 } };
+const sectionU = { uTipY: { value: 6 }, uYc: { value: 4.5 }, uR: { value: 1.5 }, uS: { value: 1.3 }, uBoneY: { value: 4.9 }, uBladeZ: { value: 0.23 }, uBelly: { value: BELLY_Y }, uAlpha: { value: 1 }, uHit: { value: 0 }, uPress: { value: 0.3 }, uToRig: { value: RIG_INV }, uSag: { value: 0 } };
 const section = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 6.6), new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: sectionU,
-  vertexShader: 'varying vec3 vW; void main(){ vW = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.0); }',
-  fragmentShader: `uniform float uTipY; uniform float uYc; uniform float uR; uniform float uS; uniform float uBoneY; uniform float uBladeZ; uniform float uBelly; uniform float uAlpha; uniform float uHit; uniform float uPress; varying vec3 vW;
+  vertexShader: 'uniform mat4 uToRig; varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = (uToRig * w).xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+  fragmentShader: `uniform float uSag; uniform float uTipY; uniform float uYc; uniform float uR; uniform float uS; uniform float uBoneY; uniform float uBladeZ; uniform float uBelly; uniform float uAlpha; uniform float uHit; uniform float uPress; varying vec3 vW;
     void main(){
-      vec2 q = vec2(vW.z / max(uS, 0.05), (vW.y - uYc) / max(uR, 0.05));
+      float zz = vW.z + uSag;
+      vec2 q = vec2(zz / max(uS, 0.05), (vW.y - uYc) / max(uR, 0.05));
       float e = length(q);
       float aa = fwidth(e) * 1.5;
       float inside = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, e);
@@ -835,20 +879,20 @@ const section = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 6.6), new THREE.Shad
       vec3 c = vec3(0.96, 0.86, 0.82); float a = inside * 0.3;
       c = mix(c, vec3(0.3, 0.36, 0.44), ring); a = max(a, ring * 0.85);
       float edgeGlow = (1.0 - smoothstep(0.0, 0.08, abs(e - 1.0))) * 0.5; a = max(a, edgeGlow * 0.5); c = mix(c, vec3(0.75, 0.85, 1.0), edgeGlow * (1.0 - inside));
-      // flesh left on the bone: between the far surface of the backbone and the blade
-      float left = step(uBladeZ, vW.z) * step(vW.z, -0.2) * (1.0 - smoothstep(0.45, 0.5, abs(vW.y - uBoneY))) * inside;
-      float hatch = step(0.5, fract((vW.y + vW.z) * 6.0));
+      // flesh left on the bone: between the upper surface of the backbone and the blade
+      float left = step(0.2, zz) * step(zz, uBladeZ) * (1.0 - smoothstep(0.45, 0.5, abs(vW.y - uBoneY))) * inside;
+      float hatch = step(0.5, fract((vW.y + zz) * 6.0));
       c = mix(c, mix(vec3(0.95, 0.62, 0.52), vec3(1.0, 0.78, 0.68), hatch), left); a = max(a, left * 0.85);
       // backbone
-      float db = length(vec2(vW.z, vW.y - uBoneY));
+      float db = length(vec2(zz, vW.y - uBoneY));
       float boneM = 1.0 - smoothstep(0.19, 0.23, db);
       c = mix(c, vec3(0.98, 0.96, 0.92), boneM); a = max(a, boneM);
       // the blade: a thin line from the back down to near the belly
-      float bl = (1.0 - smoothstep(0.018, 0.05, abs(vW.z - uBladeZ))) * step(uTipY, vW.y) * step(vW.y, uYc + uR * 1.35);
+      float bl = (1.0 - smoothstep(0.018, 0.05, abs(zz - uBladeZ))) * step(uTipY, vW.y) * step(vW.y, uYc + uR * 1.35);
       vec3 bladeCol = mix(vec3(0.62, 0.7, 0.8), vec3(1.0, 0.33, 0.28), uHit);
       c = mix(c, bladeCol, bl); a = max(a, bl * 0.8);
       // pressure where the edge meets the flesh (or the bone)
-      float pg = 0.7 * exp(-pow(length(vec2(vW.z - uBladeZ, vW.y - (uTipY + 0.12))) / 0.22, 2.0)) * uPress;
+      float pg = 0.45 * exp(-pow(length(vec2(zz - uBladeZ, vW.y - (uTipY + 0.12))) / 0.22, 2.0)) * uPress;
       c += mix(vec3(0.6, 0.8, 1.0), vec3(1.0, 0.4, 0.3), uHit) * pg; a = max(a, pg);
       if (a < 0.01) discard;
       gl_FragColor = vec4(c, a * uAlpha);
@@ -856,7 +900,7 @@ const section = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 6.6), new THREE.Shad
 }));
 section.rotation.y = Math.PI / 2;
 section.renderOrder = 9;
-scene.add(section);
+rig.add(section);
 
 // the path cut so far (amber), and the path the blade would take at the current angle (dashed)
 const pathGeo = new THREE.BufferGeometry();
@@ -869,21 +913,21 @@ pathGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((NBI
 const pathMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.85, 0.3), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 const path = new THREE.Mesh(pathGeo, pathMat);
 path.frustumCulled = false; path.renderOrder = 10;
-scene.add(path);
+rig.add(path);
 const PREV_N = 64;
 const previewGeo = new THREE.BufferGeometry();
 previewGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PREV_N * 3), 3));
 const preview = new THREE.Line(previewGeo, new THREE.LineDashedMaterial({ color: '#ffb04a', dashSize: 0.8, gapSize: 0.55, transparent: true, opacity: 0.85, depthTest: false }));
 preview.frustumCulled = false; preview.renderOrder = 11;
-scene.add(preview);
+rig.add(preview);
 const hitMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ff5448', transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-hitMark.scale.set(2.4, 2.4, 1); hitMark.renderOrder = 12; scene.add(hitMark);
+hitMark.scale.set(2.4, 2.4, 1); hitMark.renderOrder = 12; rig.add(hitMark);
 // white flash along the backbone when the blade lines up with it
 const flashMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.25, 1.3, 1.35), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-patchOpen(flashMat, +1, boneLift);
+patchOpen(flashMat, -1, boneLift, boneSagK);
 const boneFlash = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(Array.from({ length: 40 }, (_, i) => { const x = lerp(X0 - 1, X1 + 1, i / 39); return new THREE.Vector3(x, boneY(x), 0); })), 160, 0.3, 10), flashMat);
 boneFlash.renderOrder = 11;
-scene.add(boneFlash);
+rig.add(boneFlash);
 // red skid trajectory: where the blade goes when it glances off the backbone
 const skidMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, depthTest: false, uniforms: { uGrow: { value: 0 }, uTime: { value: 0 } },
@@ -896,19 +940,20 @@ const skidMat = new THREE.ShaderMaterial({
     }`,
 });
 const skid = new THREE.Mesh(new THREE.BufferGeometry(), skidMat);
-skid.renderOrder = 13; skid.visible = false; scene.add(skid);
+skid.renderOrder = 13; skid.visible = false; rig.add(skid);
 const skidHead = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.6, 16), new THREE.MeshBasicMaterial({ color: '#ff5448', depthTest: false, transparent: true }));
-skidHead.renderOrder = 13; skidHead.visible = false; scene.add(skidHead);
+skidHead.renderOrder = 13; skidHead.visible = false; rig.add(skidHead);
 const warnRing = new THREE.Mesh(new THREE.RingGeometry(2.3, 2.65, 48), new THREE.MeshBasicMaterial({ color: '#ff5448', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthTest: false }));
-warnRing.renderOrder = 13; scene.add(warnRing);
+warnRing.renderOrder = 13; rig.add(warnRing);
 let skidKey = '';
 function buildSkid(xHit) {
-  const x = clamp(xHit, X0, X1), target = handTargets[3];
+  // off the top of the backbone, out through the upper flank and on toward the hand ahead of the blade
+  const x = clamp(xHit, X0, X1), target = handTargets[3].clone().add(hand.position), xm = lerp(x, target.x, 0.45);
   const pts = [
-    new THREE.Vector3(x, boneY(x) + 0.1, -0.22),
-    new THREE.Vector3(x + 1.6, boneY(x) + 0.55, 0.05),
-    new THREE.Vector3(lerp(x, target.x, 0.45), eelTop(lerp(x, target.x, 0.45)) - 0.4, lerp(0.2, target.z, 0.5)),
-    target.clone(),
+    new THREE.Vector3(x, boneY(x) + 0.1, 0.22 - sag(x)),
+    new THREE.Vector3(x + 1.6, boneY(x) + 0.35, 0.75 - sag(x + 1.6)),
+    new THREE.Vector3(xm, eelYc(xm) + 0.25, lerp(0.95 - sag(xm), target.z, 0.5)),
+    target,
   ];
   const curve = new THREE.CatmullRomCurve3(pts);
   skid.geometry.dispose();
@@ -927,7 +972,7 @@ const edgeX = new THREE.Group();
   glow.material.opacity = 0.55; glow.scale.set(1.3, 1.3, 1); glow.position.set(0, 0.05, 0); edgeX.add(glow);
   const flesh = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.5, 3.4), new THREE.MeshStandardMaterial({ color: '#f0cfc6', roughness: 0.6, transparent: true, opacity: 0.7 }));
   flesh.position.set(0, -0.3, 0); edgeX.add(flesh);
-  edgeX.position.set(34, 16, 12); edgeX.rotation.set(0, -0.5, 0);
+  edgeX.position.set(-16, 21, 16); edgeX.rotation.set(0, 0.35, 0);
   edgeX.visible = false;
   scene.add(edgeX);
 }
@@ -1070,33 +1115,36 @@ function sound(kind) {
 // Camera presets (the blade and section views follow the blade)
 // =====================================================================================
 const CAMS = {
-  overview: { pos: [-24, 30, 62], tgt: [-4, 8.5, 0] },
+  overview: { pos: [10, 34, 58], tgt: [3, 5, 0] },
   edge: { pos: [0, 0, 0], tgt: [0, 0, 0] },
   section: { pos: [0, 0, 0], tgt: [0, 0, 0] },
-  craftsman: { pos: [-16, 44, 27], tgt: [-14, 4.5, -0.5] },
-  opened: { pos: [-3, 46, 31], tgt: [-3, 5, 0.5] },
-  fail: { pos: [-12, 60, 86], tgt: [2, 7, 0] },
-  exploded: { pos: [-20, 50, 84], tgt: [2, 12, 3] },
+  craftsman: { pos: [25, 27, 29], tgt: [10, 4.5, 0] },
+  opened: { pos: [-2, 40, 34], tgt: [-2, 4, -1.8] },
+  fail: { pos: [10, 54, 78], tgt: [-2, 6, 0] },
+  exploded: { pos: [16, 46, 80], tgt: [-2, 11, 3] },
 };
 const CAMS_PORTRAIT = {
-  overview: { pos: [-52, 80, 112], tgt: [-2, 9, 0] },
-  craftsman: { pos: [-16, 74, 44], tgt: [-14, 5, -0.5] },
-  opened: { pos: [1, 96, 60], tgt: [1, 5, 0.5] },
-  fail: { pos: [-16, 96, 132], tgt: [2, 8, 0] },
-  exploded: { pos: [-30, 98, 150], tgt: [3, 15, 2] },
+  overview: { pos: [52, 80, 112], tgt: [2, 9, 0] },
+  craftsman: { pos: [20, 44, 58], tgt: [13, 5, 0] },
+  opened: { pos: [-1, 96, 60], tgt: [-1, 5, -1.5] },
+  fail: { pos: [16, 96, 132], tgt: [-2, 8, 0] },
+  exploded: { pos: [30, 98, 150], tgt: [-3, 15, 2] },
 };
 const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
 const bladeTip = new THREE.Vector3();
 function presetVectors(name) {
   const portrait = innerWidth / innerHeight < 0.8;
   const k = portrait ? 1.6 : 1;
+  // the blade moves toward the tail (world −x): these views look back at it from ahead
   if (name === 'edge') {
-    const x = Math.min(bladeTip.x, X1 - 6);
-    return { pos: new THREE.Vector3(x + 7 * k, 8.6 + 3 * (k - 1), 11 * k), tgt: new THREE.Vector3(x - 1.0, 6.2, -0.3) };
+    // above and in front of the point where the tip meets the back, a little ahead of it
+    const w = toWorld(bladeTip.clone().setX(Math.min(bladeTip.x, X1 - 6)));
+    return { pos: new THREE.Vector3(w.x - 6.5 * k, w.y + 6.5 + 3 * (k - 1), w.z + 7.5 * k), tgt: new THREE.Vector3(w.x + 1.0, w.y - 0.4, w.z - 0.9) };
   }
   if (name === 'section') {
-    const x = Math.min(bladeTip.x, X1 - 3);
-    return { pos: new THREE.Vector3(x + 9.5 * k, 9.2 + 3 * (k - 1), -9.5 * k), tgt: new THREE.Vector3(x - 0.5, 4.8, -0.2) };
+    // ahead of the blade on the belly side, low, looking back at the cross-section
+    const w = toWorld(bladeTip.clone().setX(Math.min(bladeTip.x, X1 - 3)));
+    return { pos: new THREE.Vector3(w.x - 8.5 * k, w.y + 1.8 + 3 * (k - 1), -4.4 * k), tgt: new THREE.Vector3(w.x + 0.3, w.y - 0.25, -0.2) };
   }
   const p = (portrait && CAMS_PORTRAIT[name]) || CAMS[name];
   return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
@@ -1128,7 +1176,7 @@ const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpQ = new THREE.
 const PRESS_COL = new THREE.Color('#bfe0ff'), RED_COL = new THREE.Color('#ff5448');
 function updateBladeTip() {
   const xTip = X0 + 0.6 + S.x;
-  bladeTip.set(xTip, lerp(eelTop(xTip) + 0.02, BELLY_Y + 0.45, ease(S.depth)), -(R_BONE + S.d));
+  bladeTip.set(xTip, lerp(eelTop(xTip) + 0.02, BELLY_Y + 0.45, ease(S.depth)), R_BONE + S.d - sag(xTip));
 }
 function previewPath() {
   // the path the blade would take from here at the current angle
@@ -1149,26 +1197,27 @@ function applyScene(time) {
   const away = ease(S.away);
   const jolt = S.failKind === 'hit' ? ease(clamp((S.t - S.failT) / 0.25, 0, 1)) : 0;
   knifeYaw.position.copy(bladeTip).add(tmpV.set(2 * away, 13 * away, 9 * away + 0.35 * jolt)).addScaledVector(parts.knife.off, e);
-  knifeYaw.rotation.y = (S.dth - 2.5 * jolt) * DEG;
+  knifeYaw.rotation.y = -(S.dth - 2.5 * jolt) * DEG;   // + tips the leading edge away from the backbone
   const p = pressureMPa(S.force), pn = Math.pow(clamp(p / 30, 0, 2), 0.4);
   const inLen = S.depth > 0 ? (eelTop(bladeTip.x) - bladeTip.y) / Math.cos(KNIFE_TILT) : 0.12;
   const pc = S.failKind === 'hit' && S.status === 'failed' ? RED_COL : PRESS_COL;
+  const camK = clamp(camera.position.distanceTo(toWorld(bladeTip)) / 45, 0.3, 1);
   pressDots.forEach((d, i) => {
     const y = d.position.y, on = y < inLen + 0.15 ? 1 : 0;
     d.material.color.copy(pc);
     d.material.opacity = on * (0.3 + 0.7 * pn) * (0.35 + 0.4 * Math.exp(-y * 0.45)) * (1 - away) * fresh;
-    d.scale.setScalar(0.5 + 0.35 * pn);
+    d.scale.setScalar((0.5 + 0.35 * pn) * Math.sqrt(camK));
   });
   pressTip.material.color.copy(pc);
   const breathe = 0.85 + 0.15 * Math.sin(time * 4.2);
-  pressTip.material.opacity = (0.45 + 0.2 * pn) * breathe * (1 - away) * fresh; pressTip.scale.setScalar((2.9 + 1.2 * pn) * breathe);
+  pressTip.material.opacity = (0.45 + 0.2 * pn) * breathe * (1 - away) * fresh * (0.45 + 0.55 * camK); pressTip.scale.setScalar((2.9 + 1.2 * pn) * breathe * camK);
   // cross-section at the blade
   const showSection = (S.status === 'idle' || running || S.status === 'failed') && e < 0.6;
   section.visible = showSection;
   if (showSection) {
-    section.position.set(bladeTip.x + 0.02, 4.6, 0);
+    section.position.set(bladeTip.x + 0.02, 4.6, -sag(bladeTip.x));
     sectionU.uTipY.value = bladeTip.y; sectionU.uYc.value = eelYc(bladeTip.x); sectionU.uR.value = eelR(bladeTip.x); sectionU.uS.value = eelS(bladeTip.x);
-    sectionU.uBoneY.value = boneY(bladeTip.x); sectionU.uBladeZ.value = bladeTip.z; sectionU.uHit.value = S.failKind === 'hit' ? 1 : 0;
+    sectionU.uBoneY.value = boneY(bladeTip.x); sectionU.uBladeZ.value = R_BONE + S.d; sectionU.uSag.value = sag(bladeTip.x); sectionU.uHit.value = S.failKind === 'hit' ? 1 : 0;
     sectionU.uPress.value = pn * (S.depth > 0 ? 1 : 0.5); sectionU.uAlpha.value = fresh * (1 - e);
   }
   // the path cut so far (amber ribbon on the back)
@@ -1179,7 +1228,7 @@ function applyScene(time) {
       const x = X0 + (i / NBIN) * L_CUT, d = S.dAt[i];
       if (d >= 0) last = i;
       const j = last >= 0 ? last : 0, dj = last >= 0 ? S.dAt[j] : 0, xj = X0 + (j / NBIN) * L_CUT;
-      const xx = d >= 0 ? x : xj, zz = -(R_BONE + (d >= 0 ? d : dj)), yy = eelTop(xx) + 0.04;
+      const xx = d >= 0 ? x : xj, zz = R_BONE + (d >= 0 ? d : dj) - sag(xx), yy = eelTop(xx) + 0.04;
       pos.set([xx, yy, zz - 0.09, xx, yy, zz + 0.09], i * 6);
     }
     pathGeo.attributes.position.needsUpdate = true;
@@ -1196,14 +1245,14 @@ function applyScene(time) {
       const sK = (k / (PREV_N - 1)) * pv.end;
       let d = S.d + pv.t * sK;
       d = clamp(d, 0, D_MAX);
-      pos.set([x0 + sK, eelTop(x0 + sK) + 0.06, -(R_BONE + d)], k * 3);
+      pos.set([x0 + sK, eelTop(x0 + sK) + 0.06, R_BONE + d - sag(x0 + sK)], k * 3);
     }
     previewGeo.attributes.position.needsUpdate = true;
     preview.computeLineDistances();
     preview.material.opacity = 0.85 * fresh;
     if (pv.hit >= 0) {
       const xh = x0 + pv.hit;
-      hitMark.position.set(xh, boneY(xh) + 0.3, -R_BONE);
+      hitMark.position.set(xh, boneY(xh) + 0.3, R_BONE - sag(xh));
       hitMark.material.opacity = (0.55 + 0.35 * Math.sin(time * 6)) * fresh;
     }
   }
@@ -1215,7 +1264,7 @@ function applyScene(time) {
   {
     const pos = sleeveGeo.attributes.position.array, hb = H_BAND / 2;
     for (let i = 0; i <= NBIN; i++) {
-      const x = X0 + (i / NBIN) * L_CUT, d = Math.max(0, S.dAt[i]), yb = boneY(x), z0 = -R_BONE * 0.8, z1 = -(R_BONE + d);
+      const x = X0 + (i / NBIN) * L_CUT, d = Math.max(0, S.dAt[i]), yb = boneY(x), z0 = R_BONE * 0.8, z1 = R_BONE + d;
       const hh = hb * smooth01(d / 0.35) * (S.dAt[i] >= 0 ? 1 : 0);
       pos.set([x, yb - hh, z0, x, yb + hh, z0, x, yb + hh, z1, x, yb - hh, z1], i * 12);
     }
@@ -1225,17 +1274,23 @@ function applyScene(time) {
   }
   // ⑤ the backbone comes out; ⑥ the fins are trimmed
   const lift = ease(S.lift), trim = ease(S.trim);
-  boneLift.set(0, 4.5 * Math.sin(Math.PI * lift) + 0.25 * lift + 2.2 * e, 7.2 * lift);   // lifted out and laid on the board in front
-  finOwn.uLift.value.set(0, -0.6 * trim + 19 * e, -2.5 * trim - 5 * e);
+  // lifted out in an arc and laid straight on the board in front of the eel (local y: toward the craftsman, local z: up)
+  boneLift.set(0, 4.1 * lift, 4.5 * Math.sin(Math.PI * lift) - (S_REF - R_BONE - 0.05) * lift + 2.2 * e);
+  boneSagK.value = 1 - lift;
+  finOwn.uLift.value.set(0, -2.5 * trim - 5 * e, -0.6 * trim + 19 * e);
   finOwn.uAlpha.value = fresh * (1 - trim);
-  halves.forEach(h => { h.own.uLift.value.set(0, 14 * e, 0); h.own.uAlpha.value = fresh * (1 + 0.5 * e); h.own.uRim.value = 0.8 + 1.4 * e; h.capOwn.uLift.value.set(0, 14 * e, 0); h.capOwn.uAlpha.value = fresh; });
-  fleshOwn.uLift.value.set(0, 7.5 * e, 0); fleshOwn.uAlpha.value = 0.95 * e;
+  halves.forEach(h => { h.own.uLift.value.set(0, 0, 14 * e); h.own.uAlpha.value = fresh * (1 + 0.5 * e); h.own.uRim.value = 0.8 + 1.4 * e; h.capOwn.uLift.value.set(0, 0, 14 * e); h.capOwn.uAlpha.value = fresh; });
+  fleshOwn.uLift.value.set(0, 0, 7.5 * e); fleshOwn.uAlpha.value = 0.95 * e;
   organOwn.uLift.value.set(0, 3 * e, 11 * e); organOwn.uAlpha.value = e;
   ribMat.opacity = 0.55 * fresh;
   // the hand moves off as the body opens; floats out in the exploded view
   const o = ease(S.open);
-  hand.position.set(0, 8 * o, 7 * o).addScaledVector(parts.hand.off, e);
-  gloveMat.opacity = 0.9 * fresh;
+  hand.position.set(-2 * o, 4 * o, 6 * o).addScaledVector(parts.hand.off, e);   // lifts off (up 6, toward the craftsman 4)
+  // the glove fades when a close-up camera passes right by it, so it never fills the frame
+  const handDist = camera.position.distanceTo(toWorld(tmpV.copy(handTargets[1]).add(hand.position)));
+  gloveMat.opacity = 0.9 * fresh * (1 - o * (1 - e)) * smooth01((handDist - 9) / 9);
+  gloveMat.depthWrite = gloveMat.opacity > 0.85;   // a fading glove must not cut holes in what lies behind it
+  hand.visible = gloveMat.opacity > 0.01;
   // skid trajectory toward the hand
   const skidOn = S.status === 'failed' && S.failKind === 'hit';
   skid.visible = skidHead.visible = skidOn;
@@ -1250,7 +1305,7 @@ function applyScene(time) {
       curve.getPointAt(1, skidHead.position); curve.getTangentAt(1, tmpV2);
       skidHead.quaternion.setFromUnitVectors(tmpV.set(0, 1, 0), tmpV2.normalize());
       warnRing.position.copy(handTargets[3]).add(hand.position);
-      warnRing.quaternion.copy(camera.quaternion);
+      warnRing.quaternion.copy(RIG_QINV).multiply(camera.quaternion);
       warnRing.material.opacity = S.skid > 0.9 ? 0.65 + 0.35 * Math.sin(time * 8) : 0;
     }
   }
@@ -1402,29 +1457,29 @@ function drawScope() {
 const labelLayer = $('labels'), svg = $('leaders');
 const handAnchor = () => handTargets[1].clone().add(hand.position).add(tmpV.set(-1.5, 0.8, 0.6));
 const LABELS = [
-  { id: 'eel', text: '鰻（体は半透明の模式図）', cls: 'key', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(2, eelTop(2) + 0.3, 0.6) },
-  { id: 'knife', text: '鰻裂き包丁', cls: 'key', pri: 97, mode: 'normal', anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 9, 0)).clone() },
-  { id: 'press', text: '刃先の圧力', cls: 'press', pri: 98, mode: 'normal', anchor: () => knifeTilt.localToWorld(tmpV.set(0.1, 0.9, 0)).clone(), show: () => S.away < 0.5 },
-  { id: 'bone', text: '背骨', cls: '', pri: 90, mode: 'normal', anchor: () => { const x = 8; return new THREE.Vector3(x, boneY(x), 0).add(boneLift); } },
-  { id: 'path', text: '刃の進む道', cls: 'amber', pri: 88, mode: 'normal', anchor: () => { const x = X0 + S.x + Math.min(10, (L_CUT - S.x) * 0.5); return new THREE.Vector3(x, eelTop(x) + 0.1, -0.4); }, show: () => preview.visible },
-  { id: 'pick', text: '目打ち', cls: '', pri: 86, mode: 'normal', anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
-  { id: 'board', text: 'まな板', cls: '', pri: 72, mode: 'normal', anchor: () => new THREE.Vector3(30, 3, 13) },
+  { id: 'eel', text: '鰻（体は半透明の模式図）', cls: 'key', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(2, eelYc(2) + 0.5 * eelR(2), eelS(2) + 0.15 - sag(2)) },
+  { id: 'knife', text: '鰻裂き包丁', cls: 'key', pri: 97, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 9, 0)).clone() },
+  { id: 'press', text: '刃先の圧力', cls: 'press', pri: 98, mode: 'normal', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(0.1, 0.9, 0)).clone(), show: () => S.away < 0.5 },
+  { id: 'bone', text: '背骨', cls: '', pri: 90, mode: 'normal', anchor: () => { const x = 8; return new THREE.Vector3(x, boneY(x), -sag(x) * boneSagK.value).add(boneLift); } },
+  { id: 'path', text: '刃の進む道', cls: 'amber', pri: 88, mode: 'normal', anchor: () => { const x = X0 + S.x + Math.min(10, (L_CUT - S.x) * 0.5); return new THREE.Vector3(x, eelTop(x) + 0.1, R_BONE + 0.2 - sag(x)); }, show: () => preview.visible },
+  { id: 'pick', text: '目打ち', cls: '', pri: 86, mode: 'normal', w: true, anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
+  { id: 'board', text: 'まな板', cls: '', pri: 72, mode: 'normal', w: true, anchor: () => new THREE.Vector3(-30, 3, 13) },
   { id: 'hand', text: '押さえる手', cls: '', pri: 80, mode: 'normal', anchor: handAnchor, show: () => S.open < 0.3 && !(S.status === 'failed' && S.failKind === 'hit') },
   { id: 'warnHand', text: '刃の進む先に手を置かない', cls: 'warn', pri: 99, mode: 'normal', anchor: () => handTargets[3].clone().add(hand.position), show: () => S.status === 'failed' && S.failKind === 'hit' && S.skid > 0.6 },
-  { id: 'left', text: '骨に残る身', cls: '', pri: 84, mode: 'normal', anchor: () => { const x = X0 + L_CUT * 0.7; return new THREE.Vector3(x, boneY(x), -R_BONE - 0.4).add(boneLift); }, show: () => S.lift > 0.5 },
+  { id: 'left', text: '骨に残る身', cls: '', pri: 84, mode: 'normal', anchor: () => { const x = X0 + L_CUT * 0.7; return new THREE.Vector3(x, boneY(x), R_BONE + 0.4 - sag(x) * boneSagK.value).add(boneLift); }, show: () => S.lift > 0.5 },
   // exploded
-  { id: 'xskin', text: '皮', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(-10, eelTop(-10) + 14 * ease(S.explode), 0.3) },
-  { id: 'xflesh', text: '身', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(4, eelTop(4) + 7.5 * ease(S.explode) - 0.4, 0.4) },
-  { id: 'xbone', text: '背骨', cls: '', pri: 92, mode: 'x', anchor: () => new THREE.Vector3(14, boneY(14), 0).add(boneLift) },
-  { id: 'xribs', text: '腹骨', cls: '', pri: 88, mode: 'x', anchor: () => new THREE.Vector3(-12, 4.0, 0.9).add(boneLift) },
-  { id: 'xfins', text: '背ビレ・尻ビレ', cls: '', pri: 87, mode: 'x', anchor: () => new THREE.Vector3(22, eelTop(22) + 0.5, 0).add(finOwn.uLift.value) },
-  { id: 'xorgan', text: '内臓の位置', cls: '', pri: 86, mode: 'x', anchor: () => new THREE.Vector3(-8, 3.85, 0.1).add(organOwn.uLift.value) },
-  { id: 'xknife', text: '鰻裂き包丁', cls: '', pri: 85, mode: 'x', anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 8, 0)).clone() },
-  { id: 'xpick', text: '目打ち', cls: '', pri: 83, mode: 'x', anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
-  { id: 'xboard', text: 'まな板', cls: '', pri: 80, mode: 'x', anchor: () => boardGroup.localToWorld(tmpV.set(30, 3, 13)).clone() },
+  { id: 'xskin', text: '皮', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(-10, eelYc(-10), eelS(-10) + 14 * ease(S.explode) - sag(-10)) },
+  { id: 'xflesh', text: '身', cls: '', pri: 90, mode: 'x', anchor: () => new THREE.Vector3(4, eelYc(4) + 0.3, 0.84 * eelS(4) + 7.5 * ease(S.explode) - sag(4)) },
+  { id: 'xbone', text: '背骨', cls: '', pri: 92, mode: 'x', anchor: () => new THREE.Vector3(14, boneY(14), -sag(14) * boneSagK.value).add(boneLift) },
+  { id: 'xribs', text: '腹骨', cls: '', pri: 88, mode: 'x', anchor: () => new THREE.Vector3(-12, boneY(-12) - 0.7, -0.6 - sag(-12) * boneSagK.value).add(boneLift) },
+  { id: 'xfins', text: '背ビレ・尻ビレ', cls: '', pri: 87, mode: 'x', anchor: () => new THREE.Vector3(22, eelTop(22) + 0.3, -sag(22)).add(finOwn.uLift.value) },
+  { id: 'xorgan', text: '内臓の位置', cls: '', pri: 86, mode: 'x', w: true, anchor: () => toWorld(new THREE.Vector3(-8, 3.85, 0.1 - sag(-8))).add(organOwn.uLift.value) },
+  { id: 'xknife', text: '鰻裂き包丁', cls: '', pri: 85, mode: 'x', w: true, anchor: () => knifeTilt.localToWorld(tmpV.set(-1.4, BLADE_LEN + 8, 0)).clone() },
+  { id: 'xpick', text: '目打ち', cls: '', pri: 83, mode: 'x', w: true, anchor: () => pick.localToWorld(tmpV.set(0, 12.5, 0)).clone() },
+  { id: 'xboard', text: 'まな板', cls: '', pri: 80, mode: 'x', w: true, anchor: () => boardGroup.localToWorld(tmpV.set(-30, 3, 13)).clone() },
   { id: 'xglove', text: '切創防止の手袋', cls: '', pri: 84, mode: 'x', anchor: handAnchor },
-  { id: 'xedge', text: '刃先の断面（20倍に拡大）', cls: 'press', pri: 95, mode: 'x', anchor: () => edgeX.localToWorld(tmpV.set(0, 6.4, 0)).clone() },
-  { id: 'xnote', text: '体の構造（模式図）', cls: 'key', pri: 96, mode: 'x', anchor: () => new THREE.Vector3(-18, eelTop(-18) + 14 * ease(S.explode) + 1.2, 0) },
+  { id: 'xedge', text: '刃先の断面（20倍に拡大）', cls: 'press', pri: 95, mode: 'x', w: true, anchor: () => edgeX.localToWorld(tmpV.set(0, 6.4, 0)).clone() },
+  { id: 'xnote', text: '体の構造（模式図）', cls: 'key', pri: 96, mode: 'x', anchor: () => new THREE.Vector3(-18, eelYc(-18), eelS(-18) + 14 * ease(S.explode) + 1.2 - sag(-18)) },
 ];
 for (const L of LABELS) {
   L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
@@ -1453,7 +1508,7 @@ function layoutLabels() {
   for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
     let show = false;
     if (L.mode === mode && (!L.show || L.show())) {
-      const a = screenOf(L.anchor());
+      const av = L.anchor(), a = screenOf(L.w ? av : toWorld(av));
       if (a.ok) {
         if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
         const { w, h } = L.size;
@@ -1520,7 +1575,7 @@ function updateUI() {
     const html = isErr ? `角度がずれています<small>${S.bubbleWhy === 'hit' ? '刃が背骨に当たって滑りました。刃の進む先に手を置かない' : '身が骨に厚く残りました'}</small>` : `骨に残った身 わずか<small>きれいに開けました（骨に残った身 ${Math.max(1, Math.round(grams(S.acc)))}g、模型の値）</small>`;
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
-    const p = screenOf(tmpV.set(-24, 14, -6).clone());
+    const p = screenOf(tmpV.set(24, 14, -6).clone());
     const r = b.getBoundingClientRect();
     let x = p.x - 36, y = p.y - r.height - 24;
     x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
@@ -1548,10 +1603,10 @@ canvas.addEventListener('pointerdown', e => {
   if (DEMO_ACTIVE) return;
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
-  if (raycaster.intersectObject(knifePick, false).length) { dragging = { x: e.clientX, a: S.dth }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+  if (raycaster.intersectObject(knifePick, false).length) { dragging = { y: e.clientY, a: S.dth }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
 });
 canvas.addEventListener('pointermove', e => {
-  if (dragging) { setAngleUser(dragging.a + (e.clientX - dragging.x) * 0.02); return; }
+  if (dragging) { setAngleUser(dragging.a + (dragging.y - e.clientY) * 0.02); return; }
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
   canvas.style.cursor = raycaster.intersectObject(knifePick, false).length ? 'grab' : 'default';
