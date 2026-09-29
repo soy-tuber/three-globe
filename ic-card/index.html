@@ -1,0 +1,1748 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ICカードはなぜ電池なしで動くのか</title>
+<meta name="description" content="交通系ICカードが電池なしで動く仕組みを、改札の磁場とカードの反応で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #03050b;
+    --ink: #eef2f8;
+    --sub: #b9c3d2;
+    --muted: #8793a6;
+    --line: rgba(255, 255, 255, 0.16);
+    --line-strong: rgba(255, 255, 255, 0.38);
+    --panel: rgba(7, 11, 22, 0.58);
+    --field: #bfe2ff;
+    --amber: #ffb14a;
+    --err: #ff5c5c;
+    --ok: #ffffff;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+
+  /* ---------------------------------------------------------------- title */
+  #title { position: fixed; left: 50%; top: 5.5vh; translate: -50% 0; text-align: center; pointer-events: none; transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); width: min(1100px, 92vw); }
+  #title h1 { margin: 0; font-weight: 900; font-size: clamp(28px, 3.6vw, 64px); letter-spacing: 0.04em; line-height: 1.25; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.7); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 46em; font-size: clamp(14px, 1.15vw, 20px); line-height: 1.9; color: var(--sub); text-shadow: 0 1px 12px rgba(0, 0, 0, 0.8); transition: opacity 0.5s; }
+  #title.small { left: 28px; top: 22px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.06em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+
+  /* ---------------------------------------------------------------- panels */
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+  .big-num { font-family: var(--mono); font-size: 26px; font-weight: 500; letter-spacing: 0.02em; }
+  #left { left: 24px; top: 84px; width: 330px; transition: opacity 0.5s; }
+  #right { right: 24px; top: 24px; width: 340px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .meter-block { margin-top: 16px; }
+  .meter { position: relative; height: 16px; margin: 30px 0 26px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: visible; }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(255, 177, 74, 0.35), var(--amber)); box-shadow: 0 0 14px rgba(255, 177, 74, 0.55); }
+  .meter .th { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; top: -20px; font-size: 11px; color: var(--sub); white-space: nowrap; translate: -50% 0; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: 100%; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  #volt.on { color: #fff; }
+  .powered-tag { white-space: nowrap; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .powered-tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.35); }
+  .graph-wrap { margin-top: 10px; }
+  canvas.plot { width: 100%; height: 150px; display: block; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 6px 0 0; }
+  .opener { display: none; }
+
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps.aborted li.active { border-color: rgba(255, 92, 92, 0.7); background: rgba(255, 92, 92, 0.1); }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
+  #counter { font-family: var(--mono); font-size: 18px; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #scopeLegend { font-size: 11px; color: var(--sub); line-height: 1.5; min-height: 2.9em; margin-top: 4px; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #06080f; border-color: #fff; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+
+  #notes { position: fixed; left: 24px; bottom: 18px; max-width: 560px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 18px; }
+  #more { position: fixed; right: 24px; bottom: 64px; width: min(520px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.7; color: var(--sub); }
+  #more a { color: #dfe8f5; font-size: 11px; word-break: break-all; }
+
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: 9vh; max-width: 90vw; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.03em; padding: 0.45em 1.1em; background: rgba(0, 0, 0, 0.62); border-radius: 10px; text-align: center; line-height: 1.5; opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+  #subtitle.show { opacity: 1; }
+
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px; border-radius: 14px; font-size: clamp(18px, 1.7vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(5, 8, 16, 0.86); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd0d0; box-shadow: 0 0 30px rgba(255, 92, 92, 0.35); }
+  #bubble.ok { box-shadow: 0 0 30px rgba(255, 255, 255, 0.25); }
+  #bubble small { display: block; font-size: 0.55em; font-weight: 500; color: var(--sub); margin-top: 2px; }
+
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(4, 7, 14, 0.72); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.6); }
+  .lbl.card { border-color: rgba(255, 177, 74, 0.8); }
+  .lbl.field { border-color: rgba(191, 226, 255, 0.8); color: #e6f4ff; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.45); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+
+  #mobileTop { display: none; }
+  /* while the big title is up, only the title and the scene */
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+
+  body.demo #hint, body.demo #moreBtn { display: none; }
+
+  /* ---------------------------------------------------------------- phone */
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 22px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.7; }
+    #title.small h1 { font-size: 15px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 44px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; height: auto; max-height: 24vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter-block { margin-top: 6px; }
+    .meter { margin: 22px 0 24px; }
+    .big-num { font-size: 18px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 44px; right: 12px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 90px; max-height: 60vh; }
+    #subtitle { font-size: 16px; bottom: auto; top: 110px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    .counter-row { margin-top: 4px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="自動改札機と交通系ICカードの3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>ICカードはなぜ電池なしで動くのか</h1>
+  <p class="lead">毎日ピッとしているICカードに電池は入っていません。改札が出している見えない磁場から電気を受け取り、ほんの一瞬だけ動いて返事をしています。カードを読み取り部に近づけて、その瞬間を見てください。</p>
+</header>
+<div id="imageTag">改札機の内部は公開情報をもとにしたイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">タッチ</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn" data-act="speed">スロー</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">カードと読み取り面の距離</span><span class="big-num" id="dist">12.0 cm</span></div>
+  <div class="meter-block">
+    <div class="row"><span class="k">カードのコイルに生じる電圧（模型の値）</span><span class="powered-tag" id="powerTag">停止中</span></div>
+    <div class="meter" id="meter"><div class="fill"></div><div class="th"><span class="th-label">チップが動く最低ライン</span></div><div class="ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5 V</span></div></div>
+    <div class="row"><span class="k">現在の電圧</span><span class="big-num" id="volt">0.00 V</span></div>
+  </div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">コイルから十分離れると、磁場は距離の3乗に反比例して弱まります</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">カードと改札のやりとり</span><span class="k" id="speedTag">スロー表示（約40倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>ポーリング</b><small>改札がカードを探す</small></li>
+    <li><span class="n">②</span><b>応答</b><small>カードが番号を返す</small></li>
+    <li><span class="n">③</span><b>相互認証</b><small>本物どうしか確かめ合う</small></li>
+    <li><span class="n">④</span><b>読み出し</b><small>残高や記録を読む</small></li>
+    <li><span class="n">⑤</span><b>書き込み</b><small>新しい記録を書く</small></li>
+    <li><span class="n">⑥</span><b>完了</b><small>ピッと鳴って通れる</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">カードを待っています</span><span id="counter">経過 0.000秒</span></div>
+  <p id="realnote">カードと改札のやりとりは実際には約0.1秒です</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">オシロを開く</button>
+    <div class="plot-body">
+      <div class="k">読み取りコイルの波形（模式）</div>
+      <canvas class="plot" id="scope" style="height: 110px"></canvas>
+      <div id="scopeLegend"></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">タッチ</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">スロー</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="reader">読み取り部</button>
+    <button class="btn sm" data-cam="card">カードの中</button>
+    <button class="btn sm" data-cam="inside">改札の中</button>
+  </div>
+  <label class="slider"><span>近い</span><input type="range" id="range" min="0.5" max="15" step="0.1" value="12" aria-label="カードと読み取り面の距離" /><span>遠い</span></label>
+</section>
+
+<div id="notes">距離と電圧は原理を示すための模型の値です。改札機の内部は公開情報をもとにしたイメージです。磁場の往復は目で見える速さに落とした模式表示です。</div>
+<div id="hint">カードを上下にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol>
+    <li>カードに電池は入っていません。読み取り機がつくる磁場から電磁誘導で電気を受け取り、同じ13.56MHzから動作のタイミングも作っています。<br /><a href="https://journal.ntt.co.jp/backnumber2/0803/files/jn200803081.pdf" target="_blank" rel="noopener">NTT技術ジャーナル 2008年3月号</a></li>
+    <li>磁場の向きは1秒に1356万回往復します（13.56MHz）。<br /><a href="https://www.sony.co.jp/Products/felica/about/scheme.html" target="_blank" rel="noopener">ソニー</a></li>
+    <li>カードと読み取り機のやりとりは暗号処理を含めて約0.1秒です。<br /><a href="https://www.sony.co.jp/Products/felica/about/scheme.html" target="_blank" rel="noopener">ソニー</a></li>
+    <li>いちばん速く通る人がカードを読み取り範囲に入れている時間は約0.2秒です。改札の処理はこの中に収まるように設計されました。<br /><a href="https://www.ejrcf.or.jp/jrtr/jrtr50/6_15.html" target="_blank" rel="noopener">JRTR No.50</a></li>
+    <li>最初の試験（1994年）は2.4GHzの電波を使う電池入りのカードで、電波が人の体の水分に吸われて通信範囲が小さくなりました。2回目（1995年）は周波数を32MHzに下げましたが電池の劣化などの課題が残り、3回目の試験（1997年）で13.56MHz・電池なし・タッチ方式に切り替えました。<br /><a href="https://www.jreast.co.jp/development/tech/pdf_4/24-31.pdf" target="_blank" rel="noopener">JR東日本テクニカルレビュー No.4</a></li>
+    <li>「かざす」ではなく「タッチ」と案内されているのは、試験でかざし方がばらつき、通信の時間が足りないことがあったからです。<br /><a href="https://www.jreast.co.jp/development/tech/pdf_4/24-31.pdf" target="_blank" rel="noopener">JR東日本テクニカルレビュー No.4</a></li>
+    <li>扉を開けたまま判定する方式は、1960年代に近鉄と立石電機（現オムロン）が開発したもので、当時は外国に例のない仕組みでした。<br /><a href="https://www.omron.com/jp/ja/news/2007/11/c1127.html" target="_blank" rel="noopener">オムロン</a></li>
+    <li>技術はソニーが開発したFeliCaで、通信速度は212kbpsまたは424kbpsです。2001年11月18日に首都圏424駅でSuicaが始まり、非接触ICカード技術は「戦後日本のイノベーション100選」に選ばれています。<br /><a href="https://koueki.jiii.or.jp/innovation100/innovation_detail.php?eid=00098" target="_blank" rel="noopener">発明協会</a></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// =====================================================================================
+// Physics (1 unit = 1 cm). Model values chosen to show the principle, not a real product.
+// =====================================================================================
+const A = 4;                  // reader coil radius
+const COIL_DEPTH = 0.8;       // coil plane below the reader surface
+const CARD_W = 8.56, CARD_H = 5.4, CARD_T = 0.076;
+const CARD_COIL_W = 7.6, CARD_COIL_H = 4.6;
+const V_TH = 2.0, V_MAX = 5.0, TH_DIST = 5.5;
+const D_MIN = 0.5, D_MAX = 15;
+const SLOW = 40;              // slow-motion factor
+const AC_PERIOD = 1.2;        // displayed period of the alternating field (schematic)
+const BOOT_REAL = 0.05;       // chip power-up before it can answer (real seconds)
+const PHASES = [
+  { label: 'ポーリング', real: 0.010, comm: [['R', 1]] },
+  { label: '応答', real: 0.012, comm: [['C', 1]] },
+  { label: '相互認証', real: 0.034, comm: [['R', 0.25], ['C', 0.25], ['R', 0.25], ['C', 0.25]] },
+  { label: '読み出し', real: 0.018, comm: [['R', 0.3], ['C', 0.7]] },
+  { label: '書き込み', real: 0.022, comm: [['R', 0.7], ['C', 0.3]] },
+  { label: '完了', real: 0.004, comm: [['-', 1]] },
+];
+const EXCHANGE_REAL = PHASES.reduce((a, p) => a + p.real, 0); // 0.100 s
+const FARE = 210, START_BALANCE = 2060;
+
+/** Complete elliptic integrals K(m), E(m) by the arithmetic–geometric mean (m = k²). */
+function ellipKE(m) {
+  m = Math.min(Math.max(m, 0), 1 - 1e-12);
+  let a = 1, b = Math.sqrt(1 - m), sum = 0.5 * m, p = 0.5;
+  for (let i = 0; i < 30; i++) {
+    const an = (a + b) / 2, bn = Math.sqrt(a * b), cn = (a - b) / 2;
+    p *= 2; sum += p * cn * cn; a = an; b = bn;
+    if (Math.abs(cn) < 1e-15) break;
+  }
+  const K = Math.PI / (2 * a);
+  return [K, K * (1 - sum)];
+}
+
+/** Field of a circular current loop (radius A, in the z = 0 plane), exact, in units of μ0·I/(2π). Returns [Bρ, Bz]. */
+function loopField(rho, z) {
+  if (rho < 1e-6) {
+    const d = A * A + z * z;
+    return [0, (Math.PI * A * A) / Math.pow(d, 1.5)];
+  }
+  const r2 = rho * rho + z * z;
+  const alpha2 = Math.max(1e-9, (A - rho) ** 2 + z * z);
+  const beta2 = (A + rho) ** 2 + z * z, beta = Math.sqrt(beta2);
+  const [K, E] = ellipKE((4 * A * rho) / beta2);
+  return [(z / (rho * beta)) * (((A * A + r2) / alpha2) * E - K), (1 / beta) * (((A * A - r2) / alpha2) * E + K)];
+}
+
+/** Magnetic flux through the card's antenna (7×7 samples over the coil area), card parallel and centred. */
+function cardFlux(heightAboveCoil) {
+  let s = 0;
+  for (let i = 0; i < 7; i++)
+    for (let j = 0; j < 7; j++) {
+      const x = -CARD_COIL_W / 2 + ((i + 0.5) * CARD_COIL_W) / 7;
+      const y = -CARD_COIL_H / 2 + ((j + 0.5) * CARD_COIL_H) / 7;
+      s += loopField(Math.hypot(x, y), heightAboveCoil)[1];
+    }
+  return (s * CARD_COIL_W * CARD_COIL_H) / 49;
+}
+const K_V = V_TH / cardFlux(TH_DIST + COIL_DEPTH);  // V = kΦ, tuned so the threshold is crossed at ~5.5 cm
+const voltageExact = d => Math.min(V_MAX, K_V * cardFlux(Math.max(0.05, d) + COIL_DEPTH));
+// Tabulated (0.01 cm) so the demo can re-simulate from t = 0 every frame.
+const V_STEP = 0.01, V_TABLE = Float32Array.from({ length: Math.ceil(16 / V_STEP) + 2 }, (_, i) => voltageExact(i * V_STEP));
+function voltageAt(d) {
+  const x = Math.max(0, Math.min(16, d)) / V_STEP, i = Math.floor(x), f = x - i;
+  return V_TABLE[i] * (1 - f) + V_TABLE[i + 1] * f;
+}
+
+/** Field lines in the (ρ, z) half-plane, traced with RK4 from inside the loop until they return to the surface outside. */
+function traceFieldLine(rho0) {
+  const f = (r, z) => {
+    const [br, bz] = loopField(r, z);
+    const m = Math.hypot(br, bz);
+    return m > 1e-12 ? [br / m, bz / m] : [0, 1];
+  };
+  let r = rho0, z = 0.005;
+  const pts = [[r, z, Math.hypot(...loopField(r, z))]];
+  for (let i = 0; i < 6000; i++) {
+    const h = 0.025 + 0.018 * Math.hypot(r, z);
+    const k1 = f(r, z);
+    const k2 = f(r + (h / 2) * k1[0], z + (h / 2) * k1[1]);
+    const k3 = f(r + (h / 2) * k2[0], z + (h / 2) * k2[1]);
+    const k4 = f(r + h * k3[0], z + h * k3[1]);
+    const nr = r + (h / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+    const nz = z + (h / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+    if (nz <= 0 && i > 3) {
+      // land exactly on the surface
+      const t = z / (z - nz);
+      const lr = r + (nr - r) * t;
+      pts.push([lr, 0, Math.hypot(...loopField(lr, 0.005))]);
+      break;
+    }
+    r = Math.max(0, nr); z = nz;
+    pts.push([r, z, Math.hypot(...loopField(r, z))]);
+  }
+  return pts;
+}
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+
+const scene = new THREE.Scene();
+const FOG = new THREE.Color('#060a18');
+scene.fog = new THREE.FogExp2(FOG, 0.0021);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 1, 5000);
+camera.position.set(-58, 150, 140);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.minPolarAngle = 0.25;
+controls.maxPolarAngle = 1.45;
+controls.target.set(14, 92, 18);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.75, 0.5, 0.92);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// Environment map: a dark hall with bright ceiling strips (for the stainless steel).
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#0a0f1c');
+  const strip = new THREE.MeshBasicMaterial({ color: new THREE.Color(4.5, 4.7, 5.2) });
+  for (let i = -3; i <= 3; i++) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 6), strip);
+    m.position.set(i * 1.6, 3, 0);
+    env.add(m);
+  }
+  const far = new THREE.Mesh(new THREE.BoxGeometry(12, 2.4, 0.1), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.5, 1.8) }));
+  far.position.set(0, 0.6, -6);
+  env.add(far);
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(20, 0.1, 20), new THREE.MeshBasicMaterial({ color: '#05070d' }));
+  floor.position.y = -2;
+  env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 1.0;
+}
+
+// Background: indigo gradient dome.
+{
+  const g = new THREE.SphereGeometry(3000, 32, 16);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+    uniforms: {},
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `varying vec3 vP;
+      void main(){
+        float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 low = vec3(0.022, 0.034, 0.075);
+        vec3 high = vec3(0.004, 0.006, 0.016);
+        gl_FragColor = vec4(mix(low, high, smoothstep(0.45, 0.85, h)), 1.0);
+      }`,
+  });
+  scene.add(new THREE.Mesh(g, m));
+}
+
+scene.add(new THREE.HemisphereLight('#6b7fb8', '#0a0c14', 0.55));
+const keyLight = new THREE.DirectionalLight('#dfe8ff', 1.5);
+keyLight.position.set(-60, 320, 120);
+scene.add(keyLight);
+const fieldLight = new THREE.PointLight('#bfe2ff', 0, 30, 2);
+scene.add(fieldLight);
+const chipLight = new THREE.PointLight('#ffffff', 0, 30, 2);
+scene.add(chipLight);
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  draw(ctx, w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#bfc4ca'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) {
+    const y = rnd() * h, l = 40 + rnd() * 260, a = 0.012 + rnd() * 0.03;
+    x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(40,44,52,${a})`;
+    x.lineWidth = 0.6 + rnd();
+    const x0 = rnd() * w;
+    x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke();
+  }
+}, { repeat: [5, 3] });
+
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#20252f'; x.fillRect(0, 0, w, h);
+  const n = 4, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const v = 26 + rnd() * 10;
+    x.fillStyle = `rgb(${v},${v + 3},${v + 10})`;
+    x.fillRect(i * s + 3, j * s + 3, s - 6, s - 6);
+    for (let k = 0; k < 120; k++) { x.fillStyle = `rgba(255,255,255,${rnd() * 0.035})`; x.fillRect(i * s + rnd() * s, j * s + rnd() * s, 2, 2); }
+  }
+  x.strokeStyle = '#0c0e13'; x.lineWidth = 6;
+  for (let i = 0; i <= n; i++) { x.beginPath(); x.moveTo(i * s, 0); x.lineTo(i * s, h); x.stroke(); x.beginPath(); x.moveTo(0, i * s); x.lineTo(w, i * s); x.stroke(); }
+}, { repeat: [60, 60] });
+
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+
+function pcbTex(kind) {
+  return canvasTex(512, 512, (x, w, h) => {
+    x.fillStyle = kind === 'coil' ? '#1c2a22' : '#13261d'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(160, 200, 170, 0.28)'; x.lineWidth = 3;
+    for (let i = 0; i < 40; i++) {
+      x.beginPath();
+      let px = rnd() * w, py = rnd() * h; x.moveTo(px, py);
+      for (let k = 0; k < 4; k++) { if (rnd() > 0.5) px += (rnd() - 0.5) * 220; else py += (rnd() - 0.5) * 220; x.lineTo(px, py); }
+      x.stroke();
+    }
+    x.fillStyle = 'rgba(220, 225, 230, 0.8)';
+    for (let i = 0; i < 70; i++) x.fillRect(rnd() * w, rnd() * h, 6, 6);
+  });
+}
+
+// =====================================================================================
+// Station hall: wet tile floor, ceiling lights, distant lights
+// =====================================================================================
+const mirror = new Reflector(new THREE.PlaneGeometry(3000, 3000), {
+  textureWidth: 512, textureHeight: 512, color: 0x5a6070, clipBias: 0.003,
+});
+mirror.rotation.x = -Math.PI / 2;
+scene.add(mirror);
+const floorTiles = new THREE.Mesh(
+  new THREE.PlaneGeometry(3000, 3000),
+  new THREE.MeshStandardMaterial({ map: tileTex, transparent: true, opacity: 0.72, roughness: 0.35, metalness: 0.1, color: '#9aa3b4' }),
+);
+floorTiles.rotation.x = -Math.PI / 2;
+floorTiles.position.y = 0.05;
+scene.add(floorTiles);
+
+const ceilingMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.5, 2.8), fog: true });
+for (let row = -2; row <= 3; row++)
+  for (let k = -4; k <= 4; k++) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 140), ceilingMat);
+    m.position.set(k * 110 + 40, 330, row * 190 - 60);
+    scene.add(m);
+  }
+{
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: '#0b0f19', roughness: 0.9 }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.y = 334; scene.add(ceil);
+  // distant blurred lights
+  const lightMat = new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.6, 1.65, 1.8), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  for (let i = 0; i < 26; i++) {
+    const s = new THREE.Sprite(lightMat);
+    const z = -520 - rnd() * 600, x = (rnd() - 0.5) * 1500, y = 40 + rnd() * 200;
+    s.position.set(x, y, z);
+    const sc = 10 + rnd() * 22; s.scale.set(sc, sc, 1);
+    s.material = lightMat.clone(); s.material.opacity = 0.12 + rnd() * 0.25;
+    scene.add(s);
+  }
+  // pillars
+  const pillarMat = new THREE.MeshStandardMaterial({ color: '#2a303c', roughness: 0.6, metalness: 0.2 });
+  for (const [x, z] of [[-240, -160], [320, -160], [-240, -520], [320, -520]]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(50, 334, 50), pillarMat);
+    p.position.set(x, 167, z); scene.add(p);
+  }
+}
+
+// =====================================================================================
+// Automatic ticket gate (an original generic design; interior is an illustrative image)
+// =====================================================================================
+const steel = new THREE.MeshStandardMaterial({ color: '#d9dee4', map: brushedTex, metalness: 0.9, roughness: 0.3, envMapIntensity: 1.6 });
+const resinDark = new THREE.MeshStandardMaterial({ color: '#23262c', metalness: 0.15, roughness: 0.45 });
+const resinMid = new THREE.MeshStandardMaterial({ color: '#3b4049', metalness: 0.1, roughness: 0.5 });
+const glassBlack = new THREE.MeshStandardMaterial({ color: '#07090d', metalness: 0.3, roughness: 0.15 });
+
+const gate = new THREE.Group();
+scene.add(gate);
+const parts = {}; // exploded-view animation targets
+
+function cabinet(x) {
+  const g = new THREE.Group();
+  g.position.x = x;
+  const body = new THREE.Mesh(new RoundedBoxGeometry(24, 96, 140, 4, 2.5), steel);
+  body.position.y = 48;
+  g.add(body);
+  const kick = new THREE.Mesh(new THREE.BoxGeometry(24.4, 6, 140.4), resinDark);
+  kick.position.y = 3; g.add(kick);
+  const top = new THREE.Mesh(new RoundedBoxGeometry(26, 4, 142, 3, 1.6), resinDark);
+  top.position.y = 99;
+  g.add(top);
+  gate.add(g);
+  return { g, body, top };
+}
+const cabA = cabinet(0);
+cabinet(76);
+// More gates in the row, for depth.
+for (const x of [-76, 152, 228]) cabinet(x, false);
+
+// Top cover assembly of cabinet A (lifts in the exploded view).
+parts.topCover = { obj: cabA.top, from: cabA.top.position.clone(), off: new THREE.Vector3(0, 30, 0) };
+
+// ---- Reader unit: resin cover / antenna coil board / control board
+const READER_POS = new THREE.Vector3(0, 101.4, 42); // coil centre (world)
+const SURFACE_Y = READER_POS.y + COIL_DEPTH;
+const readerUnit = new THREE.Group();
+readerUnit.position.copy(READER_POS);
+scene.add(readerUnit);
+
+function roundedPlate(w, d, t, r, mat) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -d / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  s.lineTo(x + r, y + d); s.quadraticCurveTo(x, y + d, x, y + d - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false, curveSegments: 6 });
+  g.rotateX(-Math.PI / 2);
+  const uv = g.attributes.uv;
+  const pos = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) - x) / w, (pos.getZ(i) - y) / d);
+  return new THREE.Mesh(g, mat);
+}
+
+const controlBoard = roundedPlate(15, 13, 0.25, 0.6, new THREE.MeshStandardMaterial({ map: pcbTex('ctrl'), roughness: 0.6 }));
+controlBoard.position.y = -1.5;
+for (let i = 0; i < 6; i++) {
+  const chipBox = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 1.6, 0.35, 1 + rnd() * 1.2), glassBlack);
+  chipBox.position.set((rnd() - 0.5) * 10, 0.4, (rnd() - 0.5) * 8);
+  controlBoard.add(chipBox);
+}
+readerUnit.add(controlBoard);
+
+const coilBoard = roundedPlate(15.2, 15.2, 0.16, 0.8, new THREE.MeshStandardMaterial({ map: pcbTex('coil'), roughness: 0.6 }));
+coilBoard.position.y = -0.2;
+readerUnit.add(coilBoard);
+const copperMat = new THREE.MeshStandardMaterial({ color: '#b86b3c', metalness: 0.9, roughness: 0.3, emissive: '#c8794a', emissiveIntensity: 0.05 });
+const readerCoil = new THREE.Group();
+for (let t = 0; t < 3; t++) {
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(A - t * 0.18, 0.055, 8, 96), copperMat);
+  ring.rotation.x = Math.PI / 2;
+  readerCoil.add(ring);
+}
+readerCoil.position.y = 0.2;
+coilBoard.add(readerCoil); // coil at coilBoard.y + 0.2 ≈ 0 (the coil plane)
+
+const coverMat = new THREE.MeshPhysicalMaterial({ color: '#23272e', metalness: 0, roughness: 0.35, transparent: true, opacity: 0.62, clearcoat: 0.6, clearcoatRoughness: 0.3 });
+const readerCover = roundedPlate(16, 16, 1.0, 1.4, coverMat);
+readerCover.position.y = COIL_DEPTH - 1.0 + 0.001;
+readerUnit.add(readerCover);
+// Thin white guide line printed on the cover: "place the card here".
+{
+  const guide = new THREE.Mesh(
+    new THREE.PlaneGeometry(10.4, 7.2),
+    new THREE.MeshBasicMaterial({ map: canvasTex(256, 180, (x, w, h) => {
+      x.strokeStyle = 'rgba(235,240,248,0.55)'; x.lineWidth = 3; x.setLineDash([10, 8]);
+      x.strokeRect(6, 6, w - 12, h - 12);
+    }), transparent: true, depthWrite: false }),
+  );
+  guide.rotation.x = -Math.PI / 2; guide.position.y = 1.005;
+  readerCover.add(guide);
+}
+const readerBase = new THREE.Mesh(new RoundedBoxGeometry(18, 1.2, 18, 3, 0.5), resinMid);
+readerBase.position.set(READER_POS.x, 100.8, READER_POS.z);
+scene.add(readerBase);
+
+parts.cover = { obj: readerCover, from: readerCover.position.clone(), off: new THREE.Vector3(0, 60, 0) };
+parts.coilBoard = { obj: coilBoard, from: coilBoard.position.clone(), off: new THREE.Vector3(0, 46, 0) };
+parts.controlBoard = { obj: controlBoard, from: controlBoard.position.clone(), off: new THREE.Vector3(0, 32, 0) };
+parts.readerBase = { obj: readerBase, from: readerBase.position.clone(), off: new THREE.Vector3(0, 30, 0) };
+
+// ---- Display
+const displayCanvas = document.createElement('canvas');
+displayCanvas.width = 640; displayCanvas.height = 380;
+const displayTex = new THREE.CanvasTexture(displayCanvas);
+displayTex.colorSpace = THREE.SRGBColorSpace;
+const display = new THREE.Group();
+display.position.set(0, 106, 18);
+display.rotation.x = -0.62;
+const displayFrame = new THREE.Mesh(new RoundedBoxGeometry(16, 10, 1.6, 3, 0.6), resinDark);
+display.add(displayFrame);
+const displayScreen = new THREE.Mesh(new THREE.PlaneGeometry(14, 8.3), new THREE.MeshBasicMaterial({ map: displayTex, toneMapped: false }));
+displayScreen.position.z = 0.81;
+display.add(displayScreen);
+const displayStand = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 3), resinDark);
+displayStand.position.set(0, -5, -1.5);
+display.add(displayStand);
+scene.add(display);
+parts.display = { obj: display, from: display.position.clone(), off: new THREE.Vector3(0, 40, -6) };
+
+// ---- Doors (flaps slide out of each cabinet toward the centre of the passage)
+const doorMat = new THREE.MeshPhysicalMaterial({ color: '#8d96a3', roughness: 0.35, metalness: 0.05, clearcoat: 0.4, transparent: true, opacity: 0.9 });
+const doorEdgeMat = new THREE.MeshStandardMaterial({ color: '#e3e7ec', roughness: 0.4, emissive: '#ff3b3b', emissiveIntensity: 0 });
+function doorLeaf() {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.lineTo(22, 0); s.quadraticCurveTo(26, 0, 26, 6); s.lineTo(26, 30); s.quadraticCurveTo(26, 36, 20, 36); s.lineTo(0, 36);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 1.6, bevelEnabled: true, bevelThickness: 0.3, bevelSize: 0.3, bevelSegments: 2 });
+  g.translate(0, 0, -0.8);
+  const m = new THREE.Mesh(g, doorMat);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(1, 30, 2.4), doorEdgeMat);
+  edge.position.set(25.6, 18, 0);
+  m.add(edge);
+  return m;
+}
+const DOOR_Z = -18;
+const doorA = doorLeaf();
+doorA.position.set(12 - 24, 58, DOOR_Z);
+gate.add(doorA);
+const doorB = doorLeaf();
+doorB.rotation.y = Math.PI;
+doorB.position.set(64 + 24, 58, DOOR_Z);
+gate.add(doorB);
+const doorUnit = new THREE.Group(); // door motor unit inside cabinet A (illustrative)
+{
+  const box = new THREE.Mesh(new THREE.BoxGeometry(12, 14, 20), resinMid);
+  const motor = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 9, 20), new THREE.MeshStandardMaterial({ color: '#8a929c', metalness: 0.7, roughness: 0.4 }));
+  motor.rotation.z = Math.PI / 2; motor.position.set(0, 9, 4);
+  doorUnit.add(box, motor);
+  doorUnit.position.set(0, 58, DOOR_Z);
+  gate.add(doorUnit);
+}
+parts.doorUnit = { obj: doorUnit, from: doorUnit.position.clone(), off: new THREE.Vector3(-34, 34, 0) };
+
+// ---- Passage detection sensors (inner face of cabinet A)
+const sensors = new THREE.Group();
+{
+  const winMat = new THREE.MeshStandardMaterial({ color: '#0a0b0e', metalness: 0.4, roughness: 0.12, emissive: '#ff2d2d', emissiveIntensity: 0.18 });
+  for (const z of [-58, -40, 0, 22, 56]) for (const y of [34, 70]) {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3.2, 5), winMat);
+    w.position.set(12.2, y, z);
+    sensors.add(w);
+  }
+  gate.add(sensors);
+}
+parts.sensors = { obj: sensors, from: sensors.position.clone(), off: new THREE.Vector3(-46, 10, 0) };
+
+// ---- Interior (illustrative): main controller, power unit
+const interior = new THREE.Group();
+{
+  const main = roundedPlate(16, 40, 0.3, 1, new THREE.MeshStandardMaterial({ map: pcbTex('ctrl'), roughness: 0.6 }));
+  main.rotation.z = Math.PI / 2; main.position.set(-6, 74, 30);
+  const psu = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 22), new THREE.MeshStandardMaterial({ color: '#6c737d', metalness: 0.6, roughness: 0.45 }));
+  psu.position.set(0, 22, 20);
+  const cable = new THREE.Mesh(new THREE.TorusGeometry(10, 0.5, 6, 32, Math.PI), resinDark);
+  cable.position.set(0, 50, 5); cable.rotation.y = Math.PI / 2;
+  interior.add(main, psu, cable);
+  interior.visible = false;
+  gate.add(interior);
+}
+
+// =====================================================================================
+// Magnetic field: RK4 field lines around the reader coil, rendered as glowing tubes
+// =====================================================================================
+const fieldGroup = new THREE.Group();
+fieldGroup.position.set(0, 0, 0);
+coilBoard.add(fieldGroup);
+fieldGroup.position.y = 0.2; // coil plane
+{
+  const seeds = [0.35, 0.47, 0.58, 0.68, 0.78, 0.9].map(s => s * A);
+  const lines = seeds.map(traceFieldLine);
+  const Bref = Math.hypot(...loopField(0.5 * A, 0.4 * A));
+  const positions = [], sAttr = [], bAttr = [], idx = [];
+  const SIDES = 6, AZ = 12;
+  let base = 0;
+  for (let az = 0; az < AZ; az++) {
+    const phi = (az / AZ) * Math.PI * 2;
+    const c = Math.cos(phi), sn = Math.sin(phi);
+    lines.forEach((pts, li) => {
+      // arc length
+      const S = [0];
+      for (let i = 1; i < pts.length; i++) S.push(S[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      for (let i = 0; i < pts.length; i++) {
+        const [r, z, bm] = pts[i];
+        // brightness: monotonic in |B|, compressed so the return legs stay readable
+        const b = Math.min(1, Math.max(0.06, Math.pow(Math.max(0, bm / Bref), 0.42)));
+        // tangent in the (ρ, z) plane
+        const j0 = Math.max(0, i - 1), j1 = Math.min(pts.length - 1, i + 1);
+        let tr = pts[j1][0] - pts[j0][0], tz = pts[j1][1] - pts[j0][1];
+        const tl = Math.hypot(tr, tz);
+        if (tl > 1e-9) { tr /= tl; tz /= tl; } else { tr = 0; tz = 1; }
+        const nr = -tz, nz = tr; // in-plane normal
+        const radius = 0.016 + 0.055 * b;
+        for (let k = 0; k < SIDES; k++) {
+          const a = (k / SIDES) * Math.PI * 2;
+          const u = Math.cos(a) * radius, v = Math.sin(a) * radius;
+          const R = r + nr * u, Z = z + nz * u;
+          // azimuthal offset for the tube's second axis
+          positions.push(R * c - sn * v, Z, R * sn + c * v);
+          sAttr.push(S[i] + li * 3.7 + az * 1.3);
+          bAttr.push(b);
+        }
+        if (i > 0) {
+          const p0 = base + (i - 1) * SIDES, p1 = base + i * SIDES;
+          for (let k = 0; k < SIDES; k++) {
+            const k1 = (k + 1) % SIDES;
+            idx.push(p0 + k, p1 + k, p1 + k1, p0 + k, p1 + k1, p0 + k1);
+          }
+        }
+      }
+      base += pts.length * SIDES;
+    });
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute('aS', new THREE.Float32BufferAttribute(sAttr, 1));
+  g.setAttribute('aB', new THREE.Float32BufferAttribute(bAttr, 1));
+  g.setIndex(idx);
+  var fieldMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uFlow: { value: 0 }, uPulse: { value: 1 }, uMod: { value: 1 }, uGain: { value: 1 },
+      uColor: { value: new THREE.Color('#9ccfff') },
+    },
+    vertexShader: `attribute float aS; attribute float aB; varying float vS; varying float vB;
+      void main(){ vS = aS; vB = aB; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uFlow; uniform float uPulse; uniform float uMod; uniform float uGain; uniform vec3 uColor;
+      varying float vS; varying float vB;
+      void main(){
+        float base = vB * (0.18 + 0.82 * uPulse) * uMod;
+        float p = fract(vS * 0.55 - uFlow);
+        float grain = smoothstep(0.82, 0.97, p) * (1.0 - smoothstep(0.97, 1.0, p));
+        float I = (base * 0.32 + grain * vB * 1.1 * (0.25 + 0.75 * uPulse) * uMod) * uGain;
+        gl_FragColor = vec4(uColor * I, 1.0);
+      }`,
+  });
+  const mesh = new THREE.Mesh(g, fieldMat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 5;
+  fieldGroup.add(mesh);
+  // soft volume glow of the dome
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color('#9fd0ff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.35 }));
+  halo.scale.set(22, 14, 1); halo.position.y = 3;
+  fieldGroup.add(halo);
+  var fieldHalo = halo;
+}
+
+// =====================================================================================
+// Card: surface film / coil and chip sheet / core / back film
+// =====================================================================================
+const cardRoot = new THREE.Group();   // positioned above the reader
+scene.add(cardRoot);
+const card = new THREE.Group();       // scaled ×3 in the exploded view
+cardRoot.add(card);
+const cardPrintCanvas = document.createElement('canvas');
+cardPrintCanvas.width = 1024; cardPrintCanvas.height = 646;
+const cardPrintTex = new THREE.CanvasTexture(cardPrintCanvas);
+cardPrintTex.colorSpace = THREE.SRGBColorSpace;
+cardPrintTex.anisotropy = 8;
+cardPrintTex.flipY = false; // the film faces up: this makes the print read from the passenger side
+function drawCardPrint() {
+  const x = cardPrintCanvas.getContext('2d'), w = 1024, h = 646;
+  const g = x.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#f2f4f7'); g.addColorStop(1, '#d9dee6');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(40, 60, 90, 0.07)'; x.lineWidth = 2;
+  for (let i = -h; i < w; i += 22) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + h * 0.6, 0); x.stroke(); }
+  x.fillStyle = '#2d3848'; x.fillRect(0, h - 120, w, 120);
+  x.fillStyle = '#1e2733'; x.font = '700 64px "Noto Sans JP"'; x.fillText('交通系ICカード', 70, 150);
+  x.fillStyle = '#5b6778'; x.font = '500 30px "Noto Sans JP"'; x.fillText('無記名', 72, 205);
+  x.fillStyle = '#e8edf4'; x.font = '500 34px "JetBrains Mono"'; x.fillText('0000 1234 5678 9012', 70, h - 48);
+}
+drawCardPrint();
+const cardLayers = [];
+function cardLayer(name, t, mat, y) {
+  const m = roundedPlate(CARD_W, CARD_H, t, 0.35, mat);
+  m.position.y = y;
+  m.userData.baseY = y;
+  card.add(m);
+  cardLayers.push({ name, mesh: m });
+  return m;
+}
+const T4 = CARD_T / 4;
+const backFilm = cardLayer('裏面フィルム', T4, new THREE.MeshStandardMaterial({ color: '#aab1bc', roughness: 0.6, envMapIntensity: 0.4 }), 0);
+const core = cardLayer('芯材', T4, new THREE.MeshStandardMaterial({ color: '#b9bec6', roughness: 0.8, envMapIntensity: 0.4 }), T4);
+const inlay = cardLayer('コイルとチップのシート', T4 * 0.6, new THREE.MeshStandardMaterial({ color: '#8f9a94', roughness: 0.8, envMapIntensity: 0.4, transparent: true, opacity: 0.92 }), T4 * 2);
+const frontMat = new THREE.MeshPhysicalMaterial({ map: cardPrintTex, color: '#b4bbc6', roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, transparent: true, opacity: 0.78 });
+const frontFilm = cardLayer('表面フィルム', T4, frontMat, T4 * 3);
+// antenna coil (4 turns, flat traces) and the chip
+const cardCoilMat = new THREE.MeshStandardMaterial({ color: '#b56a38', metalness: 0.8, roughness: 0.35, emissive: '#ff8414', emissiveIntensity: 0 });
+const cardCoil = new THREE.Group();
+for (let t = 0; t < 4; t++) {
+  const w = CARD_COIL_W - t * 0.32, h = CARD_COIL_H - t * 0.32, tw = 0.09;
+  const outer = new THREE.Shape(), r = 0.3;
+  const rr = (s, W, H, R) => {
+    s.moveTo(-W / 2 + R, -H / 2); s.lineTo(W / 2 - R, -H / 2); s.quadraticCurveTo(W / 2, -H / 2, W / 2, -H / 2 + R);
+    s.lineTo(W / 2, H / 2 - R); s.quadraticCurveTo(W / 2, H / 2, W / 2 - R, H / 2); s.lineTo(-W / 2 + R, H / 2);
+    s.quadraticCurveTo(-W / 2, H / 2, -W / 2, H / 2 - R); s.lineTo(-W / 2, -H / 2 + R); s.quadraticCurveTo(-W / 2, -H / 2, -W / 2 + R, -H / 2);
+  };
+  rr(outer, w, h, r);
+  const hole = new THREE.Path(); rr(hole, w - tw * 2, h - tw * 2, Math.max(0.05, r - tw));
+  outer.holes.push(hole);
+  const g = new THREE.ShapeGeometry(outer, 6); g.rotateX(-Math.PI / 2);
+  cardCoil.add(new THREE.Mesh(g, cardCoilMat));
+}
+cardCoil.position.y = T4 * 0.6 + 0.002;
+inlay.add(cardCoil);
+const chipMat = new THREE.MeshStandardMaterial({ color: '#1a1d22', roughness: 0.3, metalness: 0.4, emissive: '#ffffff', emissiveIntensity: 0 });
+const chip = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.9), chipMat);
+chip.position.set(2.1, T4 * 0.6 + 0.03, 0.9);
+inlay.add(chip);
+const chipFlash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+chipFlash.scale.set(6, 6, 1);
+chip.add(chipFlash);
+const cardPick = new THREE.Mesh(new THREE.BoxGeometry(CARD_W + 3, 3, CARD_H + 3), new THREE.MeshBasicMaterial({ visible: false }));
+cardRoot.add(cardPick);
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), dist: $('dist'), volt: $('volt'), powerTag: $('powerTag'), meter: $('meter'),
+  fill: document.querySelector('#meter .fill'), th: document.querySelector('#meter .th'),
+  steps: [...document.querySelectorAll('#steps li')], stepsEl: $('steps'), counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  scopeLegend: $('scopeLegend'), imageTag: $('imageTag'), hint: $('hint'),
+};
+ui.th.style.left = `${(V_TH / V_MAX) * 100}%`;
+
+const fontsReady = Promise.all([
+  document.fonts.load('700 64px "Noto Sans JP"'),
+  document.fonts.load('900 64px "Noto Sans JP"'),
+  document.fonts.load('500 30px "Noto Sans JP"'),
+  document.fonts.load('500 34px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+function freshState() {
+  return {
+    d: 12, V: 0, powered: false,
+    status: 'idle',        // idle | boot | run | done | aborted
+    tReal: 0,              // real seconds since the chip woke up
+    phase: -1, latch: false,
+    speed: 'slow',
+    balance: START_BALANCE,
+    door: 0, doorTarget: 0, doorReopenAt: -1,
+    flash: 0,
+    exploded: false, explode: 0,
+    camera: 'overview',
+    t: 0,                  // display time
+    events: [],
+    bubble: null, bubbleUntil: 0,
+    interacted: false,
+  };
+}
+let S = freshState();
+
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+
+function commAt() {
+  if (S.status !== 'run') return null;
+  const tr = S.tReal - BOOT_REAL;
+  let acc = 0;
+  for (let i = 0; i < PHASES.length; i++) {
+    const p = PHASES[i];
+    if (tr < acc + p.real) {
+      const f = (tr - acc) / p.real;
+      let a = 0;
+      for (const [dir, w] of p.comm) { if (f < a + w) return dir === '-' ? null : dir; a += w; }
+      return null;
+    }
+    acc += p.real;
+  }
+  return null;
+}
+
+function startTransaction() {
+  S.status = 'boot'; S.tReal = 0; S.phase = -1; S.latch = true; S.flash = 1;
+  logEvent('boot');
+}
+function completeTransaction() {
+  S.status = 'done'; S.phase = PHASES.length - 1;
+  S.balance -= FARE;
+  showBubble('ok');
+  beep('ok');
+  logEvent('done');
+}
+function abortTransaction() {
+  S.status = 'aborted';
+  S.doorTarget = 1;
+  S.doorReopenAt = S.t + 3.4;
+  showBubble('err');
+  beep('err');
+  logEvent('abort');
+  if (!DEMO_ACTIVE) setCamera('abort');
+}
+
+/** Advance the transaction state by `dt` display-seconds. dt = 0 just re-evaluates thresholds. */
+function stepState(dt) {
+  S.t += dt;
+  S.V = voltageAt(S.d);
+  const powered = S.V >= V_TH;
+  S.powered = powered;
+  if (!powered) {
+    if (S.status === 'boot' || S.status === 'run') abortTransaction();
+    S.latch = false;
+  } else if (!S.latch && S.status !== 'boot' && S.status !== 'run') {
+    startTransaction();
+  }
+  if (S.status === 'boot' || S.status === 'run') {
+    S.tReal += S.speed === 'slow' ? dt / SLOW : dt;
+    if (S.status === 'boot' && S.tReal >= BOOT_REAL) { S.status = 'run'; S.phase = 0; logEvent('run'); }
+    if (S.status === 'run') {
+      const tr = S.tReal - BOOT_REAL;
+      let acc = 0, ph = PHASES.length - 1;
+      for (let i = 0; i < PHASES.length; i++) { if (tr < acc + PHASES[i].real) { ph = i; break; } acc += PHASES[i].real; }
+      S.phase = ph;
+      if (tr >= EXCHANGE_REAL) completeTransaction();
+    }
+  }
+  // doors
+  if (S.doorReopenAt > 0 && S.t >= S.doorReopenAt) { S.doorTarget = 0; S.doorReopenAt = -1; }
+  const ds = dt * 2.4;
+  S.door += Math.max(-ds, Math.min(ds, S.doorTarget - S.door));
+  S.flash = Math.max(0, S.flash - dt * 0.9);
+  const et = S.exploded ? 1 : 0;
+  S.explode += Math.max(-dt * 1.2, Math.min(dt * 1.2, et - S.explode));
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+}
+
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'ok' ? 4.2 : 3.6); }
+
+// =====================================================================================
+// Sound (Web Audio, created on the first user gesture)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio, { once: false });
+window.addEventListener('keydown', ensureAudio, { once: false });
+function tone(freq, start, dur, gain = 0.18) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(gain, start + 0.006);
+  g.gain.setValueAtTime(gain, start + dur - 0.012);
+  g.gain.linearRampToValueAtTime(0, start + dur);
+  o.connect(g).connect(audio.destination);
+  o.start(start); o.stop(start + dur + 0.02);
+}
+function beep(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') tone(2400, t0, 0.13);
+  else for (let i = 0; i < 5; i++) tone(3000, t0 + i * 0.12, 0.07, 0.14);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-38, 132, 102], tgt: [10, 98, 28] },
+  reader: { pos: [-27, 124, 80], tgt: [0, 104, 40] },
+  card: { pos: [9, 109, 57], tgt: [0, 0, 42], follow: true },
+  inside: { pos: [-78, 150, -34], tgt: [2, 66, 12] },
+  display: { pos: [-24, 121, 72], tgt: [2, 105, 31] },
+  abort: { pos: [26, 146, 128], tgt: [32, 80, -14] },
+  exploded: { pos: [-92, 168, 150], tgt: [6, 116, 22] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = CAMS[name];
+  const tgt = new THREE.Vector3(...p.tgt);
+  if (p.follow) tgt.y = SURFACE_Y + S.d * 0.5 + 0.5;
+  return { pos: new THREE.Vector3(...p.pos).add(p.follow ? new THREE.Vector3(0, S.d * 0.5, 0) : new THREE.Vector3()), tgt };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) {
+    camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update();
+  } else {
+    camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() };
+    camAnim.to = name; camAnim.t = 0;
+  }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3();
+let flowPhase = 0;
+function bitAt(t, rate) {
+  const n = Math.floor(t * rate);
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x) > 0.5 ? 1 : 0;
+}
+
+function applyScene(time) {
+  const w = (2 * Math.PI) / AC_PERIOD;
+  const cs = Math.cos(w * time);
+  const pulse = Math.abs(cs);
+  // particle flow: integral of sign(cos ωt) → reverses every half period, continuous
+  flowPhase = (Math.asin(Math.sin(w * time)) / w) * 0.9;
+  const comm = commAt();
+  const bitR = bitAt(time, 9), bitC = bitAt(time + 0.37, 14);
+  const mod = comm === 'R' ? 1 - 0.3 * bitR : 1;
+  fieldMat.uniforms.uFlow.value = flowPhase;
+  fieldMat.uniforms.uPulse.value = pulse;
+  fieldMat.uniforms.uMod.value = mod;
+  fieldMat.uniforms.uGain.value = 1.0;
+  fieldHalo.material.opacity = (0.04 + 0.1 * pulse) * mod * (1 - 0.5 * S.explode);
+  fieldLight.position.copy(READER_POS).add(tmpV.set(0, COIL_DEPTH + 0.6, 0));
+  fieldLight.intensity = (12 + 28 * pulse) * mod * (1 - S.explode);
+
+  // reader coil: weak copper glow, a faint flicker when the card answers (load modulation)
+  copperMat.emissiveIntensity = 0.04 + 0.1 * pulse + (comm === 'C' ? 0.12 * bitC : 0);
+
+  // card position & coil glow
+  const vRatio = S.V / V_MAX;
+  cardRoot.position.set(READER_POS.x, SURFACE_Y + S.d, READER_POS.z);
+  let glow = Math.pow(Math.max(0, vRatio), 0.7) * 1.25 * (0.6 + 0.4 * pulse);
+  if (comm === 'C') glow *= 0.7 + 0.6 * bitC;
+  cardCoilMat.emissiveIntensity = glow;
+  // chip: white flash at wake-up, steady faint light while powered
+  const chipOn = S.status === 'boot' || S.status === 'run' ? 1 : S.powered ? 0.4 : 0;
+  chipMat.emissiveIntensity = 0.5 * chipOn + 8 * S.flash;
+  chipFlash.material.opacity = Math.min(1, 1.4 * S.flash + 0.22 * chipOn);
+  chipFlash.scale.setScalar(3 + 16 * S.flash);
+  chip.getWorldPosition(chipLight.position);
+  chipLight.intensity = 90 * S.flash;
+
+  // doors: 0 open (tucked into the cabinets) → 1 closed (meeting at the passage centre)
+  const k = ease(S.door);
+  doorA.position.x = 12 - 24 + k * 24.5;
+  doorB.position.x = 64 + 24 - k * 24.5;
+  doorEdgeMat.emissiveIntensity = S.status === 'aborted' ? 2.2 * k : 0;
+
+  // exploded view
+  const e = ease(S.explode);
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  fieldGroup.scale.setScalar(1 - 0.55 * e);
+  const cs3 = 1 + 2 * e;
+  card.scale.setScalar(cs3);
+  card.position.set(-30 * e, 18 * e, 8 * e);
+  cardLayers.forEach((l, i) => (l.mesh.position.y = l.mesh.userData.baseY + e * i * 1.1));
+  frontMat.opacity = 0.78 - 0.25 * e;
+
+  // "inside the gate" view: see-through shell
+  const insideView = S.camera === 'inside';
+  seeThrough(cabA.body, insideView);
+  seeThrough(cabA.top, insideView);
+  interior.visible = insideView || S.explode > 0.01;
+  ui.imageTag.classList.toggle('show', insideView || S.explode > 0.3);
+}
+const seeMats = new Map();
+function seeThrough(mesh, on) {
+  if (!seeMats.has(mesh)) {
+    const m = mesh.material.clone();
+    m.transparent = true; m.opacity = 0.14; m.depthWrite = false;
+    seeMats.set(mesh, { normal: mesh.material, see: m });
+  }
+  const s = seeMats.get(mesh);
+  mesh.material = on ? s.see : s.normal;
+}
+
+// =====================================================================================
+// Display (Canvas text, drawn after fonts load)
+// =====================================================================================
+let lastDisplayKey = '';
+function drawDisplay() {
+  const key = `${S.status}|${S.balance}|${S.status === 'run' ? S.phase : ''}`;
+  if (key === lastDisplayKey) return;
+  lastDisplayKey = key;
+  const x = displayCanvas.getContext('2d'), W = displayCanvas.width, H = displayCanvas.height;
+  x.fillStyle = '#05070b'; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(255,255,255,0.15)'; x.lineWidth = 2; x.strokeRect(10, 10, W - 20, H - 20);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (S.status === 'aborted') {
+    x.fillStyle = '#ff4d4d'; x.fillRect(10, 10, W - 20, 70);
+    x.fillStyle = '#fff'; x.font = '700 40px "Noto Sans JP"'; x.fillText('エラー', W / 2, 46);
+    x.fillStyle = '#ff6b6b'; x.font = '900 50px "Noto Sans JP"'; x.fillText('もう一度タッチ', W / 2, 180); x.fillText('してください', W / 2, 250);
+  } else if (S.status === 'done') {
+    x.fillStyle = '#d7dde6'; x.font = '500 40px "Noto Sans JP"'; x.fillText('残高', W / 2, 110);
+    x.fillStyle = '#ffffff'; x.font = '900 104px "Noto Sans JP"'; x.fillText(`${S.balance.toLocaleString('ja-JP')}円`, W / 2, 215);
+    x.fillStyle = '#9aa6b8'; x.font = '500 30px "Noto Sans JP"'; x.fillText(`運賃 ${FARE}円`, W / 2, 312);
+  } else if (S.status === 'boot' || S.status === 'run') {
+    x.fillStyle = '#ffffff'; x.font = '700 54px "Noto Sans JP"'; x.fillText('読み取り中', W / 2, 160);
+    const n = S.status === 'run' ? S.phase + 1 : 0;
+    for (let i = 0; i < 6; i++) { x.fillStyle = i < n ? '#ffffff' : 'rgba(255,255,255,0.18)'; x.fillRect(W / 2 - 170 + i * 58, 240, 46, 12); }
+  } else {
+    x.fillStyle = '#d7dde6'; x.font = '700 42px "Noto Sans JP"'; x.fillText('ICカードを', W / 2, 150); x.fillText('タッチしてください', W / 2, 212);
+  }
+  displayTex.needsUpdate = true;
+}
+
+// =====================================================================================
+// Graph (distance → voltage) and oscilloscope
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const curve = [];
+for (let d = D_MIN; d <= D_MAX + 1e-9; d += 0.1) curve.push([d, voltageAt(d)]);
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+function graphGeom(w, h) { return { l: 34, r: w - 10, t: 10, b: h - 26 }; }
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = d => g.l + ((d - 0) / D_MAX) * (g.r - g.l), Y = v => g.b - (v / V_MAX) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8793a6'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (let d = 0; d <= 15; d += 5) x.fillText(`${d}`, X(d), g.b + 12);
+  x.textAlign = 'right';
+  for (let v = 0; v <= 5; v += 1) x.fillText(`${v}`, g.l - 5, Y(v) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('距離 cm', g.r - 42, g.b + 23); x.fillText('電圧 V', 2, g.t + 2);
+  // threshold
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.7)';
+  x.beginPath(); x.moveTo(g.l, Y(V_TH)); x.lineTo(g.r, Y(V_TH)); x.stroke();
+  x.strokeStyle = 'rgba(255,255,255,0.45)';
+  x.beginPath(); x.moveTo(X(TH_DIST), g.t); x.lineTo(X(TH_DIST), g.b); x.stroke();
+  x.setLineDash([]);
+  x.fillStyle = '#b9c3d2'; x.fillText('約5.5cm', X(TH_DIST) + 4, g.t + 10);
+  // curve
+  x.strokeStyle = '#ffb14a'; x.lineWidth = 1.8; x.beginPath();
+  curve.forEach(([d, v], i) => (i ? x.lineTo(X(d), Y(v)) : x.moveTo(X(d), Y(v))));
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+  x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const px = g.l + (S.d / D_MAX) * (g.r - g.l), py = g.b - (S.V / V_MAX) * (g.b - g.t);
+  x.fillStyle = S.powered ? '#ffffff' : '#ffb14a';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+let lastLegend = '';
+function drawScope(time) {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s, mid = h / 2;
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.1)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo((i * w) / 8, 0); x.lineTo((i * w) / 8, h); x.stroke(); }
+  for (let i = 1; i < 4; i++) { x.beginPath(); x.moveTo(0, (i * h) / 4); x.lineTo(w, (i * h) / 4); x.stroke(); }
+  const comm = commAt();
+  const amp = h * 0.36;
+  const env = xx => {
+    const tt = time * 1.5 + xx / w;
+    if (comm === 'R') return 1 - 0.32 * bitAt(tt, 7);                        // reader sends: envelope dips
+    if (comm === 'C') return 1 + 0.06 * (Math.sin(tt * 2 * Math.PI * 22) > 0 ? 1 : -1) * bitAt(tt, 7); // card answers: tiny ripple
+    return 1;
+  };
+  x.strokeStyle = '#bfe2ff'; x.lineWidth = 1.2; x.beginPath();
+  for (let i = 0; i <= w; i++) {
+    const y = mid - amp * env(i) * Math.sin((i / w) * 2 * Math.PI * 34 - time * 9);
+    i ? x.lineTo(i, y) : x.moveTo(i, y);
+  }
+  x.stroke();
+  // envelope guide
+  x.strokeStyle = comm === 'C' ? 'rgba(255,177,74,0.9)' : 'rgba(255,255,255,0.55)'; x.lineWidth = 1;
+  for (const sgn of [1, -1]) { x.beginPath(); for (let i = 0; i <= w; i += 2) { const y = mid - sgn * amp * env(i); i ? x.lineTo(i, y) : x.moveTo(i, y); } x.stroke(); }
+  const legend =
+    comm === 'R' ? '改札→カード：磁場の強さを少し弱めたり戻したりして、0と1を送ります（振幅変調）'
+    : comm === 'C' ? 'カード→改札：カードは電波を出さず、中の負荷を切り替えて磁場をわずかに揺らして返事をします（負荷変調）'
+    : '搬送波 13.56MHz（表示のために遅くした模式図）';
+  if (legend !== lastLegend) { ui.scopeLegend.textContent = legend; lastLegend = legend; }
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const LABELS = [
+  { id: 'card', text: '交通系ICカード', cls: 'key card', pri: 100, mode: 'normal', anchor: () => cardRoot.localToWorld(tmpV.set(-CARD_W * 0.35, 0.1, 0)).clone() },
+  { id: 'field', text: '磁場', cls: 'key field', pri: 95, mode: 'normal', anchor: () => new THREE.Vector3(READER_POS.x + 9, SURFACE_Y + 3, READER_POS.z + 1) },
+  { id: 'reader', text: '読み取り部', cls: 'key', pri: 90, mode: 'normal', anchor: () => new THREE.Vector3(READER_POS.x - 7, SURFACE_Y - 0.2, READER_POS.z + 6) },
+  { id: 'gate', text: '自動改札機', cls: 'key', pri: 85, mode: 'normal', anchor: () => new THREE.Vector3(-12.5, 92, 20) },
+  { id: 'display', text: '表示器', cls: '', pri: 60, mode: 'normal', anchor: () => display.localToWorld(tmpV.set(-8, 3, 0)).clone() },
+  { id: 'door', text: '扉', cls: '', pri: 50, mode: 'normal', anchor: () => doorB.localToWorld(tmpV.set(22, 30, 0)).clone() },
+  // exploded
+  { id: 'xcard', text: 'カード（3倍に拡大）', cls: 'key card', pri: 100, mode: 'x', anchor: () => frontFilm.localToWorld(tmpV.set(-CARD_W / 2, 0, -CARD_H / 2)).clone() },
+  { id: 'xfront', text: '表面フィルム', cls: 'card', pri: 80, mode: 'x', anchor: () => frontFilm.localToWorld(tmpV.set(CARD_W / 2, 0, 0)).clone() },
+  { id: 'xinlay', text: 'コイルとチップのシート', cls: 'card', pri: 82, mode: 'x', anchor: () => inlay.localToWorld(tmpV.set(CARD_W / 2, 0, 0)).clone() },
+  { id: 'xcore', text: '芯材', cls: 'card', pri: 70, mode: 'x', anchor: () => core.localToWorld(tmpV.set(CARD_W / 2, 0, 0)).clone() },
+  { id: 'xback', text: '裏面フィルム', cls: 'card', pri: 68, mode: 'x', anchor: () => backFilm.localToWorld(tmpV.set(CARD_W / 2, 0, 0)).clone() },
+  { id: 'xcover', text: '樹脂カバー', cls: '', pri: 78, mode: 'x', anchor: () => readerCover.localToWorld(tmpV.set(8, 0.5, 0)).clone() },
+  { id: 'xcoil', text: 'アンテナコイル基板', cls: 'field', pri: 88, mode: 'x', anchor: () => coilBoard.localToWorld(tmpV.set(7.6, 0, 0)).clone() },
+  { id: 'xctrl', text: '制御基板', cls: '', pri: 76, mode: 'x', anchor: () => controlBoard.localToWorld(tmpV.set(7.5, 0, 0)).clone() },
+  { id: 'xreader', text: '読み取りユニット', cls: 'key', pri: 84, mode: 'x', anchor: () => coilBoard.localToWorld(tmpV.set(-7.6, 0, -7)).clone() },
+  { id: 'xtop', text: '上蓋', cls: '', pri: 60, mode: 'x', anchor: () => cabA.top.localToWorld(tmpV.set(0, 2, -40)).clone() },
+  { id: 'xdisp', text: '表示器', cls: '', pri: 62, mode: 'x', anchor: () => display.localToWorld(tmpV.set(-8, 0, 0)).clone() },
+  { id: 'xdoor', text: '扉ユニット', cls: '', pri: 58, mode: 'x', anchor: () => doorUnit.localToWorld(tmpV.set(0, 7, 0)).clone() },
+  { id: 'xsens', text: '通行検知センサー', cls: '', pri: 56, mode: 'x', anchor: () => sensors.localToWorld(tmpV.set(12.2, 70, 22)).clone() },
+  // inside
+  { id: 'iboard', text: '制御装置', cls: '', pri: 70, mode: 'inside', anchor: () => new THREE.Vector3(-6, 74, 30) },
+  { id: 'ipsu', text: '電源', cls: '', pri: 60, mode: 'inside', anchor: () => new THREE.Vector3(0, 30, 20) },
+  { id: 'idoor', text: '扉ユニット', cls: '', pri: 65, mode: 'inside', anchor: () => doorUnit.localToWorld(tmpV.set(0, 7, 0)).clone() },
+  { id: 'isens', text: '通行検知センサー', cls: '', pri: 62, mode: 'inside', anchor: () => new THREE.Vector3(12.2, 70, 0) },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div');
+  L.el.className = `lbl ${L.cls}`;
+  L.el.textContent = L.text;
+  labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)');
+  L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [];
+let blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint']
+    .map(id => $(id))
+    .filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0'; })
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function displayBox() {
+  const pts = [[-8, -5], [8, -5], [-8, 5], [8, 5]].map(([a, b]) => screenOf(display.localToWorld(new THREE.Vector3(a, b, 1))));
+  return { x0: Math.min(...pts.map(p => p.x)), x1: Math.max(...pts.map(p => p.x)), y0: Math.min(...pts.map(p => p.y)), y1: Math.max(...pts.map(p => p.y)) };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : S.camera === 'inside' ? 'inside' : 'normal';
+  const placed = [displayBox()];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  const sorted = [...LABELS].sort((a, b) => b.pri - a.pri);
+  for (const L of sorted) {
+    let show = false;
+    if (L.mode === mode && !(mode === 'normal' && S.camera === 'card' && L.id !== 'card' && L.id !== 'field')) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        const cands = [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 44]];
+        for (const [dx, dy] of cands) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p))) continue;
+          if (blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = Math.max(box.x0, Math.min(box.x1, a.x)), ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          const exx = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : ex;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1));
+          L.line.setAttribute('x2', exx.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true;
+          break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+function updateUI() {
+  ui.dist.textContent = `${S.d.toFixed(1)} cm`;
+  ui.volt.textContent = `${S.V.toFixed(2)} V`;
+  ui.volt.classList.toggle('on', S.powered);
+  ui.fill.style.width = `${Math.min(100, (S.V / V_MAX) * 100).toFixed(1)}%`;
+  ui.powerTag.textContent = S.powered ? 'チップ起動' : '停止中';
+  ui.powerTag.classList.toggle('on', S.powered);
+  if (document.activeElement !== ui.range) ui.range.value = S.d.toFixed(1);
+  ui.stepsEl.classList.toggle('aborted', S.status === 'aborted');
+  ui.steps.forEach((li, i) => {
+    const active = (S.status === 'run' || S.status === 'aborted') && i === S.phase;
+    const done = (S.status === 'run' && i < S.phase) || S.status === 'done' || (S.status === 'aborted' && i < S.phase);
+    li.classList.toggle('active', active || (S.status === 'done' && i === PHASES.length - 1));
+    li.classList.toggle('done', done);
+  });
+  const exch = Math.max(0, Math.min(EXCHANGE_REAL, S.tReal - BOOT_REAL));
+  ui.counter.textContent = `経過 ${(S.status === 'idle' ? 0 : exch).toFixed(3)}秒`;
+  ui.stateText.textContent =
+    S.status === 'boot' ? 'チップが目を覚ましました'
+    : S.status === 'run' ? `${PHASES[S.phase].label}中`
+    : S.status === 'done' ? '完了'
+    : S.status === 'aborted' ? '中断　電源が落ちました'
+    : S.powered ? 'カードを離すと次のタッチを待ちます' : 'カードを待っています';
+  ui.realnote.classList.toggle('show', S.status === 'done');
+  ui.speedTag.textContent = S.speed === 'slow' ? 'スロー表示（約40倍）' : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'slow' ? '実時間にする' : 'スローにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  // bubble
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? '中断　もう一度タッチしてください<small>カードが離れて、チップの電源が落ちました</small>' : `ピッ　残高 ${S.balance.toLocaleString('ja-JP')}円<small>処理が完了しました。扉は開いたままです</small>`;
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const p = screenOf(display.localToWorld(new THREE.Vector3(-7, 6, 1)));
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 20;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) { // desktop: keep clear of the side panels
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    // phone: keep the bubble above the bottom sheet and below the top buttons
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: card drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null;
+let tapPlan = null;
+function markInteraction() {
+  if (!S.interacted) { S.interacted = true; collapseTitle(); }
+}
+function setDistanceUser(d) {
+  tapPlan = null;
+  S.d = Math.max(D_MIN, Math.min(D_MAX, d));
+  stepState(0);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(cardPick, false).length) {
+    dragging = { y: e.clientY, d: S.d, id: e.pointerId };
+    controls.enabled = false;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = 'grabbing';
+    markInteraction();
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) {
+    const camDist = camera.position.distanceTo(cardRoot.position);
+    setDistanceUser(dragging.d + (dragging.y - e.clientY) * 0.00085 * camDist);
+    return;
+  }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(cardPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => {
+  if (DEMO_ACTIVE) return;
+  e.preventDefault();
+  markInteraction();
+  setDistanceUser(S.d + e.deltaY * 0.008);
+}, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setDistanceUser(S.d + 0.3); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setDistanceUser(S.d - 0.3); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setDistanceUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'slow' ? 'real' : 'slow';
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+
+function tap() {
+  tapPlan = { stage: 'in', from: S.d, t: 0, hold: 0 };
+}
+function updateTap(dt) {
+  if (!tapPlan) return;
+  const p = tapPlan;
+  p.t += dt;
+  if (p.stage === 'in') {
+    const k = ease(Math.min(1, p.t / 0.8));
+    S.d = p.from + (1.2 - p.from) * k;
+    if (p.t >= 0.8) { p.stage = 'hold'; p.t = 0; }
+  } else if (p.stage === 'hold') {
+    if (S.status === 'done' || S.status === 'aborted' || p.t > 12) { p.hold += dt; if (p.hold > 0.9) { p.stage = 'out'; p.t = 0; p.from = S.d; } }
+  } else if (p.stage === 'out') {
+    const k = ease(Math.min(1, p.t / 1.0));
+    S.d = p.from + (12 - p.from) * k;
+    if (p.t >= 1.0) tapPlan = null;
+  }
+}
+function setExploded(on) {
+  S.exploded = !!on;
+  if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview');
+}
+
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const SUBS = [
+  [0, 3, '毎日ピッとしているICカードに電池は入っていません'],
+  [3, 7, '改札の読み取り部は見えない磁場を出し続けています'],
+  [7, 12, 'カードを近づけると中のコイルに電気が流れ始めます'],
+  [12, 14, 'ある距離を越えた瞬間にチップが目を覚まします'],
+  [14, 18.5, 'カードは電波を出さず、磁場をわずかに揺らして返事をします'],
+  [18.5, 23, 'カードと改札のやりとりは実際には約0.1秒です'],
+  [23, 27, '途中で離すと電気が切れて処理が止まり、扉が閉じます'],
+  [27, 30, 'だから鉄道会社は「かざす」ではなく「タッチ」を案内しています'],
+];
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, t0, t1) => Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+function demoDistance(t) {
+  if (t < 7) return 12;
+  if (t < 12) return lerp(12, 5.52, ease(seg(t, 7, 12)));
+  if (t < 13.5) return lerp(5.52, 2.6, ease(seg(t, 12, 13.5)));
+  if (t < 21) return 2.6;
+  if (t < 23) return lerp(2.6, 12, ease(seg(t, 21, 23)));
+  if (t < 23.7) return lerp(12, 3.0, ease(seg(t, 23, 23.7)));
+  if (t < 25.6) return 3.0;
+  if (t < 26.6) return lerp(3.0, 12, ease(seg(t, 25.6, 26.6)));
+  return 12;
+}
+const DEMO_CAMS = [
+  [0, 'overview'], [3, 'reader'], [13.5, 'card'], [18.4, 'display'], [23, 'reader'], [25.95, 'abort'], [27, 'exploded'],
+];
+function demoCamera(t) {
+  // blend between consecutive presets over 1.4 s after each switch time; slow drift otherwise
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name);
+  const prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'abort' ? 0.9 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  // gentle drift
+  const ang = Math.sin(t * 0.21) * 0.05;
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt);
+  camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= 30 ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+/** Deterministic: rebuild the state from t = 0 with a fixed step, then render once. */
+function simulateDemoTo(t) {
+  S = freshState();
+  S.speed = 'slow';
+  const dt = 1 / 120;
+  for (let tt = 0; tt < t - 1e-9; tt += dt) {
+    const step = Math.min(dt, t - tt);
+    S.d = demoDistance(tt + step);
+    S.exploded = tt + step >= 27;
+    stepState(step);
+  }
+  S.d = demoDistance(t); S.V = voltageAt(S.d); S.powered = S.V >= V_TH;
+}
+let demoExternal = false; // set when a caller (e.g. the video exporter) drives the frames
+function renderDemoFrame(t) {
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  // Frame-exact export: no CSS transitions, so cross-fade the title and panels by hand.
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) document.getElementById(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t);
+  demoSubtitle(t);
+  camera.updateMatrixWorld();
+  refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr);
+  composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h;
+  camera.fov = w / h < 0.8 ? 50 : 38;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  mirror.getRenderTarget().setSize(Math.round(w * dpr * 0.4), Math.round(h * dpr * 0.4));
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+
+let viewShift = 0;
+/** Phone: the bottom sheet covers the lower half, so frame the scene in the upper part. */
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 && document.body.classList.contains('collapsed') ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift();
+  applyScene(time);
+  drawDisplay();
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld();
+  updateUI();
+  layoutLabels();
+  drawGraph();
+  drawScope(time);
+  composer.render(dt);
+}
+
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) {
+    const t = Math.min(30, (performance.now() - demoStart) / 1000);
+    renderDemoFrame(t);
+    return;
+  }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt);
+  stepState(dt);
+  updateCameraAnim(dt);
+  if (S.camera === 'card' && camAnim.t >= 1) { const v = presetVectors('card'); controls.target.lerp(v.tgt, 0.1); }
+  renderFrame(visualTime, dt);
+  // adaptive resolution: start low, raise while there is headroom
+  const cost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + cost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  return {
+    ready: window.__lab.ready,
+    distance: +S.d.toFixed(3),
+    voltage: +S.V.toFixed(4),
+    threshold: V_TH,
+    powered: S.powered,
+    status: S.status,
+    phase: S.phase,
+    phaseLabel: S.phase >= 0 ? PHASES[S.phase].label : null,
+    exchangeElapsed: +Math.max(0, Math.min(EXCHANGE_REAL, S.tReal - BOOT_REAL)).toFixed(4),
+    balance: S.balance,
+    door: +S.door.toFixed(3),
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setDistance(cm) { DEMO_ACTIVE = false; markInteraction(); setDistanceUser(cm); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'slow'; },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  voltageAt,
+  pause(on = true) { RENDER_PAUSED = on; },
+  /** Deterministic stepping for tests: advance the simulation by `sec` in 1/60 s steps, then render once. */
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+};
+
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  await fontsReady;
+  drawCardPrint(); cardPrintTex.needsUpdate = true;
+  lastDisplayKey = ''; drawDisplay();
+  drawGraphStatic();
+  stepState(0);
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
