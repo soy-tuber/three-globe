@@ -1,0 +1,1738 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>急速凍結すると、なぜ解凍してもおいしいのか</title>
+<meta name="description" content="冷凍の蒲焼きを凍らせるとき、身の中で氷の結晶がどう育ち、冷やす速さで何が変わるのかを、光る結晶と冷やす速さの操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #06080c;
+    --ink: #f1f4f7;
+    --sub: #c3c8ce;
+    --muted: #8a9098;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --cold: #9fd6ff;
+    --ice: #e4f5ff;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.3vw, 62px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.95); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  #title.small .big-br { display: none; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(18, 21, 26, 0.68), rgba(8, 10, 13, 0.58)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mid-jp { font-size: 15px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 350px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 11px 0 9px; }
+  .meter { position: relative; height: 10px; margin: 30px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; background: linear-gradient(90deg, rgba(159, 214, 255, 0.3), var(--cold)); box-shadow: 0 0 16px rgba(159, 214, 255, 0.45); }
+  .meter .fill.pred { background: repeating-linear-gradient(90deg, rgba(159, 214, 255, 0.55) 0 6px, rgba(159, 214, 255, 0.18) 6px 10px); box-shadow: none; }
+  .meter.over .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.3), var(--err)); box-shadow: 0 0 16px rgba(255, 84, 72, 0.5); }
+  .meter.over .fill.pred { background: repeating-linear-gradient(90deg, rgba(255, 84, 72, 0.7) 0 6px, rgba(255, 84, 72, 0.22) 6px 10px); box-shadow: none; }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); left: 5px; font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.cold { color: #d6eeff; border-color: rgba(159, 214, 255, 0.8); }
+  .tag.ng { color: #ffd6d2; border-color: var(--err); }
+  #passVal.ng, #cryVal.ng, #dripVal.ng { color: #ffb3ab; }
+  .graph-wrap { margin-top: 10px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.warn { border-color: rgba(255, 84, 72, 0.7); }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 640px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(580px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e3e8ee; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(5, 6, 9, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(7, 8, 11, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(190, 230, 255, 0.28); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(7, 9, 12, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.cold { border-color: rgba(159, 214, 255, 0.85); color: #e2f3ff; }
+  .lbl.ice { border-color: rgba(228, 245, 255, 0.9); color: #f2fbff; box-shadow: 0 0 12px rgba(190, 230, 255, 0.25); }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.82); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 20px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small { right: 92px; }
+    #title.small h1 { font-size: 12.5px; letter-spacing: 0.02em; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 28px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; white-space: normal; max-width: calc(100vw - 24px); }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="冷凍庫の棚の真空包装した蒲焼きと、拡大した身の中の氷の結晶の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>急速凍結すると、<br class="big-br" />なぜ解凍してもおいしいのか</h1>
+  <p class="lead">身の水分は、凍るときに氷の結晶になります。ゆっくり凍らせると結晶が大きく育ち、身を傷めてしまいます。冷やす速さを変えて、結晶の育ち方を見てください。</p>
+</header>
+<div id="imageTag">身の細胞と結晶の様子は模式図です（大きさは実際と異なります）</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">急速凍結</button>
+  <button class="btn warn" data-act="slow">緩慢凍結</button>
+  <button class="btn" data-act="thaw">解凍</button>
+  <button class="btn" data-act="explode">分解</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">冷やす速さ（目盛り）</span><span class="big-num" id="uVal">15<span class="unit">%</span></span></div>
+  <div class="row"><span class="k">庫内の温度・風の強さ（模型の値）</span><span class="mid-num" id="airVal">−23℃・9 W/m²K</span></div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">結晶が育ちやすい温度帯を通り抜ける時間（中心、模型の値）</span></div>
+  <div class="row" style="margin-top: 6px"><span class="tag" id="passTag">予測</span><span class="big-num" id="passVal">118<span class="unit">分</span></span></div>
+  <div class="meter" id="pmeter">
+    <div class="fill" id="pfill"></div>
+    <div class="th" id="thPass"><span class="th-label">結晶が小さいまま凍るライン</span></div>
+    <div class="ticks" id="pticks"></div>
+  </div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">中心温度</span><span class="big-num" id="tcVal">1.5<span class="unit">℃</span></span></div>
+  <div class="row"><span class="k">表面温度</span><span class="mid-num" id="tsVal">−1.3℃</span></div>
+  <div class="row"><span class="k">結晶の大きさ（中心、細胞との比、模型の値）</span><span class="mid-num" id="cryVal">0.2倍</span></div>
+  <div class="row"><span class="k">解凍したときのドリップ（模型の値）</span><span class="mid-jp" id="dripVal">―</span></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">時間と中心温度（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">この温度帯を早く通り抜けるほど、結晶は小さいままです</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">凍結から解凍まで</span><span class="k" id="speedTag">早回し表示（約600倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>冷える</b><small>身の温度が下がる</small></li>
+    <li><span class="n">②</span><b>凍り始める</b><small>水分が凍り始める</small></li>
+    <li><span class="n">③</span><b>通り抜ける</b><small>結晶が育ちやすい温度帯を通る</small></li>
+    <li><span class="n">④</span><b>固まる</b><small>全体が凍る</small></li>
+    <li><span class="n">⑤</span><b>保存</b><small>冷凍保存する</small></li>
+    <li><span class="n">⑥</span><b>解凍</b><small>溶かしたときに水分が身に残るかを見る</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">冷やす速さを上げてください</span><span id="counter">経過 0分</span></div>
+  <p id="realnote">実際の凍結にかかる時間は、設備や製品によって異なります</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">表面温度と中心温度の変化（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--cold)"></i>表面温度</span><span><i style="background: var(--amber)"></i>中心温度</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">急速凍結</button>
+    <button class="btn warn" data-act="slow">緩慢凍結</button>
+    <button class="btn" data-act="thaw">解凍</button>
+    <button class="btn" data-act="explode">分解</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="inside">身の中</button>
+    <button class="btn sm" data-cam="cells">細胞</button>
+    <button class="btn sm" data-cam="plate">皿の上</button>
+    <button class="btn sm" data-act="speed">実時間にする</button>
+  </div>
+  <label class="slider"><span>ゆっくり</span><input type="range" id="range" min="0" max="1" step="0.001" value="0.15" aria-label="冷やす速さ" /><span>速い</span></label>
+</section>
+
+<div id="notes">温度と時間は原理を示すための模型の値です。身の細胞と結晶の様子は模式図で、大きさは実際と異なります。凍結設備の内部は公開情報をもとにしたイメージです。</div>
+<div id="hint">冷凍庫の扉の横のつまみをドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>食品の水分は、食品によって異なりますが、一般に−1℃あたりから凍り始め、−5℃程度でほぼ凍結します。この温度帯を「最大氷結晶生成温度帯」といいます。<span class="src"><a href="https://online.reishokukyo.or.jp/learn/basic/about/frozen-product_01/" target="_blank" rel="noopener">日本冷凍食品協会 冷食オンライン「冷凍の世界 ～製品編～ 前編」</a></span></li>
+    <li>この温度帯を通過する時間が長いと、氷の結晶どうしがくっつき合って大きく育ち、食品の組織を壊してしまいます。この温度帯を急速に通過させて、組織の損傷をできるだけ少なくする凍結方法を「急速凍結」といいます。急速凍結すると氷の結晶が小さいままなので、組織を圧迫せず、壊れにくくなります。日本冷凍食品協会の認定基準では、製品を凍結するときに、製品の中心温度がこの温度帯を概ね30分以内に通過することとしています。<span class="src"><a href="https://online.reishokukyo.or.jp/learn/basic/about/frozen-product_01/" target="_blank" rel="noopener">日本冷凍食品協会 冷食オンライン「冷凍の世界 ～製品編～ 前編」</a>　<a href="https://www.reishokukyo.or.jp/wp-content/uploads/2025/03/R%EF%BC%97-ninteiseido-p2-ninteikijunn.pdf" target="_blank" rel="noopener">日本冷凍食品協会「冷凍食品製造工場認定基準」令和7年度版</a></span></li>
+    <li>日本冷凍食品協会は、冷凍食品の条件として「前処理している」「急速凍結している」「適切に包装している」「−18℃以下で保管している」の4つを挙げています。4つ目は、食品の温度（品温）を、生産・貯蔵・輸送・配送・販売の各段階を通じて、一貫して常に−18℃以下に保つように管理することです。<span class="src"><a href="https://online.reishokukyo.or.jp/learn/basic/about/" target="_blank" rel="noopener">日本冷凍食品協会 冷食オンライン「冷凍食品とは」</a></span></li>
+    <li>食肉をゆっくり凍らせると、氷の結晶の体積が増えて細胞組織が傷つき、解凍すると、細胞内の可溶成分（たんぱく質、エキス分、ビタミン類など）までが水分とともに細胞の外へ流れ出るため、うま味が低下します。凍った肉を解凍したときに、肉の内部から分離して出る液体を、一般にドリップといいます。<span class="src"><a href="https://www.jmi.or.jp/info/word/ta/ta_140.html" target="_blank" rel="noopener">日本食肉消費総合センター「用語集：ドリップ」</a></span>食品一般でも、凍結に時間がかかると氷の結晶が成長して食品の組織を圧迫・破損し、食感の低下や、解凍後にドリップが流れ出るなどの品質の劣化が起きるとされています。<span class="src"><a href="https://www.mhlw.go.jp/content/11130500/000808133.pdf" target="_blank" rel="noopener">日本冷凍食品協会「冷凍食品製造事業者向けＨＡＣＣＰに基づく衛生管理のための手引書」第2版（厚生労働省ウェブサイト掲載）</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const smoothstep = (a, b, x) => smooth01((x - a) / (b - a));
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+
+// =====================================================================================
+// Freezing model: 1-D heat conduction through the 1.5 cm slab with latent heat (enthalpy method).
+// All values are model values chosen to show the principle.
+// =====================================================================================
+const N = 19;                                   // nodes: surface … centre … surface
+const CENTER = (N - 1) >> 1;
+const DXM = 0.015 / (N - 1);                    // m
+const RHO = 1050, WATER = 0.6, TF = -1.0, LW = 334000;   // kg/m³, water mass fraction, initial freezing point ℃, J/kg
+const C_SOLID = 1500, C_WATER = 4180, C_ICE = 2100, K_UNFROZEN = 0.48, K_FROZEN = 1.45;
+const ZONE_HI = -1, ZONE_LO = -5;               // 結晶が育ちやすい温度帯（模型の値）
+const PASS_OK = 30 * 60;                        // s: the "small crystals" line for the centre
+const C0 = 0.15, CMAX = 1.8, TAU = 2488;        // crystal size / cell size: C0 + (CMAX − C0)(1 − e^(−t/TAU)); = 1.0 at 30 min
+const T_DONE = -18;                             // the centre is frozen through at this temperature
+const TS0 = -1.3, TC0 = 1.5;                    // starting profile: the surface has just begun to freeze
+const DT_MODEL = 0.4;                           // s, explicit step (stable for these values)
+const FAST_QUICK = 600, FAST_SLOW = 6000;       // time-lapse while freezing (quick / slow runs)
+const STORE_SEC = { quick: 0.8, slow: 0.25 }, THAW_SEC = { quick: 1.5, slow: 0.8 };   // display seconds (schematic)
+const U0 = 0.15, U_QUICK = 0.75, U_SLOW = 0.25;
+const iceFrac = T => (T >= TF ? 0 : 1 - TF / T);                  // share of the water that is ice
+const cSens = T => { const p = iceFrac(T); return (1 - WATER) * C_SOLID + WATER * ((1 - p) * C_WATER + p * C_ICE); };
+const kOf = T => K_UNFROZEN + ((K_FROZEN - K_UNFROZEN) * iceFrac(T)) / 0.975;
+const airTemp = u => -20 - 20 * u;                                // ℃
+const heatTransfer = u => 6 * Math.pow(11, u);                    // W/m²K (fan speed)
+const crystalOf = tz => C0 + (CMAX - C0) * (1 - Math.exp(-tz / TAU));
+function dripOf(tz) { let s = 0; for (let i = 0; i < N; i++) s += smoothstep(0.95, 1.6, crystalOf(tz[i])); return 0.002 + (0.08 * s) / N; }
+// enthalpy table H(T) and its inverse on a uniform H grid
+const HT_MIN = -45, HT_MAX = 30, HT_STEP = 0.005, HT_N = Math.round((HT_MAX - HT_MIN) / HT_STEP) + 1;
+const H_TAB = new Float64Array(HT_N);
+{ let hs = 0; for (let i = 0; i < HT_N; i++) { const T = HT_MIN + i * HT_STEP; if (i) hs += cSens(T - HT_STEP / 2) * HT_STEP; H_TAB[i] = hs + WATER * LW * (1 - iceFrac(T)); } }
+const HofT = T => { const x = (clamp(T, HT_MIN, HT_MAX) - HT_MIN) / HT_STEP; const i = Math.min(HT_N - 2, Math.floor(x)); return H_TAB[i] + (H_TAB[i + 1] - H_TAB[i]) * (x - i); };
+const TI_N = 8000, TI_H0 = H_TAB[0], TI_H1 = H_TAB[HT_N - 1], T_INV = new Float64Array(TI_N);
+{ let j = 0; for (let m = 0; m < TI_N; m++) { const H = TI_H0 + ((TI_H1 - TI_H0) * m) / (TI_N - 1); while (j < HT_N - 2 && H_TAB[j + 1] < H) j++; const f = (H - H_TAB[j]) / Math.max(1e-9, H_TAB[j + 1] - H_TAB[j]); T_INV[m] = HT_MIN + (j + clamp(f, 0, 1)) * HT_STEP; } }
+const TofH = H => { const x = ((clamp(H, TI_H0, TI_H1) - TI_H0) / (TI_H1 - TI_H0)) * (TI_N - 1); const m = Math.min(TI_N - 2, Math.floor(x)); return T_INV[m] + (T_INV[m + 1] - T_INV[m]) * (x - m); };
+function newProduct() {
+  const T = new Float64Array(N), H = new Float64Array(N), tz = new Float64Array(N);
+  for (let i = 0; i < N; i++) { const s = Math.abs((2 * i) / (N - 1) - 1); T[i] = TC0 + (TS0 - TC0) * s * s; H[i] = HofT(T[i]); }
+  return { T, H, tz, tIn: -1, tOut: -1 };
+}
+const KBUF = new Float64Array(N), QBUF = new Float64Array(N);
+/** One explicit step of dt seconds with air at Ta and heat-transfer coefficient h on both faces. */
+function modelStep(P, Ta, h, dt, tNow) {
+  const T = P.T, H = P.H;
+  for (let i = 0; i < N; i++) { KBUF[i] = kOf(T[i]); QBUF[i] = 0; }
+  for (let i = 0; i < N - 1; i++) { const k = (2 * KBUF[i] * KBUF[i + 1]) / (KBUF[i] + KBUF[i + 1]); const q = (k * (T[i + 1] - T[i])) / DXM; QBUF[i] += q; QBUF[i + 1] -= q; }
+  QBUF[0] += h * (Ta - T[0]); QBUF[N - 1] += h * (Ta - T[N - 1]);
+  for (let i = 0; i < N; i++) {
+    const V = i === 0 || i === N - 1 ? DXM / 2 : DXM;
+    H[i] += (dt * QBUF[i]) / (RHO * V);
+    T[i] = TofH(H[i]);
+    if (T[i] <= ZONE_HI && T[i] >= ZONE_LO) P.tz[i] += dt;
+  }
+  if (P.tIn < 0 && T[CENTER] <= ZONE_HI) P.tIn = tNow + dt;
+  if (P.tOut < 0 && T[CENTER] <= ZONE_LO) P.tOut = tNow + dt;
+}
+const centrePass = (P, tNow) => (P.tIn < 0 ? 0 : (P.tOut >= 0 ? P.tOut : tNow) - P.tIn);
+// Prediction table: the same model run from the starting profile at fixed dial settings
+const PRED_G = 40, CURVE_DT = 60, CURVE_N = 121;   // centre temperature every minute up to 120 min
+const PRED = [];
+for (let g = 0; g <= PRED_G; g++) {
+  const u = g / PRED_G, Ta = airTemp(u), h = heatTransfer(u), P = newProduct(), curve = new Float32Array(CURVE_N);
+  let t = 0, ci = 0, done = -1;
+  while (t < 6 * 3600) {
+    while (ci < CURVE_N && t >= ci * CURVE_DT - 1e-6) curve[ci++] = P.T[CENTER];
+    modelStep(P, Ta, h, DT_MODEL, t); t += DT_MODEL;
+    if (done < 0 && P.T[CENTER] <= T_DONE) done = t;
+    if (P.tOut >= 0 && ci >= CURVE_N && (done >= 0 || t > 5 * 3600)) break;
+  }
+  while (ci < CURVE_N) curve[ci++] = P.T[CENTER];
+  PRED.push({ u, pass: Math.max(1, P.tOut - P.tIn), crystal: crystalOf(P.tz[CENTER]), drip: dripOf(P.tz), done, curve });
+}
+function predAt(u) {
+  const x = clamp(u, 0, 1) * PRED_G, g = Math.min(PRED_G - 1, Math.floor(x)), f = x - g, a = PRED[g], b = PRED[g + 1];
+  return { pass: Math.exp(lerp(Math.log(a.pass), Math.log(b.pass), f)), crystal: lerp(a.crystal, b.crystal, f), drip: lerp(a.drip, b.drip, f), a, b, f };
+}
+const U_TH = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (predAt(m).pass > PASS_OK) lo = m; else hi = m; } return (lo + hi) / 2; })();
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0b0f15');
+scene.fog = new THREE.FogExp2('#0e131b', 0.0014);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.2; controls.maxPolarAngle = 1.75;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.88);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uFlash: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uFlash; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c.rgb *= mix(0.7, 1.0, 1.0 - smoothstep(0.25, 1.15, length(q)));
+      c.rgb = mix(c.rgb, vec3(1.0), uFlash * (1.0 - 0.5 * smoothstep(0.1, 0.9, length(q))));
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#8e9aa8');
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.0, 2.2, 2.5), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.y = 3; env.add(top);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#252a31', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.6;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 29;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const wallTex = canvasTex(1024, 512, (x, w, h) => {
+  // insulated panels with frost
+  x.fillStyle = '#cfd8e1'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 4; i++) { x.fillStyle = 'rgba(80,96,112,0.35)'; x.fillRect((i * w) / 4, 0, 2, h); }
+  for (let i = 0; i < 9000; i++) { const a = rnd() * 0.08; x.fillStyle = `rgba(255,255,255,${a})`; const s = 1 + rnd() * 3; x.fillRect(rnd() * w, rnd() * h, s, s); }
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,0.28)'); g.addColorStop(0.35, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0.18)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+}, { repeat: [3, 1] });
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b8bfc6'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.024; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,34,40,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [3, 3] });
+const perfTex = canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = '#aeb6bf'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#3a4048';
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) { x.beginPath(); x.arc(8 + i * 16 + (j % 2) * 8, 8 + j * 16, 3.2, 0, Math.PI * 2); x.fill(); }
+}, { repeat: [5, 3] });
+const tareTex = canvasTex(512, 256, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#7a3a14'); g.addColorStop(0.5, '#9a4f1c'); g.addColorStop(1, '#6d3211');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9; i++) { x.fillStyle = `rgba(35,14,4,${0.28 + rnd() * 0.12})`; const x0 = (i + 0.5) * (w / 9) + (rnd() - 0.5) * 14; x.beginPath(); x.ellipse(x0, h / 2, 9 + rnd() * 5, h * 0.44, 0.12, 0, Math.PI * 2); x.fill(); }
+  for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(255,200,130,${0.03 + rnd() * 0.06})`; x.beginPath(); x.ellipse(rnd() * w, rnd() * h, 2 + rnd() * 10, 1 + rnd() * 3, rnd() * 3, 0, Math.PI * 2); x.fill(); }
+});
+const fleshTex = canvasTex(256, 128, (x, w, h) => {
+  x.fillStyle = '#d7b89c'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 60; i++) { x.strokeStyle = `rgba(150,105,80,${0.12 + rnd() * 0.12})`; x.lineWidth = 1; const y0 = rnd() * h; x.beginPath(); x.moveTo(0, y0); x.bezierCurveTo(w * 0.3, y0 + (rnd() - 0.5) * 12, w * 0.7, y0 + (rnd() - 0.5) * 12, w, y0); x.stroke(); }
+});
+const skinTex = canvasTex(256, 128, (x, w, h) => {
+  x.fillStyle = '#3a342f'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(120,120,110,${0.05 + rnd() * 0.08})`; x.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 2, 1 + rnd() * 2); }
+});
+const dispCanvas = document.createElement('canvas'); dispCanvas.width = 256; dispCanvas.height = 160;
+const dispTex = new THREE.CanvasTexture(dispCanvas); dispTex.colorSpace = THREE.SRGBColorSpace;
+const ringCanvas = document.createElement('canvas'); ringCanvas.width = 512; ringCanvas.height = 512;
+const ringTex = new THREE.CanvasTexture(ringCanvas); ringTex.colorSpace = THREE.SRGBColorSpace;
+
+// =====================================================================================
+// Freezing room and the freezer (walls, shelves, cooler, fans, sensor, dial)
+// =====================================================================================
+const parts = {};
+{
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(900, 360), new THREE.MeshStandardMaterial({ map: wallTex, color: '#d9e3ec', roughness: 0.8 }));
+  wall.position.set(20, 80, -70); scene.add(wall);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(900, 700), new THREE.MeshStandardMaterial({ color: '#3a434e', roughness: 0.55, metalness: 0.15 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -82; scene.add(floor);
+}
+const steelMat = new THREE.MeshStandardMaterial({ color: '#e3e8ed', map: brushedTex, metalness: 0.8, roughness: 0.36, envMapIntensity: 1.35 });
+const linerMat = new THREE.MeshStandardMaterial({ color: '#c3cbd3', map: brushedTex, metalness: 0.7, roughness: 0.4, envMapIntensity: 0.9 });
+const freezer = new THREE.Group();
+scene.add(freezer);
+{
+  const box = (w, h, d, x, y, z, m = steelMat) => { const b = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, 0.6), m); b.position.set(x, y, z); freezer.add(b); return b; };
+  box(6, 78, 64, -39, 31, 0);           // left wall
+  box(6, 78, 64, 39, 31, 0);            // right wall
+  box(84, 6, 64, 0, 67, 0);             // top
+  box(84, 6, 64, 0, -5, 0);             // bottom
+  box(84, 78, 6, 0, 31, -29);           // back
+  // interior liner faces (slightly lighter)
+  const liner = new THREE.Mesh(new THREE.BoxGeometry(71.6, 65.6, 57.6), new THREE.MeshStandardMaterial({ color: '#aab4be', map: brushedTex, metalness: 0.6, roughness: 0.45, side: THREE.BackSide }));
+  liner.position.set(0, 31, 3.3); freezer.add(liner);
+  // control column on the right with the display and the dial
+  box(16, 78, 64, 50, 31, 0);
+  const face = new THREE.Mesh(new RoundedBoxGeometry(13, 44, 1, 2, 0.4), new THREE.MeshStandardMaterial({ color: '#1b1f25', roughness: 0.35, metalness: 0.2 }));
+  face.position.set(50, 42, 32.2); freezer.add(face);
+  const disp = new THREE.Mesh(new THREE.PlaneGeometry(11, 6.9), new THREE.MeshBasicMaterial({ map: dispTex, toneMapped: false }));
+  disp.position.set(50, 57, 32.75); freezer.add(disp);
+  // plinth
+  const base = new THREE.Mesh(new RoundedBoxGeometry(100, 74, 60, 2, 0.8), steelMat);
+  base.position.set(8, -45, -1); freezer.add(base);
+  const kick = new THREE.Mesh(new THREE.BoxGeometry(100, 6, 1), new THREE.MeshStandardMaterial({ color: '#2a3038', roughness: 0.6 }));
+  kick.position.set(8, -79, 29.6); freezer.add(kick);
+  // door: hinged on the left, standing open
+  const door = new THREE.Group();
+  const dOuter = new THREE.Mesh(new RoundedBoxGeometry(84, 78, 5, 2, 0.8), steelMat); dOuter.position.set(42, 0, 2.5); door.add(dOuter);
+  const dLiner = new THREE.Mesh(new RoundedBoxGeometry(76, 70, 1.4, 2, 0.5), new THREE.MeshStandardMaterial({ color: '#b9c2cb', roughness: 0.55 })); dLiner.position.set(42, 0, -0.5); door.add(dLiner);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 40, 12), new THREE.MeshStandardMaterial({ color: '#e6eaee', metalness: 0.9, roughness: 0.2 })); handle.position.set(78, 0, 7.5); door.add(handle);
+  door.position.set(-42, 31, 32); door.rotation.y = -2.62;
+  freezer.add(door);
+}
+// wire shelves
+const shelves = [];
+const wireGeo = new THREE.CylinderGeometry(0.22, 0.22, 42, 6);
+const wireMat = new THREE.MeshStandardMaterial({ color: '#e1e6ea', metalness: 0.85, roughness: 0.3 });
+for (const y of [30, 47]) {
+  const g = new THREE.Group();
+  const wires = new THREE.InstancedMesh(wireGeo, wireMat, 29);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+  for (let i = 0; i < 29; i++) { M.compose(new THREE.Vector3(-35 + i * 2.5, 0, 9), Q, new THREE.Vector3(1, 1, 1)); wires.setMatrixAt(i, M); }
+  g.add(wires);
+  for (const z of [-12, 9, 30]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 71, 8), wireMat); r.rotation.z = Math.PI / 2; r.position.set(0, -0.2, z); g.add(r); }
+  g.position.set(0, y, 0);
+  freezer.add(g); shelves.push(g);
+}
+parts.shelf = { obj: shelves[0], from: shelves[0].position.clone(), off: new THREE.Vector3(0, -6, 46) };
+// baffle with two fans (送風機) and the cooler (冷却器) above
+const baffle = new THREE.Mesh(new THREE.BoxGeometry(72, 44, 1), new THREE.MeshStandardMaterial({ map: perfTex, color: '#c9d0d7', metalness: 0.6, roughness: 0.45 }));
+baffle.position.set(0, 20, -14.5); freezer.add(baffle);
+const fanGroup = new THREE.Group();
+const fanRotors = [];
+{
+  const shroudMat = new THREE.MeshStandardMaterial({ color: '#59616b', metalness: 0.7, roughness: 0.35 });
+  const bladeMat = new THREE.MeshStandardMaterial({ color: '#2d333a', metalness: 0.3, roughness: 0.5 });
+  for (const x of [-17, 17]) {
+    const shroud = new THREE.Mesh(new THREE.TorusGeometry(8.2, 0.9, 10, 40), shroudMat); shroud.position.set(x, 24, -13.4); fanGroup.add(shroud);
+    const guard = new THREE.Mesh(new THREE.RingGeometry(7.4, 7.9, 40), new THREE.MeshBasicMaterial({ color: '#1a1e23', side: THREE.DoubleSide })); guard.position.set(x, 24, -13.6); fanGroup.add(guard);
+    const rotor = new THREE.Group(); rotor.position.set(x, 24, -13.2);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 1.6, 20), shroudMat); hub.rotation.x = Math.PI / 2; rotor.add(hub);
+    for (let b = 0; b < 5; b++) { const bl = new THREE.Mesh(new THREE.BoxGeometry(2.8, 6.4, 0.25), bladeMat); bl.position.set(0, 4.3, 0); bl.rotation.y = 0.45; const arm = new THREE.Group(); arm.rotation.z = (b / 5) * Math.PI * 2; arm.add(bl); rotor.add(arm); }
+    fanGroup.add(rotor); fanRotors.push(rotor);
+  }
+}
+freezer.add(fanGroup);
+parts.fans = { obj: fanGroup, from: fanGroup.position.clone(), off: new THREE.Vector3(0, 30, 52) };
+const cooler = new THREE.Group();
+{
+  const finMat = new THREE.MeshStandardMaterial({ color: '#e9f1f8', metalness: 0.4, roughness: 0.55, emissive: '#1c3244', emissiveIntensity: 0.25 });
+  const fins = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 9.5, 11), finMat, 47);
+  const M = new THREE.Matrix4();
+  for (let i = 0; i < 47; i++) { M.makeTranslation(-27.6 + i * 1.2, 0, 0); fins.setMatrixAt(i, M); }
+  cooler.add(fins);
+  const tubeMat = new THREE.MeshStandardMaterial({ color: '#b87a4d', metalness: 0.85, roughness: 0.35 });
+  for (const [y, z] of [[-2.5, -3], [2.5, -3], [-2.5, 3], [2.5, 3]]) { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 58, 10), tubeMat); t.rotation.z = Math.PI / 2; t.position.set(0, y, z); cooler.add(t); }
+  cooler.position.set(0, 56, -20);
+}
+freezer.add(cooler);
+parts.cooler = { obj: cooler, from: cooler.position.clone(), off: new THREE.Vector3(0, 40, 6) };
+
+// =====================================================================================
+// The product: vacuum-packed kabayaki on the middle shelf (skin / flesh / tare, film)
+// =====================================================================================
+const PROD_POS = new THREE.Vector3(-4, 31.0, 6);
+const product = new THREE.Group();
+freezer.add(product);
+product.position.copy(PROD_POS);
+const kaba = new THREE.Group();
+product.add(kaba);
+const skinMat = new THREE.MeshStandardMaterial({ map: skinTex, color: '#ffffff', roughness: 0.55 });
+const fleshMat = new THREE.MeshStandardMaterial({ map: fleshTex, color: '#ffffff', roughness: 0.6 });
+const tareMat = new THREE.MeshPhysicalMaterial({ map: tareTex, color: '#ffffff', roughness: 0.32, clearcoat: 0.9, clearcoatRoughness: 0.18 });
+{
+  const skin = new THREE.Mesh(new RoundedBoxGeometry(18, 0.24, 8, 2, 0.1), skinMat); skin.position.y = -0.63; kaba.add(skin);
+  const flesh = new THREE.Mesh(new RoundedBoxGeometry(17.9, 1.1, 7.9, 3, 0.4), fleshMat); flesh.position.y = -0.0; kaba.add(flesh);
+  const tare = new THREE.Mesh(new RoundedBoxGeometry(17.8, 0.2, 7.8, 2, 0.09), tareMat); tare.position.y = 0.64; kaba.add(tare);
+}
+// the cut face along the front: the temperature through the thickness (amber = not frozen yet, ice = frozen)
+const secUniforms = { uT: { value: new Float32Array(N) }, uTime: { value: 0 } };
+const section = new THREE.Mesh(new THREE.PlaneGeometry(17.4, 1.5), new THREE.ShaderMaterial({
+  uniforms: secUniforms, transparent: true, depthWrite: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uT[${N}]; varying vec2 vUv;
+    void main(){
+      float x = clamp(vUv.y, 0.0, 1.0) * ${N - 1}.0;
+      int i = int(floor(x)); int j = min(i + 1, ${N - 1});
+      float T = mix(uT[i], uT[j], fract(x));
+      float ice = T >= -1.0 ? 0.0 : 1.0 - (-1.0 / min(T, -1.0001));
+      float warm = clamp((T + 1.0) / 2.5, 0.0, 1.0);
+      vec3 amber = vec3(1.0, 0.52, 0.12) * (0.45 + 0.9 * warm);
+      vec3 iceC = vec3(0.82, 0.93, 1.0);
+      vec3 c = mix(amber * (1.0 - ice * 1.2), iceC * (0.5 + 0.6 * ice), smoothstep(0.0, 0.85, ice));
+      float edge = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.96, vUv.x);
+      gl_FragColor = vec4(c, 0.92 * edge);
+    }`,
+}));
+section.position.set(0, 0, 4.02);
+product.add(section);
+// vacuum film: a fresnel shell with frost that grows as the surface freezes
+const filmUniforms = { uFrost: { value: 0 }, uFade: { value: 1 } };
+const filmMat = new THREE.ShaderMaterial({
+  uniforms: filmUniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vP = position; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uFrost; uniform float uFade; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 2.6);
+      float wr = noise(vP.xz * 1.3 + vP.y * 2.0);
+      float frost = uFrost * (0.55 + 0.45 * noise(vP.xz * 6.0 + 3.0));
+      vec3 c = mix(vec3(0.8, 0.9, 1.0), vec3(0.97, 0.99, 1.0), frost);
+      float a = (0.015 + 0.5 * f * f + 0.05 * wr * f + 0.34 * frost) * uFade;
+      gl_FragColor = vec4(c * (0.75 + 0.6 * f), a);
+    }`,
+});
+const film = new THREE.Group();
+{
+  const shell = new THREE.Mesh(new RoundedBoxGeometry(18.8, 1.95, 8.8, 4, 0.8), filmMat); film.add(shell);
+  const flange = new THREE.Mesh(new RoundedBoxGeometry(22, 0.08, 11.6, 2, 0.04), filmMat); flange.position.y = -0.15; film.add(flange);
+  shell.renderOrder = 6; flange.renderOrder = 6;
+}
+product.add(film);
+// core temperature probe (温度センサー) and its cable to the control column
+const sensor = new THREE.Group();
+{
+  const needle = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 9, 10), new THREE.MeshStandardMaterial({ color: '#dfe4e8', metalness: 0.9, roughness: 0.25 }));
+  needle.rotation.z = Math.PI / 2; needle.position.set(4.5, 0, 0); sensor.add(needle);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 4, 14), new THREE.MeshStandardMaterial({ color: '#2e3a46', roughness: 0.5 }));
+  grip.rotation.z = Math.PI / 2; grip.position.set(11, 0, 0); sensor.add(grip);
+  const pts = [new THREE.Vector3(13, 0, 0), new THREE.Vector3(20, 3, 6), new THREE.Vector3(30, 12, 18), new THREE.Vector3(38, 22, 25), new THREE.Vector3(46, 18, 26.5)];
+  const cable = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.32, 8, false), new THREE.MeshStandardMaterial({ color: '#39434e', roughness: 0.6 }));
+  sensor.add(cable);
+  sensor.position.set(PROD_POS.x + 4.5, PROD_POS.y, PROD_POS.z);
+}
+freezer.add(sensor);
+parts.sensor = { obj: sensor, from: sensor.position.clone(), off: new THREE.Vector3(18, 14, 40) };
+// dial knob on the control column (冷やす速さ)
+const knob = new THREE.Group();
+const KNOB_POS = new THREE.Vector3(50, 36, 32.8);
+{
+  const ring = new THREE.Mesh(new THREE.CircleGeometry(6, 64), new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, toneMapped: false }));
+  knob.add(ring);
+  const cap = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.5, 2.6, 40), new THREE.MeshStandardMaterial({ color: '#2a3036', metalness: 0.5, roughness: 0.35 }));
+  body.rotation.x = Math.PI / 2; body.position.z = 1.3; cap.add(body);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.2, 40), new THREE.MeshStandardMaterial({ color: '#3c444c', metalness: 0.6, roughness: 0.3 }));
+  top.rotation.x = Math.PI / 2; top.position.z = 2.62; cap.add(top);
+  const pointer = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.2, 0.2), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+  pointer.position.set(0, 1.9, 2.75); cap.add(pointer);
+  knob.add(cap); knob.userData.cap = cap;
+  knob.position.copy(KNOB_POS);
+}
+freezer.add(knob);
+const knobPick = new THREE.Mesh(new THREE.BoxGeometry(15, 15, 8), new THREE.MeshBasicMaterial({ visible: false }));
+knobPick.position.copy(KNOB_POS);
+freezer.add(knobPick);
+const coolLight = new THREE.PointLight('#bfe0ff', 900, 140, 2);
+coolLight.position.set(0, 58, 20); freezer.add(coolLight);
+scene.add(new THREE.HemisphereLight('#e6effa', '#39414b', 1.05));
+const keyLight = new THREE.DirectionalLight('#eef5ff', 1.25);
+keyLight.position.set(80, 200, 160); scene.add(keyLight);
+
+// =====================================================================================
+// Side table with the plate (thawing and drip)
+// =====================================================================================
+const PLATE_POS = new THREE.Vector3(96, -2.0, 22);
+{
+  const top = new THREE.Mesh(new RoundedBoxGeometry(84, 3, 66, 2, 0.8), steelMat); top.position.set(100, -5.5, 8); scene.add(top);
+  for (const [x, z] of [[62, -22], [138, -22], [62, 38], [138, 38]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(3.4, 76, 3.4), steelMat); l.position.set(x, -45, z); scene.add(l); }
+  const under = new THREE.Mesh(new THREE.BoxGeometry(78, 1.6, 60), steelMat); under.position.set(100, -62, 8); scene.add(under);
+}
+const plate = new THREE.Group();
+{
+  const prof = [[0, 0], [11.5, 0], [12.6, 0.35], [14.2, 1.3], [15.4, 2.2], [15.8, 2.3], [15.6, 2.0], [14.0, 1.0], [12.0, 0.45], [0, 0.45]].map(([r, y]) => new THREE.Vector2(r, y));
+  const p = new THREE.Mesh(new THREE.LatheGeometry(prof, 72), new THREE.MeshPhysicalMaterial({ color: '#d6dade', roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 }));
+  plate.add(p);
+  plate.position.set(PLATE_POS.x, -4.0, PLATE_POS.z);
+}
+scene.add(plate);
+// thawed kabayaki on the plate
+const plateKaba = kaba.clone();
+plateKaba.position.set(PLATE_POS.x, -4.0 + 0.45 + 0.75, PLATE_POS.z);
+plateKaba.rotation.y = -0.35;
+plateKaba.visible = false;
+scene.add(plateKaba);
+// drip pool: rounded rectangle around the kabayaki footprint, spreading with the drip amount
+const poolUniforms = { uMargin: { value: 0 }, uWarn: { value: 0 }, uTime: { value: 0 }, uAlpha: { value: 0 } };
+const pool = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShaderMaterial({
+  uniforms: poolUniforms, transparent: true, depthWrite: false,
+  vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uMargin; uniform float uWarn; uniform float uTime; uniform float uAlpha; varying vec2 vP;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+    void main(){
+      vec2 b = vec2(9.0, 4.0);
+      vec2 q = abs(vP) - b + 1.2;
+      float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 1.2;
+      float m = uMargin * (0.8 + 0.4 * noise(vP * 0.35 + 2.0));
+      float inside = 1.0 - smoothstep(m - 0.35, m, sd);
+      float rim = smoothstep(m - 1.2, m - 0.1, sd) * inside;
+      vec3 liquid = vec3(0.62, 0.26, 0.1);
+      float spec = pow(max(0.0, noise(vP * 0.6 + uTime * 0.2)), 6.0) * 0.8;
+      vec3 c = liquid * (0.75 + 0.35 * rim) + spec;
+      c = mix(c, vec3(1.0, 0.25, 0.2), uWarn * smoothstep(m - 0.9, m - 0.1, sd) * inside * (0.55 + 0.45 * sin(uTime * 6.0)));
+      gl_FragColor = vec4(c * 1.15, inside * uAlpha * (0.82 + 0.18 * rim));
+    }`,
+}));
+pool.rotation.x = -Math.PI / 2;
+pool.position.set(PLATE_POS.x, -4.0 + 0.47, PLATE_POS.z);
+pool.rotation.z = -0.35;
+pool.renderOrder = 3;
+scene.add(pool);
+
+// =====================================================================================
+// Magnified view of the flesh: cells through the thickness with ice crystals
+// =====================================================================================
+const P_BLOCK = new THREE.Vector3(4, 11, 46), P_BLOCK_PLATE = new THREE.Vector3(96, 29, 14), P_BLOCK_X = new THREE.Vector3(70, 62, 34);
+const cellView = new THREE.Group();
+cellView.position.copy(P_BLOCK);
+scene.add(cellView);
+const ROWS = 7, COLS = 8, CELL_R = 1.72, CELL_DX = 3.4, CELL_DY = 3.0, CELL_DEPTH = 6.2;
+const ROW_NODE = Array.from({ length: ROWS }, (_, r) => Math.round((r * (N - 1)) / (ROWS - 1)));
+const BLOCK_W = COLS * CELL_DX + CELL_DX / 2 + 1.2, BLOCK_H = ROWS * CELL_DY + 1.4;
+const cellPos = (r, c) => new THREE.Vector3((c - (COLS - 1) / 2) * CELL_DX + (r % 2 ? CELL_DX / 4 : -CELL_DX / 4), ((ROWS - 1) / 2 - r) * CELL_DY, 0);
+// backdrop with the amber glow of the rows that are not frozen yet
+const backUniforms = { uHeat: { value: new Float32Array(ROWS) }, uWarn: { value: 0 } };
+const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(BLOCK_W, BLOCK_H), new THREE.ShaderMaterial({
+  uniforms: backUniforms, transparent: true, depthWrite: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uHeat[${ROWS}]; varying vec2 vUv;
+    void main(){
+      float r = (1.0 - vUv.y) * ${ROWS}.0 - 0.5;
+      int i = int(clamp(floor(r), 0.0, ${ROWS - 1}.0)); int j = int(clamp(floor(r) + 1.0, 0.0, ${ROWS - 1}.0));
+      float h = mix(uHeat[i], uHeat[j], clamp(fract(r), 0.0, 1.0));
+      vec3 base = mix(vec3(0.025, 0.04, 0.07), vec3(0.05, 0.08, 0.13), vUv.y);
+      vec3 c = base + vec3(0.5, 0.24, 0.06) * h * 0.38;
+      float e = smoothstep(0.0, 0.03, vUv.x) * smoothstep(1.0, 0.97, vUv.x) * smoothstep(0.0, 0.04, vUv.y) * smoothstep(1.0, 0.96, vUv.y);
+      gl_FragColor = vec4(c, 0.93 * e);
+    }`,
+}));
+backdrop.position.z = -CELL_DEPTH / 2 - 0.6; backdrop.renderOrder = 1;
+cellView.add(backdrop);
+const frameEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(BLOCK_W, BLOCK_H, CELL_DEPTH + 1.4)), new THREE.LineBasicMaterial({ color: '#dbe9f5', transparent: true, opacity: 0.35 }));
+cellView.add(frameEdges);
+// surface markers: thin bright lines at the top and bottom faces (the film side)
+for (const s of [1, -1]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(BLOCK_W, 0.18), new THREE.MeshBasicMaterial({ color: '#9fd6ff', transparent: true, opacity: 0.8, toneMapped: false })); l.position.set(0, (s * BLOCK_H) / 2, CELL_DEPTH / 2 + 0.7); cellView.add(l); }
+// cells: hexagonal prisms with a translucent membrane
+const NCELL = ROWS * COLS;
+const CELL_JIT = Array.from({ length: NCELL }, () => ({ a: (rnd() - 0.5) * 0.5, sx: 0.9 + rnd() * 0.16, sy: 0.9 + rnd() * 0.16, o: new THREE.Vector3((rnd() - 0.5) * 0.25, (rnd() - 0.5) * 0.25, 0) }));
+const cellGeo = new THREE.PlaneGeometry(CELL_R * 2.3, CELL_R * 2.3);
+const cellHeat = new THREE.InstancedBufferAttribute(new Float32Array(NCELL), 1), cellDmg = new THREE.InstancedBufferAttribute(new Float32Array(NCELL), 1);
+cellGeo.setAttribute('aHeat', cellHeat); cellGeo.setAttribute('aDmg', cellDmg);
+const cellMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: { uTime: { value: 0 } },
+  vertexShader: `attribute float aHeat; attribute float aDmg; varying float vHeat; varying float vDmg; varying vec2 vL;
+    void main(){
+      vec4 lp = vec4(position, 1.0);
+      #ifdef USE_INSTANCING
+        lp = instanceMatrix * lp;
+      #endif
+      vL = position.xy / ${(CELL_R).toFixed(3)};
+      vHeat = aHeat; vDmg = aDmg;
+      gl_Position = projectionMatrix * modelViewMatrix * lp;
+    }`,
+  fragmentShader: `varying float vHeat; varying float vDmg; varying vec2 vL;
+    void main(){
+      vec2 p = abs(vL);
+      float d = max(p.x * 0.8660254 + p.y * 0.5, p.y);          // pointy-top hexagon, 1 at the corners' circle
+      float body = 1.0 - smoothstep(0.86, 0.9, d);
+      float rim = smoothstep(0.7, 0.86, d) * body;
+      vec3 mem = vec3(0.98, 0.86, 0.82);
+      vec3 inner = mix(vec3(0.62, 0.42, 0.4), vec3(1.0, 0.62, 0.25), vHeat);
+      vec3 c = mix(inner * (0.35 + 0.25 * (1.0 - d)), mem, rim);
+      c = mix(c, vec3(1.0, 0.3, 0.25), vDmg * (0.35 + 0.65 * rim));
+      float a = body * (0.1 + 0.12 * vHeat + 0.55 * rim);
+      if (a < 0.003) discard;
+      gl_FragColor = vec4(c, a);
+    }`,
+});
+const cells = new THREE.InstancedMesh(cellGeo, cellMat, NCELL);
+cells.frustumCulled = false; cells.renderOrder = 5;
+cellView.add(cells);
+// ice crystals: small ones inside and between the cells; the ones between cells grow when freezing is slow
+const crystalGeo = new THREE.OctahedronGeometry(1, 0);
+crystalGeo.scale(0.8, 1.25, 0.8);
+const SLOTS = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const p = cellPos(r, c);
+    for (let k = 0; k < 3; k++) { const a = rnd() * Math.PI * 2, d = 0.35 + rnd() * 0.6; SLOTS.push({ r, kind: 'in', p: p.clone().add(new THREE.Vector3(Math.cos(a) * d, Math.sin(a) * d, (rnd() - 0.5) * 3.6)), s: 0.75 + rnd() * 0.5, rot: new THREE.Euler(rnd() * 6, rnd() * 6, rnd() * 6) }); }
+    if (c < COLS - 1) SLOTS.push({ r, kind: 'out', keep: (r + c) % 3 === 0, p: p.clone().add(new THREE.Vector3(CELL_DX / 2, (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 2.4)), s: 0.85 + rnd() * 0.3, rot: new THREE.Euler(rnd() * 6, rnd() * 6, rnd() * 6) });
+    if (r < ROWS - 1 && c % 2 === 0) SLOTS.push({ r, kind: 'out', keep: false, p: p.clone().add(new THREE.Vector3(CELL_DX / 4 * (r % 2 ? 1 : -1), -CELL_DY / 2, (rnd() - 0.5) * 2.4)), s: 0.8 + rnd() * 0.3, rot: new THREE.Euler(rnd() * 6, rnd() * 6, rnd() * 6) });
+  }
+}
+const NSLOT = SLOTS.length;
+const crySpark = new THREE.InstancedBufferAttribute(new Float32Array(NSLOT), 1), cryWarn = new THREE.InstancedBufferAttribute(new Float32Array(NSLOT), 1);
+crystalGeo.setAttribute('aSpark', crySpark); crystalGeo.setAttribute('aWarn', cryWarn);
+const crystalMat = new THREE.ShaderMaterial({
+  uniforms: {},
+  vertexShader: `attribute float aSpark; attribute float aWarn; varying float vSpark; varying float vWarn; varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec4 lp = vec4(position, 1.0);
+      #ifdef USE_INSTANCING
+        lp = instanceMatrix * lp;
+        vec3 n = mat3(instanceMatrix) * normal;
+      #else
+        vec3 n = normal;
+      #endif
+      vec4 mv = modelViewMatrix * lp;
+      vN = normalize(normalMatrix * n); vV = normalize(-mv.xyz); vSpark = aSpark; vWarn = aWarn;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `varying float vSpark; varying float vWarn; varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float d = clamp(dot(N, V), 0.0, 1.0);
+      float f = pow(1.0 - d, 2.0);
+      float facet = 0.55 + 0.45 * clamp(dot(N, normalize(vec3(0.3, 0.8, 0.5))), 0.0, 1.0);
+      vec3 ice = vec3(0.72, 0.88, 1.0) * facet + vec3(0.9, 0.97, 1.0) * f * 0.9;
+      vec3 c = ice * (1.0 - 0.55 * vWarn) + vec3(1.0, 0.28, 0.22) * vWarn * (0.18 + 1.1 * f) + vec3(1.0) * vSpark * 1.2;
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+});
+const crystals = new THREE.InstancedMesh(crystalGeo, crystalMat, NSLOT);
+crystals.frustumCulled = false;
+cellView.add(crystals);
+const cryGlowPos = new Float32Array(NSLOT * 3), cryGlowSize = new Float32Array(NSLOT), cryGlowAlpha = new Float32Array(NSLOT);
+const cryGlowGeo = new THREE.BufferGeometry();
+cryGlowGeo.setAttribute('position', new THREE.BufferAttribute(cryGlowPos, 3));
+cryGlowGeo.setAttribute('aSize', new THREE.BufferAttribute(cryGlowSize, 1));
+cryGlowGeo.setAttribute('aAlpha', new THREE.BufferAttribute(cryGlowAlpha, 1));
+const cryGlowMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uScale: { value: 400 } },
+  vertexShader: `attribute float aAlpha; attribute float aSize; uniform float uScale; varying float vA;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vA = aAlpha; gl_PointSize = aSize * uScale / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying float vA; void main(){ float r = length(gl_PointCoord - 0.5); float a = pow(smoothstep(0.5, 0.0, r), 2.2); gl_FragColor = vec4(vec3(0.75, 0.9, 1.0) * a * vA * 0.8, 1.0); }`,
+});
+const cryGlow = new THREE.Points(cryGlowGeo, cryGlowMat);
+cryGlow.frustumCulled = false; cryGlow.renderOrder = 7;
+cellView.add(cryGlow);
+// drops of water leaving damaged cells while thawing
+const NDROP = 44;
+const drops = new THREE.InstancedMesh(new THREE.SphereGeometry(0.34, 12, 8), new THREE.MeshStandardMaterial({ color: '#c46b3c', emissive: '#5a1d08', emissiveIntensity: 0.6, roughness: 0.2, transparent: true, opacity: 0.85 }), NDROP);
+drops.frustumCulled = false;
+cellView.add(drops);
+const DROP_SRC = Array.from({ length: NDROP }, (_, i) => ({ r: i % ROWS, c: Math.floor(rnd() * COLS), d: rnd(), sp: 0.7 + rnd() * 0.6 }));
+const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+flashSprite.scale.set(40, 40, 1);
+cellView.add(flashSprite);
+// leader from the product to the magnified view
+const leaderGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 1, 1)]);
+const leader = new THREE.Line(leaderGeo, new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 1.4, gapSize: 1.1, transparent: true, opacity: 0.5, depthTest: false }));
+leader.computeLineDistances(); leader.renderOrder = 20;
+scene.add(leader);
+
+// =====================================================================================
+// Cold air: particles along the lanes from the fans, over and under the shelves, back to the cooler
+// =====================================================================================
+const LANE_X = [-31, -25, -19, -13, -7, -1, 5, 11, 17, 23, 29], LANE_Y = [22, 25.5, 28.4, 33.8, 36.5, 40, 44.5];
+const NAIR = 900;
+const airPos = new Float32Array(NAIR * 6), airCol = new Float32Array(NAIR * 6);
+const airGeo = new THREE.BufferGeometry();
+airGeo.setAttribute('position', new THREE.BufferAttribute(airPos, 3));
+airGeo.setAttribute('color', new THREE.BufferAttribute(airCol, 3));
+const air = new THREE.LineSegments(airGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+air.frustumCulled = false;
+freezer.add(air);
+const AIR = Array.from({ length: NAIR }, (_, i) => ({ lane: Math.floor(rnd() * LANE_X.length * LANE_Y.length), ph: rnd(), sp: 0.8 + rnd() * 0.4, jx: (rnd() - 0.5) * 2.4, jy: (rnd() - 0.5) * 0.8, rank: i / NAIR }));
+function lanePoint(x, y, s, out) {
+  // forward along the shelf level (s 0–0.56), up the front (0.56–0.72), back along the ceiling to the cooler (0.72–1)
+  if (s < 0.56) { const k = s / 0.56; out.set(x, y, lerp(-12.5, 26, k)); return 1; }
+  if (s < 0.72) { const k = (s - 0.56) / 0.16, a = k * Math.PI / 2; out.set(x, lerp(y, 60, Math.sin(a)), 26 + 2.5 * Math.sin(a * 2)); return 0.28 * (1 - k); }
+  const k = (s - 0.72) / 0.28; out.set(x, 60 - 3 * smooth01(k), lerp(26, -18, k)); return 0.22 * smoothstep(0, 0.2, k) * (1 - smoothstep(0.8, 1, k));
+}
+// mist spilling from the open door
+const mist = Array.from({ length: 26 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#dcecff', transparent: true, depthWrite: false, opacity: 0 })); s.userData = { x: -30 + rnd() * 66, ph: rnd(), sp: 0.05 + rnd() * 0.05 }; scene.add(s); return s; });
+
+// =====================================================================================
+// Exploded view: the product layers (film / tare / flesh / skin) as a larger diagram
+// =====================================================================================
+const prodX = new THREE.Group();
+scene.add(prodX);
+prodX.visible = false;
+const prodXLayers = [];
+{
+  const mk = (geo, mat, y) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; prodX.add(m); prodXLayers.push(m); return m; };
+  mk(new RoundedBoxGeometry(18.8, 0.3, 8.8, 2, 0.12), filmMat.clone(), 5.4);
+  mk(new RoundedBoxGeometry(17.8, 0.2, 7.8, 2, 0.09), tareMat, 2.6);
+  mk(new RoundedBoxGeometry(17.9, 1.1, 7.9, 3, 0.4), fleshMat, 0);
+  mk(new RoundedBoxGeometry(18, 0.24, 8, 2, 0.1), skinMat, -2.4);
+  prodXLayers[0].material.uniforms = { uFrost: { value: 0.35 }, uFade: { value: 1.6 } };
+  prodX.position.set(-44, 70, 44);
+  prodX.rotation.set(0.35, 0.5, 0);
+}
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), uVal: $('uVal'), airVal: $('airVal'), passTag: $('passTag'), passVal: $('passVal'), pmeter: $('pmeter'), pfill: $('pfill'),
+  tcVal: $('tcVal'), tsVal: $('tsVal'), cryVal: $('cryVal'), dripVal: $('dripVal'),
+  steps: [...document.querySelectorAll('#steps li')], counter: $('counter'), stateText: $('stateText'), realnote: $('realnote'), speedTag: $('speedTag'),
+  range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'), imageTag: $('imageTag'), hint: $('hint'),
+};
+const PASS_MAX = 120;   // minutes on the meter
+const pPct = m => (clamp(m, 0, PASS_MAX) / PASS_MAX) * 100;
+$('thPass').style.left = `${pPct(30)}%`;
+$('pticks').innerHTML = [0, 30, 60, 90, 120].map(v => `<span style="left:${pPct(v)}%">${v}${v === 120 ? '分' : ''}</span>`).join('');
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+const fmtC = T => `${T < -0.05 ? '−' : ''}${Math.abs(T).toFixed(1)}`;
+const fmtMin = s => { const m = Math.floor(s / 60 + 1e-6); return m < 60 ? `${m}分` : `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, '0')}分`; };
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+const PHASES = [{ label: '冷える' }, { label: '凍り始める' }, { label: '通り抜ける' }, { label: '固まる' }, { label: '保存' }, { label: '解凍' }];
+function freshProductState() {
+  const P = newProduct();
+  const rowNuc = new Float32Array(ROWS);
+  for (let r = 0; r < ROWS; r++) rowNuc[r] = P.T[ROW_NODE[r]] < TF ? -100 : -1;
+  return { P, status: 'idle', kind: 'quick', tModel: 0, tRun: 0, phase: 0, flash: 0, rowNuc, storeT: 0, thawT: 0, thawK: 0, result: null, drip: 0, passFinal: -1, doneT: -1, clearT: -100 };
+}
+function blockTarget() {
+  if (S.status === 'thaw') return Math.max(S.blockHold, smooth01(S.thawK / 0.45));
+  if (S.status === 'done') return 1;
+  return S.status === 'idle' ? 0 : S.blockHold;
+}
+function freshState() {
+  return Object.assign(freshProductState(), {
+    u: U0, speed: 'fast', exploded: false, explode: 0, camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0, curve: [], curveNext: 0, failCamUntil: -1, returnCam: 'overview', demoSlow: false, blockK: 0, blockHold: 0,
+  });
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+const runFast = () => (S.speed === 'fast' ? (S.kind === 'slow' ? FAST_SLOW : FAST_QUICK) : 1);
+function startRun(kind) {
+  S.blockHold = S.blockK > 0.5 ? 1 : 0;
+  S.status = 'run'; S.kind = kind; S.tRun = 0; S.curve = [[0, S.P.T[CENTER]]]; S.curveNext = CURVE_DT;
+  if (kind === 'quick') { S.flash = 1; logEvent('fast'); } else logEvent('slow');
+}
+function startThaw() {
+  S.status = 'thaw'; S.thawT = 0; S.thawK = 0; logEvent('thaw');
+  // follow the product to the plate (the demo scripts its own cameras)
+  if (!DEMO_ACTIVE) { if (!['plate', 'fail', 'exploded'].includes(S.camera)) S.returnCam = S.camera; if (!S.exploded) setCamera(S.kind === 'slow' ? 'fail' : 'plate'); }
+}
+function finishThaw() {
+  S.status = 'done'; S.doneT = S.t;
+  S.passFinal = centrePass(S.P, S.tModel);
+  S.drip = dripOf(S.P.tz);
+  S.result = S.passFinal <= PASS_OK ? 'ok' : 'ng';
+  if (S.result === 'ok') { showBubble('ok'); sound('ok'); logEvent('success'); }
+  else {
+    showBubble('err'); sound('err'); logEvent('failure');
+    if (!DEMO_ACTIVE && !S.exploded) { if (S.camera !== 'fail') setCamera('fail'); S.failCamUntil = S.t + 4.2; }
+  }
+}
+function resetProduct() { const keepClear = S.status === 'done' || S.status === 'thaw'; Object.assign(S, freshProductState()); if (keepClear) S.clearT = S.t; S.bubble = null; S.curve = []; }
+/** Advance by dt display-seconds; while freezing, model time runs time-lapsed. */
+function stepState(dt) {
+  S.t += dt;
+  const Ta = airTemp(S.u), h = heatTransfer(S.u);
+  if (S.status === 'idle' || S.status === 'run') {
+    const dtm = dt * (S.status === 'run' ? runFast() : 1);
+    if (dtm > 0) {
+      const n = Math.ceil(dtm / DT_MODEL - 1e-9), d = dtm / n;
+      for (let k = 0; k < n; k++) {
+        modelStep(S.P, Ta, h, d, S.tModel); S.tModel += d;
+        if (S.status === 'run') { S.tRun += d; if (S.tRun >= S.curveNext) { S.curve.push([S.tRun, S.P.T[CENTER]]); S.curveNext += CURVE_DT; } }
+      }
+    }
+    for (let r = 0; r < ROWS; r++) if (S.rowNuc[r] === -1 && S.P.T[ROW_NODE[r]] < TF - 0.02) S.rowNuc[r] = S.t;
+  }
+  if (S.status === 'idle' && predAt(S.u).pass <= PASS_OK) startRun('quick');
+  if (S.status === 'run') {
+    const tc = S.P.T[CENTER];
+    S.phase = tc > 0 ? 0 : tc > ZONE_HI ? 1 : tc >= ZONE_LO ? 2 : 3;
+    if (tc <= T_DONE) { S.status = 'store'; S.storeT = 0; S.phase = 4; logEvent('frozen'); }
+  } else if (S.status === 'store') {
+    S.storeT += dt; S.phase = 4;
+    if (S.storeT >= STORE_SEC[S.kind]) startThaw();
+  } else if (S.status === 'thaw') {
+    S.thawT += dt; S.thawK = Math.min(1, S.thawT / THAW_SEC[S.kind]); S.phase = 5;
+    if (S.thawK >= 1) finishThaw();
+  } else if (S.status === 'idle') S.phase = 0;
+  else if (S.status === 'done') S.phase = 5;
+  if (!DEMO_ACTIVE && S.failCamUntil > 0 && S.t > S.failCamUntil) { S.failCamUntil = -1; setCamera(S.returnCam); }
+  { const bt = blockTarget(); S.blockK = S.status === 'thaw' ? bt : S.blockK + clamp(bt - S.blockK, -dt / 0.6, dt / 0.6); }
+  S.flash = Math.max(0, S.flash - dt * 1.3);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && (S.t > S.bubbleUntil || S.explode > 0.3)) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, S.P.T[0], S.P.T[CENTER]]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 30; }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + 4.2; }
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') { tone(1800, t0, 0.03, 0.2); tone(3600, t0, 0.02, 0.06); }
+  else for (let i = 0; i < 3; i++) tone(3000, t0 + i * 0.12, 0.07, 0.12);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [12, 56, 178], tgt: [8, 23, 12] },
+  approach: { rel: true, pos: [4, 17, 82], tgt: [1, 4, -6] },
+  inside: { rel: true, pos: [0, 2, 42], tgt: [0, 0, 0] },
+  cells: { rel: true, pos: [2, 1.6, 30], tgt: [1, -0.4, 0] },
+  shelf: { pos: [20, 39, 32], tgt: [-5, 30.8, 3] },
+  plate: { pos: [112, 30, 110], tgt: [96, 12, 14] },
+  fail: { pos: [124, 40, 132], tgt: [92, 9, 14] },
+  exploded: { pos: [8, 126, 290], tgt: [22, 44, 8] },
+};
+const CAMS_PORTRAIT = {
+  overview: { pos: [10, 80, 290], tgt: [8, 24, 10] },
+  approach: { rel: true, pos: [4, 19, 114], tgt: [1, 4, -6] },
+  inside: { rel: true, pos: [0, 2, 72], tgt: [0, 0, 0] },
+  cells: { rel: true, pos: [2, 1.6, 50], tgt: [1, -0.4, 0] },
+  plate: { pos: [114, 36, 170], tgt: [96, 12, 14] },
+  fail: { pos: [130, 56, 220], tgt: [88, 10, 14] },
+  exploded: { pos: [10, 150, 400], tgt: [22, 46, 8] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = (innerWidth / innerHeight < 0.8 && CAMS_PORTRAIT[name]) || CAMS[name];
+  if (p.rel) { const b = blockPosition(new THREE.Vector3()); return { pos: b.clone().add(new THREE.Vector3(...p.pos)), tgt: b.clone().add(new THREE.Vector3(...p.tgt)) }; }
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
+const ARC_A = PROD_POS.clone(), ARC_C = new THREE.Vector3(50, 64, 64), ARC_B = new THREE.Vector3(PLATE_POS.x, -4.0 + 0.45 + 0.75, PLATE_POS.z);
+const productArc = new THREE.QuadraticBezierCurve3(ARC_A, ARC_C, ARC_B);
+function drawDisplay() {
+  const x = dispCanvas.getContext('2d'), w = 256, h = 160;
+  x.fillStyle = '#05080b'; x.fillRect(0, 0, w, h);
+  x.font = '500 22px "Noto Sans JP"'; x.fillStyle = '#8fa3b5'; x.textAlign = 'left'; x.textBaseline = 'middle';
+  x.fillText('庫内', 18, 42); x.fillText('中心', 18, 112);
+  x.font = '500 44px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillStyle = '#cfe9ff'; x.fillText(`${fmtC(airTemp(S.u))}℃`, w - 16, 42);
+  const tc = S.P.T[CENTER];
+  x.fillStyle = tc > ZONE_HI ? '#ffcf94' : tc >= ZONE_LO ? '#ffffff' : '#bfe4ff';
+  x.fillText(`${fmtC(tc)}℃`, w - 16, 112);
+  dispTex.needsUpdate = true;
+}
+function drawRing() {
+  const x = ringCanvas.getContext('2d'), w = 512, h = 512, cx = w / 2, cy = h / 2;
+  x.clearRect(0, 0, w, h);
+  x.fillStyle = 'rgba(12,15,19,0.92)'; x.beginPath(); x.arc(cx, cy, 250, 0, Math.PI * 2); x.fill();
+  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25;
+  for (let i = 0; i <= 20; i++) {
+    const a = lerp(a0, a1, i / 20), major = i % 5 === 0, r0 = major ? 188 : 200;
+    x.strokeStyle = major ? '#ffffff' : 'rgba(255,255,255,0.55)'; x.lineWidth = major ? 7 : 4;
+    x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); x.lineTo(cx + Math.cos(a) * 232, cy + Math.sin(a) * 232); x.stroke();
+  }
+  // threshold mark (where the predicted pass time crosses 30 min)
+  const ath = lerp(a0, a1, U_TH);
+  x.setLineDash([12, 10]); x.strokeStyle = 'rgba(159,214,255,0.95)'; x.lineWidth = 5;
+  x.beginPath(); x.moveTo(cx + Math.cos(ath) * 150, cy + Math.sin(ath) * 150); x.lineTo(cx + Math.cos(ath) * 244, cy + Math.sin(ath) * 244); x.stroke(); x.setLineDash([]);
+  x.font = '700 40px "Noto Sans JP"'; x.fillStyle = '#e8edf2'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('ゆっくり', cx - 118, cy + 188); x.fillText('速い', cx + 128, cy + 188);
+  ringTex.needsUpdate = true;
+}
+let lastDisp = '';
+function rowState(r) {
+  const i = ROW_NODE[r], T = S.P.T[i], phi = iceFrac(T), c = crystalOf(S.P.tz[i]);
+  const heat = (1 - clamp(phi / 0.8, 0, 1)) * (0.55 + 0.45 * clamp((T - TF) / 2.5, 0, 1));
+  return { T, phi, c, heat, grow: Math.sqrt(clamp(phi / 0.8, 0, 1)) };
+}
+function applyScene(time) {
+  const e = ease(S.explode);
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  const u = S.u, hN = (heatTransfer(u) - 6) / 60;
+  // dial knob and display
+  knob.userData.cap.rotation.z = -lerp(-Math.PI * 0.75, Math.PI * 0.75, u);
+  const dk = `${airTemp(u).toFixed(1)}|${S.P.T[CENTER].toFixed(1)}`;
+  if (dk !== lastDisp) { lastDisp = dk; drawDisplay(); }
+  fanRotors.forEach((r, i) => (r.rotation.z = -time * (4 + 30 * hN) * (i ? 1 : 1.07)));
+  // cold air particles: thicker and brighter as the cooling speeds up
+  const vis = 0.4 + 0.6 * u, aBase = 0.3 + 0.9 * u, len = 0.03 + 0.06 * u;
+  for (let k = 0; k < NAIR; k++) {
+    const a = AIR[k], lx = LANE_X[a.lane % LANE_X.length], ly = LANE_Y[Math.floor(a.lane / LANE_X.length)];
+    const s = (a.ph + time * (0.05 + 0.2 * u) * a.sp) % 1;
+    const w = lanePoint(lx + a.jx, ly + a.jy, s, tmpV);
+    lanePoint(lx + a.jx, ly + a.jy, Math.max(0, s - len * (s < 0.56 ? 1 : 0.6)), tmpV2);
+    airPos.set([tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.y, tmpV2.z], k * 6);
+    const al = (a.rank < vis ? 1 : 0) * aBase * w * smoothstep(0, 0.05, s) * (1 - 0.85 * e);
+    airCol.set([0.62 * al, 0.82 * al, al, 0, 0, 0], k * 6);
+  }
+  airGeo.attributes.position.needsUpdate = true; airGeo.attributes.color.needsUpdate = true;
+  mist.forEach((m, i) => {
+    const d = m.userData, k = (d.ph + time * d.sp) % 1;
+    m.position.set(d.x - 8 + 10 * k, lerp(4, -60, k), 40 + 26 * k);
+    const sc = 10 + 26 * k; m.scale.set(sc, sc * 0.7, 1);
+    m.material.opacity = 0.045 * Math.sin(Math.PI * k) * (0.5 + u) * (1 - e);
+  });
+  // product: on the shelf while freezing, carried to the plate while thawing
+  const onShelf = S.status === 'idle' || S.status === 'run' || S.status === 'store';
+  const k = S.status === 'thaw' ? smooth01(S.thawK / 0.45) : 0;
+  product.visible = onShelf || (S.status === 'thaw' && S.thawK < 0.45);
+  if (S.status === 'thaw') productArc.getPoint(k, product.position); else product.position.copy(PROD_POS).addScaledVector(parts.shelf.off, e);
+  product.rotation.y = S.status === 'thaw' ? lerp(0, -0.35, k) : 0;
+  filmUniforms.uFade.value = S.status === 'thaw' ? 1 - k : 1;
+  const surf = S.P.T[0];
+  filmUniforms.uFrost.value = S.status === 'thaw' ? 0 : smoothstep(0.3, 0.95, iceFrac(surf)) * 0.75;
+  secUniforms.uT.value.set(S.P.T);
+  const thawed = S.status === 'done' || (S.status === 'thaw' && S.thawK >= 0.45);
+  const clearFade = clamp(1 - (S.t - S.clearT) / 0.35, 0, 1);
+  plateKaba.visible = thawed || clearFade > 0;
+  const dripNow = S.status === 'done' ? S.drip : dripOf(S.P.tz);
+  const dmg = smoothstep(0.004, 0.05, dripNow);
+  const tk = S.status === 'done' ? 1 : S.status === 'thaw' ? smoothstep(0.45, 1, S.thawK) : 0;
+  plateKaba.scale.set(1, 1 - 0.14 * dmg * tk, 1);
+  const spread = S.status === 'done' ? smoothstep(0, 1.4, S.t - S.doneT) : 0;
+  poolUniforms.uMargin.value = (0.25 + 7.2 * Math.sqrt(clamp(dripNow / 0.08, 0, 1))) * (0.55 * tk + 0.45 * spread);
+  poolUniforms.uAlpha.value = thawed ? tk : clearFade;
+  poolUniforms.uWarn.value = S.result === 'ng' ? 1 : 0;
+  poolUniforms.uTime.value = time;
+  pool.visible = poolUniforms.uAlpha.value > 0.01 && poolUniforms.uMargin.value > 0.05;
+  // magnified cells and crystals
+  const heats = backUniforms.uHeat.value, rows = [];
+  for (let r = 0; r < ROWS; r++) { rows.push(rowState(r)); heats[r] = rows[r].heat; }
+  const thawK = S.status === 'thaw' ? S.thawK : S.status === 'done' ? 1 : 0;
+  const melt = smooth01(thawK / 0.7);
+  let ci = 0;
+  for (let r = 0; r < ROWS; r++) {
+    const R = rows[r], crush = smoothstep(0.85, 1.45, R.c) * R.grow;
+    const damaged = smoothstep(0.95, 1.4, R.c);
+    for (let c = 0; c < COLS; c++, ci++) {
+      const p = cellPos(r, c);
+      const sq = 1 - 0.3 * crush * (1 - 0.4 * melt) - 0.12 * damaged * melt;
+      const wob = CELL_JIT[ci].a + Math.sin(time * 0.8 + ci) * 0.02;
+      tmpM.compose(tmpV.copy(p).add(CELL_JIT[ci].o), tmpQ.setFromEuler(tmpE.set(0, 0, wob)), tmpS.set(sq * CELL_JIT[ci].sx, sq * CELL_JIT[ci].sy, 1));
+      cells.setMatrixAt(ci, tmpM);
+      cellHeat.array[ci] = thawK > 0 ? (0.25 + 0.5 * (1 - damaged)) * melt : R.heat;
+      cellDmg.array[ci] = Math.max(crush, damaged * melt) * (R.c > 1 ? 1 : 0.4);
+    }
+  }
+  cells.instanceMatrix.needsUpdate = true; cellHeat.needsUpdate = true; cellDmg.needsUpdate = true;
+  for (let i = 0; i < NSLOT; i++) {
+    const sl = SLOTS[i], R = rows[sl.r];
+    const spark = S.rowNuc[sl.r] >= 0 ? Math.exp(-(S.t - S.rowNuc[sl.r]) / 0.35) : 0;
+    let size;
+    if (sl.kind === 'in') size = CELL_R * 0.26 * sl.s * R.grow * (1 - smoothstep(0.45, 0.9, R.c));
+    else if (sl.keep) size = CELL_R * (0.3 + 0.8 * smoothstep(0.6, 1.6, R.c)) * sl.s * R.grow;
+    else size = CELL_R * 0.3 * sl.s * R.grow * (1 - smoothstep(0.45, 0.9, R.c));
+    size *= 1 - melt;
+    const tw = 1 + 0.05 * Math.sin(time * 3 + i);
+    tmpE.set(sl.rot.x + time * 0.05, sl.rot.y, sl.rot.z);
+    tmpM.compose(sl.p, tmpQ.setFromEuler(tmpE), tmpS.setScalar(Math.max(1e-4, size * tw)));
+    crystals.setMatrixAt(i, tmpM);
+    crySpark.array[i] = Math.min(1, spark + S.flash * 0.6);
+    cryWarn.array[i] = smoothstep(1.0, 1.35, R.c);
+    cryGlowPos[i * 3] = sl.p.x; cryGlowPos[i * 3 + 1] = sl.p.y; cryGlowPos[i * 3 + 2] = sl.p.z;
+    cryGlowSize[i] = size > 1e-3 ? 1.0 + Math.min(size, 0.8) * 2.2 : 0;
+    cryGlowAlpha[i] = size > 1e-3 ? (0.18 + 0.6 * crySpark.array[i]) * (1 - cryWarn.array[i]) : 0;
+  }
+  cryGlowGeo.attributes.position.needsUpdate = true; cryGlowGeo.attributes.aSize.needsUpdate = true; cryGlowGeo.attributes.aAlpha.needsUpdate = true;
+  cryGlowMat.uniforms.uScale.value = renderer.domElement.height * 0.9;
+  crystals.instanceMatrix.needsUpdate = true; crySpark.needsUpdate = true; cryWarn.needsUpdate = true;
+  for (let i = 0; i < NDROP; i++) {
+    const d = DROP_SRC[i], R = rows[d.r], damaged = smoothstep(0.95, 1.4, R.c);
+    const k2 = clamp((thawK - 0.3 - d.d * 0.3) / 0.5, 0, 1) + (S.status === 'done' ? ((S.t - S.doneT) * d.sp * 0.45) % 1 : 0);
+    const show = damaged > 0.2 && thawK > 0.3;
+    const p = cellPos(d.r, d.c);
+    tmpM.compose(tmpV.set(p.x + (d.d - 0.5) * 1.6, p.y - CELL_DY * 0.4 - (k2 % 1) * 9, p.z + CELL_DEPTH / 2 + 0.4), tmpQ.identity(), tmpS.setScalar(show ? 1 - 0.5 * (k2 % 1) : 1e-4));
+    drops.setMatrixAt(i, tmpM);
+  }
+  drops.instanceMatrix.needsUpdate = true;
+  flashSprite.material.opacity = Math.min(0.7, S.flash * 0.9);
+  flashSprite.scale.setScalar(12 + 34 * S.flash);
+  gradePass.uniforms.uFlash.value = 0.3 * Math.pow(S.flash, 3);
+  // the magnified view follows the product (shelf → plate) and moves aside in the exploded view
+  const ex = e;
+  blockPosition(cellView.position);
+  cellView.scale.setScalar(1 + 0.25 * ex);
+  const onPlateNow = !product.visible;
+  const from = onPlateNow ? tmpV.copy(plateKaba.position).add(tmpV2.set(-4, 1.2, 3)) : tmpV.copy(product.position).add(tmpV2.set(2, -1.0, 4));
+  const lp = leaderGeo.attributes.position;
+  lp.setXYZ(0, from.x, from.y, from.z);
+  const to = cellView.localToWorld(tmpV2.set(onPlateNow ? -BLOCK_W / 2 + 2 : -BLOCK_W / 2 + 4, -BLOCK_H / 2, 0));
+  lp.setXYZ(1, to.x, to.y, to.z); lp.needsUpdate = true; leader.computeLineDistances();
+  leader.visible = ex < 0.2 && (product.visible || plateKaba.visible) && from.distanceTo(to) < 80;
+  prodX.visible = ex > 0.02;
+  prodX.scale.setScalar(Math.max(0.001, 2.1 * ex));
+  prodXLayers.forEach((m, i) => (m.position.y = (5.4 - i * 2.6) * (0.6 + 0.4 * ex)));
+  ui.imageTag.classList.toggle('show', nearBlock() || S.explode > 0.3);
+  ui.hint.style.visibility = ui.imageTag.classList.contains('show') ? 'hidden' : '';
+}
+const nearBlock = () => camera.position.distanceTo(cellView.position) < 60;
+function blockPosition(out) {
+  out.copy(P_BLOCK).lerp(P_BLOCK_PLATE, smooth01(S.blockK));
+  return out.lerp(P_BLOCK_X, ease(S.explode));
+}
+
+// =====================================================================================
+// Graph (time → centre temperature) and the record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const G_TMAX = 120, G_Y0 = 5, G_Y1 = -40;
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  sizeCanvas(graphCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = { l: 34, r: w - 8, t: 10, b: h - 22 };
+  const X = m => g.l + (clamp(m, 0, G_TMAX) / G_TMAX) * (g.r - g.l), Y = T => g.t + ((G_Y0 - clamp(T, G_Y1, G_Y0)) / (G_Y0 - G_Y1)) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  // zone band
+  x.fillStyle = 'rgba(159,214,255,0.14)'; x.fillRect(g.l, Y(ZONE_HI), g.r - g.l, Y(ZONE_LO) - Y(ZONE_HI));
+  x.strokeStyle = 'rgba(159,214,255,0.45)'; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(g.l, Y(ZONE_HI)); x.lineTo(g.r, Y(ZONE_HI)); x.moveTo(g.l, Y(ZONE_LO)); x.lineTo(g.r, Y(ZONE_LO)); x.stroke(); x.setLineDash([]);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1; x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8a9098'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (const m of [0, 30, 60, 90, 120]) x.fillText(`${m}`, X(m), g.b + 12);
+  x.textAlign = 'right'; for (const T of [0, -20, -40]) x.fillText(`${T}`, g.l - 4, Y(T) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('分', g.r - 10, g.b + 12); x.fillText('中心温度 ℃', g.l + 4, g.t + 8);
+  x.fillStyle = '#bfe4ff'; x.fillText('結晶が育ちやすい温度帯', g.r - 118, Y(ZONE_LO) + 11);
+  // predicted curve for the current setting
+  const pr = predAt(S.u);
+  x.strokeStyle = S.status === 'idle' ? 'rgba(255,176,74,0.95)' : 'rgba(255,176,74,0.35)'; x.lineWidth = 1.6; x.setLineDash(S.status === 'idle' ? [] : [4, 3]);
+  x.beginPath();
+  for (let i = 0; i < CURVE_N; i++) { const T = lerp(pr.a.curve[i], pr.b.curve[i], pr.f); const px = X(i), py = Y(T); i ? x.lineTo(px, py) : x.moveTo(px, py); }
+  x.stroke(); x.setLineDash([]);
+  // measured curve of the current run
+  if (S.curve.length > 1 && S.status !== 'idle') {
+    x.strokeStyle = '#ffffff'; x.lineWidth = 2; x.beginPath();
+    S.curve.forEach(([t, T], i) => { const px = X(t / 60), py = Y(T); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+    if (S.status === 'run') x.lineTo(X(S.tRun / 60), Y(S.P.T[CENTER]));
+    x.stroke();
+  }
+  const pt = S.status === 'idle' ? [0, S.P.T[CENTER]] : [S.tRun / 60, S.P.T[CENTER]];
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(X(pt[0]), Y(pt[1]), 4, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(X(pt[0]), Y(pt[1]), 7.5, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 8, t = 6, b = h - 6;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  const Y = T => t + ((G_Y0 - clamp(T, G_Y1, G_Y0)) / (G_Y0 - G_Y1)) * (b - t);
+  x.fillStyle = 'rgba(159,214,255,0.1)'; x.fillRect(l, Y(ZONE_HI), r - l, Y(ZONE_LO) - Y(ZONE_HI));
+  x.fillStyle = '#8a9098'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('0℃', l - 3, Y(0) + 3); x.fillText('−40', l - 3, b);
+  const H = S.hist, NH = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (NH - 1)) * (r - l);
+  x.lineWidth = 1.6;
+  x.strokeStyle = '#9fd6ff'; x.beginPath(); H.forEach((p, i) => (i ? x.lineTo(X(i), Y(p[1])) : x.moveTo(X(i), Y(p[1])))); x.stroke();
+  x.strokeStyle = '#ffb04a'; x.beginPath(); H.forEach((p, i) => (i ? x.lineTo(X(i), Y(p[2])) : x.moveTo(X(i), Y(p[2])))); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const blockPt = (x, y, z = CELL_DEPTH / 2) => () => cellView.localToWorld(tmpV.set(x, y, z)).clone();
+const LABELS = [
+  { id: 'freezer', text: '冷凍庫', cls: 'key', pri: 95, mode: 'normal', anchor: () => freezer.localToWorld(tmpV.set(-39, 44, 32)).clone() },
+  { id: 'product', text: '真空包装した蒲焼き', cls: 'key', pri: 98, mode: 'normal', anchor: () => product.localToWorld(tmpV.set(-5, 1.2, 2)).clone(), dyn: () => (product.visible ? '真空包装した蒲焼き' : '') },
+  { id: 'block', text: '身の中の拡大（模式図）', cls: 'key', pri: 97, mode: 'normal', anchor: blockPt(-BLOCK_W / 2, BLOCK_H / 2) },
+  { id: 'crystal', text: '氷の結晶', cls: 'ice', pri: 96, mode: 'normal', anchor: () => { const sl = SLOTS.find(s => s.kind === 'out' && s.r === 1 && s.p.x > 3); return cellView.localToWorld(tmpV.copy(sl.p)).clone(); }, dyn: () => (rowState(1).grow > 0.05 && S.status !== 'done' && S.status !== 'thaw' ? '氷の結晶' : '') },
+  { id: 'air', text: '冷気', cls: 'cold', pri: 90, mode: 'normal', anchor: () => freezer.localToWorld(tmpV.set(20, 34.2, 22)).clone() },
+  { id: 'knob', text: 'つまみ（冷やす速さ）', cls: '', pri: 93, mode: 'normal', anchor: () => freezer.localToWorld(tmpV.copy(KNOB_POS).add(tmpV2.set(-3, -4, 1))).clone() },
+  { id: 'plate', text: '皿', cls: '', pri: 80, mode: 'normal', anchor: () => new THREE.Vector3(PLATE_POS.x + 13, -2, PLATE_POS.z + 4), dyn: () => (plateKaba.visible ? '皿' : '') },
+  { id: 'drip', text: '', cls: 'warn', pri: 99, mode: 'normal', anchor: () => new THREE.Vector3(PLATE_POS.x - 6, -3.4, PLATE_POS.z + 7), dyn: () => (S.status === 'done' && S.result === 'ng' ? 'ドリップ' : '') },
+  // close to the magnified view
+  { id: 'surfTop', text: '表面（包装の側）', cls: 'cold', pri: 92, mode: 'block', anchor: blockPt(-BLOCK_W / 2, (ROWS - 1) / 2 * CELL_DY) },
+  { id: 'center', text: '中心', cls: 'amber', pri: 94, mode: 'block', anchor: blockPt(-BLOCK_W / 2, 0) },
+  { id: 'surfBot', text: '表面（皮の側）', cls: 'cold', pri: 91, mode: 'block', anchor: blockPt(-BLOCK_W / 2, -(ROWS - 1) / 2 * CELL_DY) },
+  { id: 'bCell', text: '細胞', cls: '', pri: 89, mode: 'block', anchor: () => cellView.localToWorld(tmpV.copy(cellPos(4, 6)).add(tmpV2.set(0, 0, CELL_DEPTH / 2))).clone() },
+  { id: 'bCry', text: '氷の結晶', cls: 'ice', pri: 96, mode: 'block', anchor: () => { const sl = SLOTS.find(s => s.kind === 'out' && s.r === 2 && s.p.x > 5); return cellView.localToWorld(tmpV.copy(sl.p)).clone(); }, dyn: () => (rowState(2).grow > 0.05 && S.status !== 'done' ? '氷の結晶' : '') },
+  // exploded
+  { id: 'xFilm', text: '真空包装のフィルム', cls: '', pri: 90, mode: 'x', anchor: () => prodXLayers[0].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xTare', text: 'タレ', cls: 'amber', pri: 89, mode: 'x', anchor: () => prodXLayers[1].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xFlesh', text: '蒲焼きの身', cls: '', pri: 91, mode: 'x', anchor: () => prodXLayers[2].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xSkin', text: '皮', cls: '', pri: 88, mode: 'x', anchor: () => prodXLayers[3].localToWorld(tmpV.set(9, 0, 0)).clone() },
+  { id: 'xCooler', text: '冷却器', cls: 'cold', pri: 94, mode: 'x', anchor: () => cooler.localToWorld(tmpV.set(24, 4, 5)).clone() },
+  { id: 'xFans', text: '送風機', cls: 'cold', pri: 93, mode: 'x', anchor: () => fanGroup.localToWorld(tmpV.set(17, 32, -13)).clone() },
+  { id: 'xShelf', text: '棚', cls: '', pri: 92, mode: 'x', anchor: () => shelves[0].localToWorld(tmpV.set(30, 0, 28)).clone() },
+  { id: 'xSensor', text: '温度センサー', cls: 'amber', pri: 95, mode: 'x', anchor: () => sensor.localToWorld(tmpV.set(11, 0, 0)).clone() },
+  { id: 'xCells', text: '身の細胞（模式図、大きさは実際と異なる）', cls: 'key', pri: 97, mode: 'x', anchor: blockPt(-BLOCK_W / 2, BLOCK_H / 2) },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+// the magnified view must not be covered by labels (except its own)
+function blockScreenRect() {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const p = screenOf(cellView.localToWorld(tmpV.set((sx * BLOCK_W) / 2, (sy * BLOCK_H) / 2, CELL_DEPTH / 2))); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
+  return { x0: x0 + 6, y0: y0 + 6, x1: x1 - 6, y1: y1 - 6 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : nearBlock() ? 'block' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  const bRect = mode === 'normal' ? blockScreenRect() : null;
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false, text = L.text;
+    if (L.dyn) { text = L.dyn(); if (L.el.textContent !== text) { L.el.textContent = text; L.size = null; } }
+    if (L.mode === mode && text) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        const cands = mode === 'block' ? [[-40 - w, -30], [-40 - w, 30], [-46 - w, 0], [40, -46], [46, 26], [-w / 2, -64]] : [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]];
+        for (const [dx, dy] of cands) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          if (bRect && L.id !== 'block' && L.id !== 'crystal' && overlapsBox(box, bRect, 2)) continue;
+          if (bRect && L.id === 'block' && overlapsBox(box, bRect, 2)) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const dripWord = d => (d < 0.01 ? 'わずか' : d < 0.04 ? 'やや多い' : '多い');
+function updateUI() {
+  const u = S.u;
+  ui.uVal.innerHTML = `${Math.round(u * 100)}<span class="unit">%</span>`;
+  ui.airVal.textContent = `${fmtC(airTemp(u))}℃・${heatTransfer(u).toFixed(0)} W/m²K`;
+  const pr = predAt(u);
+  const running = S.status !== 'idle';
+  const measured = centrePass(S.P, S.tModel);
+  const passS = running ? (S.status === 'done' ? S.passFinal : measured) : pr.pass;
+  const tagText = !running ? '予測' : S.P.tOut >= 0 ? '結果' : '計測中';
+  if (ui.passTag.textContent !== tagText) ui.passTag.textContent = tagText;
+  const over = passS > PASS_OK;
+  ui.passTag.className = `tag ${tagText === '結果' ? (over ? 'ng' : 'on') : 'cold'}`;
+  ui.passVal.innerHTML = `${Math.floor(passS / 60 + 1e-6)}<span class="unit">分</span>`;
+  ui.passVal.classList.toggle('ng', over && (tagText !== '計測中'));
+  ui.pfill.style.width = `${pPct(passS / 60).toFixed(1)}%`;
+  ui.pfill.classList.toggle('pred', !running);
+  ui.pmeter.classList.toggle('over', over);
+  const tc = S.P.T[CENTER];
+  ui.tcVal.innerHTML = `${fmtC(tc)}<span class="unit">℃</span>`;
+  ui.tsVal.textContent = `${fmtC(S.P.T[0])}℃`;
+  const cC = running ? crystalOf(S.P.tz[CENTER]) : pr.crystal;
+  ui.cryVal.textContent = `${cC.toFixed(1)}倍${running ? '' : '（予測）'}`;
+  ui.cryVal.classList.toggle('ng', cC > 1.0);
+  const d = S.status === 'done' ? S.drip : running ? dripOf(S.P.tz) : pr.drip;
+  ui.dripVal.textContent = S.status === 'done' ? dripWord(d) : `${dripWord(d)}（予測）`;
+  ui.dripVal.classList.toggle('ng', d >= 0.01);
+  if (document.activeElement !== ui.range) ui.range.value = u.toFixed(3);
+  ui.steps.forEach((li, i) => { li.classList.toggle('active', i === S.phase); li.classList.toggle('done', i < S.phase || (S.status === 'done' && i <= 5)); });
+  ui.counter.textContent = `経過 ${fmtMin(S.tRun)}`;
+  const st = S.status === 'done' ? (S.result === 'ok' ? '結晶 小さいまま　ドリップ わずか' : '結晶が大きく育ちました')
+    : S.status === 'thaw' ? '解凍：溶かしています（模式表示）' : S.status === 'store' ? '保存：冷凍保存しています'
+    : S.status === 'run' ? ['冷える：身の温度が下がっています', '凍り始める：水分が凍り始めています', '通り抜ける：中心が温度帯を通っています', '固まる：全体が凍っていきます'][S.phase]
+    : '冷やす速さを上げてください';
+  if (ui.stateText.textContent !== st) ui.stateText.textContent = st;
+  ui.stateText.style.color = S.status === 'done' && S.result === 'ng' ? '#ffb3ab' : '';
+  ui.realnote.classList.toggle('show', S.status === 'done');
+  const fac = S.kind === 'slow' ? FAST_SLOW : FAST_QUICK;
+  ui.speedTag.textContent = S.speed === 'fast' ? `早回し表示（約${fac.toLocaleString('ja-JP')}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const pm = Math.floor(S.passFinal / 60 + 1e-6);
+    const html = isErr ? `結晶が大きく育ちました<small>中心が温度帯を通り抜けた時間 ${pm}分。解凍すると、ドリップが流れ出しました（模型の値）</small>` : `カチッ　結晶 小さいまま　ドリップ わずか<small>中心が温度帯を通り抜けた時間 ${pm}分（模型の値）</small>`;
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const anchor = freezer.localToWorld(new THREE.Vector3(50, 71, 30));
+    const p = screenOf(anchor);
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: dial drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null, tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setDialUser(u) {
+  tapPlan = null;
+  if (S.status === 'done') resetProduct();
+  S.u = clamp(u, 0, 1);
+  stepState(0);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(knobPick, false).length) { dragging = { x: e.clientX, y: e.clientY, u: S.u }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) { setDialUser(dragging.u + (e.clientX - dragging.x - (e.clientY - dragging.y)) * 0.0035); return; }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(knobPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setDialUser(S.u - e.deltaY * 0.0006); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setDialUser(S.u + 0.01); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setDialUser(S.u - 0.01); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setDialUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'slow') slowFreeze();
+  else if (btn.dataset.act === 'thaw') thawNow();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** 急速凍結: a fresh product; the dial turns up past the line and the freezer does the rest. */
+function tap() { resetProduct(); S.u = Math.min(S.u, 0.3); tapPlan = { from: S.u, t: 0 }; stepState(0); }
+function updateTap(dt) {
+  if (!tapPlan) return;
+  tapPlan.t += dt;
+  S.u = lerp(tapPlan.from, U_QUICK, ease(Math.min(1, tapPlan.t / 2.4)));
+  if (tapPlan.t >= 2.4) tapPlan = null;
+}
+/** 緩慢凍結: a fresh product frozen with the dial turned down. */
+function slowFreeze() { tapPlan = null; resetProduct(); S.u = U_SLOW; startRun('slow'); stepState(0); }
+function thawNow() { if (S.status === 'store') { startThaw(); stepState(0); } }
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30, SLOW_T = 23.0;
+const SUBS = [
+  [0, 3, '冷凍の蒲焼きは、凍らせ方で味が変わります'],
+  [3, 7, '身の水分は、凍るときに氷の結晶になります'],
+  [7, 12, '結晶には、大きく育ちやすい温度帯があります'],
+  [12, 14, 'その温度帯を素早く通り抜けた瞬間、結晶は小さいまま凍ります'],
+  [14, 18.5, '小さな結晶は、細胞を押しつぶしません'],
+  [18.5, 23, 'だから解凍しても、旨味を含んだ水分が身に残ります'],
+  [23, 27, 'ゆっくり凍らせると結晶が育ち、旨味が流れ出してしまいます'],
+  [27, 30, 'だから加工場では、凍らせる速さまで管理しています'],
+];
+function demoDial(t) {
+  if (t < 7) return U0;
+  if (t < 12.25) { const v = seg(t, 7, 12.25); return lerp(U0, U_TH + 0.004, v * v * (1.8 - 0.8 * v)); }
+  return lerp(U_TH + 0.004, 0.66, ease(seg(t, 12.25, 13.5)));
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'approach'], [4.6, 'inside'], [7.3, 'shelf'], [10.9, 'inside'], [13.7, 'cells'], [17.2, 'plate'], [22.6, 'cells'], [24.6, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'fail' ? 1.1 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * (name === 'inside' || name === 'cells' ? 0.08 : 0.04);
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  if (!S.demoSlow && t >= SLOW_T) { S.demoSlow = true; slowFreeze(); }
+  if (!S.demoSlow) S.u = demoDial(t);
+  S.exploded = t >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'fast'; stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  tapPlan = null;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 52 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift(); applyScene(time); scene.updateMatrixWorld();
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld(); updateUI(); layoutLabels(); drawGraph(); drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt); stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  const pr = predAt(S.u), running = S.status !== 'idle';
+  const pass = S.status === 'done' ? S.passFinal : running ? centrePass(S.P, S.tModel) : pr.pass;
+  const crystal = running ? crystalOf(S.P.tz[CENTER]) : pr.crystal;
+  const drip = S.status === 'done' ? S.drip : running ? dripOf(S.P.tz) : pr.drip;
+  return {
+    ready: window.__lab.ready,
+    coolingRate: +S.u.toFixed(4),
+    airTemperature: +airTemp(S.u).toFixed(2),
+    heatTransfer: +heatTransfer(S.u).toFixed(2),
+    passLineMinutes: PASS_OK / 60,
+    dialAtPassLine: +U_TH.toFixed(4),
+    passPredictedMinutes: +(pr.pass / 60).toFixed(2),
+    passMinutes: +(pass / 60).toFixed(2),
+    crystalCenter: +crystal.toFixed(3),
+    crystalPredicted: +pr.crystal.toFixed(3),
+    dripPercent: +(drip * 100).toFixed(2),
+    dripPredictedPercent: +(pr.drip * 100).toFixed(2),
+    staysSmall: pr.pass <= PASS_OK,
+    centerTemperature: +S.P.T[CENTER].toFixed(2),
+    surfaceTemperature: +S.P.T[0].toFixed(2),
+    status: S.status,
+    kind: S.kind,
+    phase: S.phase,
+    phaseLabel: PHASES[S.phase].label,
+    elapsedMinutes: +(S.tRun / 60).toFixed(2),
+    success: S.result === 'ok',
+    failure: S.result === 'ng',
+    onPlate: S.status === 'done',
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    speedFactor: S.speed === 'fast' ? (S.kind === 'slow' ? FAST_SLOW : FAST_QUICK) : 1,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setCoolingRate(u) { DEMO_ACTIVE = false; markInteraction(); setDialUser(u); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); return getState(); },
+  slowFreeze() { DEMO_ACTIVE = false; markInteraction(); slowFreeze(); return getState(); },
+  thaw() { DEMO_ACTIVE = false; thawNow(); return getState(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  predict: u => { const p = predAt(u); return { passMinutes: +(p.pass / 60).toFixed(2), crystal: +p.crystal.toFixed(3), dripPercent: +(p.drip * 100).toFixed(2) }; },
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  await fontsReady;
+  drawDisplay(); drawRing();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
