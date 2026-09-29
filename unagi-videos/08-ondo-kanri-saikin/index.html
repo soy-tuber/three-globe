@@ -1,0 +1,1742 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>なぜ冷やして管理するのか</title>
+<meta name="description" content="細菌が倍々で増える仕組みと、冷やすと増える速さが落ちることを、光る細菌の粒と温度の操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #06070a;
+    --ink: #f1f2f4;
+    --sub: #c3c6cc;
+    --muted: #8a8e96;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --bac: #bfe3ff;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.4vw, 64px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(20, 22, 26, 0.68), rgba(9, 10, 13, 0.58)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; font-family: var(--font); }
+  #left { left: 24px; top: 72px; width: 350px; }
+  #right { right: 24px; top: 24px; width: 350px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 34px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; }
+  #tmeter .fill { background: linear-gradient(90deg, rgba(255, 176, 74, 0.25), var(--amber)); box-shadow: 0 0 16px rgba(255, 176, 74, 0.45); }
+  #tmeter.cold .fill { background: linear-gradient(90deg, rgba(191, 227, 255, 0.2), var(--bac)); box-shadow: 0 0 16px rgba(191, 227, 255, 0.4); }
+  #nmeter .fill { background: linear-gradient(90deg, rgba(191, 227, 255, 0.2), var(--bac)); box-shadow: 0 0 16px rgba(191, 227, 255, 0.45); }
+  #nmeter.max { border-color: var(--err); }
+  #nmeter.max .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.35), var(--err)); box-shadow: 0 0 18px rgba(255, 84, 72, 0.6); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); left: 0; translate: -50% 0; font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; white-space: nowrap; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.bac { color: #e2f2ff; border-color: rgba(191, 227, 255, 0.75); }
+  .tag.warn { color: #ffd6d2; border-color: var(--err); background: rgba(255, 84, 72, 0.12); }
+  .tag.cold { color: #e2f2ff; border-color: rgba(191, 227, 255, 0.5); }
+  .tag.amber { color: #ffe2bd; border-color: rgba(255, 176, 74, 0.8); }
+  #nval.max { color: #ffd6d2; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps li.active.hot { border-color: var(--err); background: rgba(255, 84, 72, 0.1); }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #stateText { flex: 1; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.warn.on { background: rgba(255, 84, 72, 0.18); color: #ffd6d2; border-color: var(--err); }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #notes { position: fixed; left: 24px; bottom: 14px; max-width: 560px; font-size: 11px; line-height: 1.55; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(580px, calc(100vw - 48px)); max-height: 72vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e8ec; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(5, 6, 8, 0.68); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(7, 8, 10, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); white-space: normal; width: min(600px, 60vw); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(191, 227, 255, 0.25); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(7, 8, 10, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.bac { border-color: rgba(191, 227, 255, 0.85); color: #e6f4ff; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.82); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note, #notes { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 21px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 14px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; white-space: normal; max-width: calc(100vw - 24px); }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="作業台の上の鰻の身と、身の表面で増える細菌の粒、奥の冷蔵庫の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>なぜ冷やして管理するのか</h1>
+  <p class="lead">細菌は、1つが2つ、2つが4つと倍々で増えます。冷やすのは、細菌を殺すためではなく、増える速さを落とすためです。温度を変えて、その違いを見てください。</p>
+</header>
+<div id="imageTag">細菌の粒は模式図です（大きさと数は実際と異なります）</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">冷蔵庫へ</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn warn" data-act="leave">置きっぱなし</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">置いておく場所の温度</span><span class="tag" id="locTag">作業台</span></div>
+  <div class="row" style="margin-top: 2px"><span class="k" id="roomNote"></span><span class="big-num" id="tval">6.0<span class="unit">℃</span></span></div>
+  <div class="meter" id="tmeter">
+    <div class="fill"></div>
+    <div class="th" id="thStd"><span class="th-label">基準の温度（冷蔵の例 10℃）を越えたライン</span></div>
+    <div class="ticks" id="tticks"></div>
+  </div>
+  <div class="row"><span class="k">倍になるまでの時間（模型の値）</span><span class="mid-num" id="tdval">—</span></div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">細菌の数（模型の値、対数の目盛り）</span></div>
+  <div class="row" style="margin-top: 6px"><span class="tag bac" id="stateTag">ゆっくり増える</span><span class="big-num" id="nval">1,000<span class="unit">個</span></span></div>
+  <div class="meter" id="nmeter" style="margin-top: 14px"><div class="fill"></div><div class="ticks"><span style="left:0%">1000</span><span style="left:33.333%">1万</span><span style="left:66.667%">10万</span><span style="left:100%">100万</span></div></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">温度と、倍になるまでの時間（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">温度が上がるほど、細菌が倍になるまでの時間は短くなります</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">置いておくと起きること</span><span class="k" id="speedTag">早回し表示（約1,000倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>付く</b><small>手や道具から細菌が付く</small></li>
+    <li><span class="n">②</span><b>待つ</b><small>最初はほとんど増えない</small></li>
+    <li><span class="n">③</span><b>分かれる</b><small>1つが2つに分かれる</small></li>
+    <li><span class="n">④</span><b>倍々</b><small>2、4、8と増えていく</small></li>
+    <li><span class="n">⑤</span><b>冷やす</b><small>冷蔵庫に入れると増える速さが落ちる</small></li>
+    <li><span class="n">⑥</span><b>守る</b><small>決めた温度と時間を記録して守る</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">温度を変えてください</span><span id="counter">経過 0時間00分</span></div>
+  <p id="realnote">置きっぱなしの数時間で、数は何倍にもなります</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">温度の記録と、細菌の数の変化（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--amber)"></i>温度</span><span><i style="background: var(--bac)"></i>細菌の数（対数）</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">冷蔵庫へ</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+    <button class="btn warn" data-act="leave">置きっぱなし</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="surface">身の表面</button>
+    <button class="btn sm" data-cam="fridge">冷蔵庫の中</button>
+    <button class="btn sm" data-cam="record">記録表</button>
+  </div>
+  <label class="slider"><span>低い</span><input type="range" id="range" min="-20" max="40" step="0.1" value="6" aria-label="作業台の温度" /><span>高い</span></label>
+</section>
+
+<div id="notes">温度と時間は原理を示すための模型の値です。細菌の粒は模式図で、大きさと数は実際と異なります。増え方は目で見える速さに変えた模式表示です。基準の温度は、店や工場が衛生管理計画で決めます。ここでは、厚生労働省のサイトに掲載された小規模な一般飲食店・水産加工業者向けの手引書の例（冷蔵：10℃以下）を使っています。大量調理施設衛生管理マニュアルでは、生鮮魚介類は5℃以下です（同一メニューを1回300食以上又は1日750食以上を提供する調理施設に適用）。</div>
+<div id="hint">温度計を上下にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>令和3年（2021年）6月1日から、原則として、すべての食品等事業者が HACCP に沿った衛生管理に取り組むことになりました。営業者は、衛生管理計画を作成して従業員に周知し、衛生管理の実施状況を記録し、保存します。<span class="src"><a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/shokuhin/haccp/index.html" target="_blank" rel="noopener">厚生労働省「HACCP（ハサップ）」</a></span></li>
+    <li>大量調理施設衛生管理マニュアルでは、生鮮魚介類（生食用鮮魚介類を含む。）の保存温度を5℃以下としています。このマニュアルは、同一メニューを1回300食以上又は1日750食以上を提供する調理施設に適用されます。厚生労働省は、大量調理施設だけでなく中小規模調理施設等でも、このマニュアルの趣旨を踏まえた衛生管理の徹底を図るよう、都道府県などに求めています。小規模な一般飲食店事業者向けと小規模な水産加工業者向けの手引書は、冷蔵庫・冷凍庫の庫内温度を確認する例として「冷蔵：10℃以下、冷凍：−15℃以下」を示しています。<span class="src"><a href="https://www.mhlw.go.jp/file/06-Seisakujouhou-11130500-Shokuhinanzenbu/0000168026.pdf" target="_blank" rel="noopener">厚生労働省「大量調理施設衛生管理マニュアル（平成29年６月16日）」</a>　<a href="https://www.mhlw.go.jp/content/11130500/001190337.pdf" target="_blank" rel="noopener">日本食品衛生協会「HACCPの考え方を取り入れた衛生管理のための手引書（小規模な一般飲食店事業者向け）」</a>　<a href="https://www.mhlw.go.jp/content/11130500/000789868.pdf" target="_blank" rel="noopener">全国水産加工業協同組合連合会「HACCP の考え方を取り入れた衛生管理の手引書（小規模な水産加工業者向け）」</a></span></li>
+    <li>家庭では、冷蔵庫は10℃以下、冷凍庫は−15℃以下に保つよう呼びかけられています。細菌の多くは高温多湿な環境で活発に増えますが、10℃以下では増え方がゆっくりとなり、−15℃以下では増えるのが止まります。なお、冷蔵庫に入れても、細菌はゆっくりと増えます。<span class="src"><a href="https://www.gov-online.go.jp/article/20110602/entry-8196.html" target="_blank" rel="noopener">政府広報オンライン「食中毒予防の原則と6つのポイント」</a></span></li>
+    <li>食中毒を防ぐためには、細菌の場合は、細菌を食べ物に「つけない」、食べ物に付着した細菌を「増やさない」、食べ物や調理器具に付着した細菌を「やっつける」という3つのことが原則となります。<span class="src"><a href="https://www.gov-online.go.jp/article/20110602/entry-8196.html" target="_blank" rel="noopener">政府広報オンライン「食中毒予防の原則と6つのポイント」</a></span></li>
+    <li>腸炎ビブリオは海の中にいる細菌で、夏になって海水温が上がると急激に増え、魚介類の体に付着します。増える速さは条件によって異なりますが極めて速く、至適条件下での世代時間（数が2倍になるまでの時間）は8～9分や10～13分とされています。熱には弱く、煮沸すれば瞬時に死滅します。真水に弱い性質もあります。<span class="src"><a href="https://www.fsc.go.jp/sonota/risk_profile/vibrioparahaemolyticus.pdf" target="_blank" rel="noopener">食品安全委員会「食品健康影響評価のためのリスクプロファイル ～生鮮魚介類における腸炎ビブリオ～（改訂版）」</a>　<a href="https://www.pref.hokkaido.lg.jp/hf/kse/sho/tyu/18biburio.html" target="_blank" rel="noopener">北海道「腸炎ビブリオ食中毒を予防しましょう」</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// =====================================================================================
+// Growth model (model values; 10 ℃ is the refrigeration example from the guides on the MHLW site)
+// =====================================================================================
+const T_GROW_MIN = -6;                                   // ℃: no growth at or below (model; placed above −15 ℃ and below the refrigerator)
+const TD_25 = 20 / 60;                                   // h: doubling time at 25 ℃ (model)
+const B_SQ = Math.sqrt(1 / TD_25) / (25 - T_GROW_MIN);   // square-root model: √r = b (T − Tmin)
+const growthRate = T => (T > T_GROW_MIN ? (B_SQ * (T - T_GROW_MIN)) ** 2 : 0);   // doublings per hour
+const doublingH = T => { const r = growthRate(T); return r > 1e-9 ? 1 / r : Infinity; };
+const Q0 = 0.5;                                          // lag: the cells start "not ready" (lag ≈ log2(1 + 1/Q0) ≈ 1.6 doubling times)
+const N0 = 1000, N_CAP = 1e6;                            // model counts; the count stops at N_CAP and reads 数えきれない
+const D_CAP = Math.log2(N_CAP / N0);
+const THETA_MAX = 400;
+// log2(N/N0) from the accumulated doublings Θ = ∫ r dt (Baranyi-type lag: N ∝ 1 + Q0·2^Θ)
+const growthLog2 = th => { const x = th > 60 ? th + Math.log2(Q0) : Math.log2(1 + Q0 * Math.pow(2, th)); return Math.max(0, x - Math.log2(1 + Q0)); };
+const T_STD = 10;                                        // 冷蔵の例 10 ℃
+const T_FRIDGE = 3;                                      // model: inside the refrigerator
+const T_LEAVE = 25;                                      // model: the room when the food is left out
+const T_LO = -20, T_HI = 40;
+const FAST = 1000, LEAVE_FAST = 6000;                    // time-lapse factors (resting / left out)
+const DOOR_T = 0.4, CARRY_T = 1.0, CLOSE_T = 0.5;        // putting it in: real time
+const OUT_DOOR_T = 0.35, OUT_CARRY_T = 1.0;              // taking it out: the door closes during the carry
+const RETURN_AFTER = 3.0;                                // s after the failure: back to the refrigerator
+const PHASES = [{ label: '付く' }, { label: '待つ' }, { label: '分かれる' }, { label: '倍々' }, { label: '冷やす' }, { label: '守る' }];
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0b0d12');
+scene.fog = new THREE.FogExp2('#0b0d12', 0.0014);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.2; controls.maxPolarAngle = 1.7;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.45, 0.86);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uFlash: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uFlash; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c.rgb *= mix(0.7, 1.0, 1.0 - smoothstep(0.25, 1.15, length(q)));
+      c.rgb = mix(c.rgb, vec3(1.0), uFlash * (1.0 - 0.5 * smoothstep(0.1, 0.9, length(q))));
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#6d737d');
+  for (const [x, z] of [[-2, -1], [2, -1], [0, 2]]) { const top = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.9), new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 3.25, 3.35), side: THREE.DoubleSide })); top.rotation.x = Math.PI / 2; top.position.set(x, 3, z); env.add(top); }
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(8, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 1.15, 1.25), side: THREE.DoubleSide })); side.position.set(0, 0.5, 5); env.add(side);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#15171b', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.75;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 8;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#b9bcc1'; x.fillRect(0, 0, w, h);
+  const n = 8, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 226 + rnd() * 12; x.fillStyle = `rgb(${v},${v + 1},${v + 3})`; x.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
+}, { repeat: [10, 5] });
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b9bdc2'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.026; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [5, 2] });
+const brushedTexV = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b9bdc2'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const xx = rnd() * w, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.024; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const y0 = rnd() * h; x.beginPath(); x.moveTo(xx, y0); x.lineTo(xx + (rnd() - 0.5) * 0.6, y0 + l); x.stroke(); }
+}, { repeat: [2, 3] });
+const boardTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#f2f0ec'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 140; i++) { x.strokeStyle = `rgba(150,146,140,${0.04 + rnd() * 0.06})`; x.lineWidth = 0.5 + rnd(); const x0 = rnd() * w, y0 = rnd() * h; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + (rnd() - 0.5) * 60, y0 + (rnd() - 0.5) * 8); x.stroke(); }
+});
+const fleshTex = canvasTex(1024, 256, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#8e8f96'); g.addColorStop(0.07, '#d9b7a8'); g.addColorStop(0.5, '#f0d6c8'); g.addColorStop(0.93, '#d9b7a8'); g.addColorStop(1, '#8e8f96');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 44; i++) { x.strokeStyle = `rgba(200,140,128,${0.16 + rnd() * 0.1})`; x.lineWidth = 2; const x0 = (i / 44) * w; x.beginPath(); x.moveTo(x0, h * 0.08); x.quadraticCurveTo(x0 + 22, h / 2, x0, h * 0.92); x.stroke(); }
+  x.strokeStyle = 'rgba(190,120,112,0.35)'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, h / 2); x.lineTo(w, h / 2); x.stroke();
+});
+const wireTex = canvasTex(256, 256, (x, w, h) => {
+  x.clearRect(0, 0, w, h); x.strokeStyle = 'rgba(235,238,242,1)'; x.lineWidth = 5;
+  for (let i = 0; i <= 8; i++) { const p = (i / 8) * w; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, h); x.stroke(); }
+  x.lineWidth = 3; for (let i = 0; i <= 2; i++) { const p = (i / 2) * h; x.beginPath(); x.moveTo(0, p); x.lineTo(w, p); x.stroke(); }
+}, { repeat: [3, 2] });
+
+// =====================================================================================
+// Night processing room: tiled wall, floor, stainless bench, white board
+// =====================================================================================
+const parts = {};
+const room = new THREE.Group();
+scene.add(room);
+{
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(760, 320), new THREE.MeshStandardMaterial({ map: tileTex, color: '#cfd3d9', roughness: 0.35, envMapIntensity: 0.4 }));
+  wall.position.set(20, 75, -92); room.add(wall);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(900, 700), new THREE.MeshStandardMaterial({ color: '#3a3e45', roughness: 0.55, metalness: 0.1 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -85; room.add(floor);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(760, 10, 2), new THREE.MeshStandardMaterial({ color: '#8f949b', roughness: 0.4, metalness: 0.6 }));
+  base.position.set(20, -80, -91); room.add(base);
+}
+const benchMat = new THREE.MeshStandardMaterial({ color: '#d4d8dc', map: brushedTex, metalness: 0.85, roughness: 0.32, envMapIntensity: 1.1 });
+const BENCH_X0 = -100, BENCH_X1 = 62;
+{
+  const bench = new THREE.Mesh(new RoundedBoxGeometry(BENCH_X1 - BENCH_X0, 4, 64, 3, 1.2), benchMat);
+  bench.position.set((BENCH_X0 + BENCH_X1) / 2, -2, 0); room.add(bench);
+  const splash = new THREE.Mesh(new RoundedBoxGeometry(BENCH_X1 - BENCH_X0, 12, 2, 2, 0.6), benchMat);
+  splash.position.set((BENCH_X0 + BENCH_X1) / 2, 6, -31); room.add(splash);
+  const legMat = new THREE.MeshStandardMaterial({ color: '#b8bcc1', metalness: 0.85, roughness: 0.35 });
+  for (const [x, z] of [[BENCH_X0 + 5, -28], [BENCH_X1 - 5, -28], [BENCH_X0 + 5, 28], [BENCH_X1 - 5, 28]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(4, 82, 4), legMat); l.position.set(x, -45, z); room.add(l); }
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(BENCH_X1 - BENCH_X0 - 10, 2, 56), benchMat); shelf.position.set((BENCH_X0 + BENCH_X1) / 2, -62, 0); room.add(shelf);
+}
+const board = new THREE.Mesh(new RoundedBoxGeometry(60, 2.5, 34, 3, 0.8), new THREE.MeshStandardMaterial({ map: boardTex, color: '#d6d4cf', roughness: 0.72, envMapIntensity: 0.6 }));
+board.position.set(-6, 1.25, 4); room.add(board);
+parts.board = { obj: board, from: board.position.clone(), off: new THREE.Vector3(0, 0, 0) };
+
+// =====================================================================================
+// The eel fillet in a clear vacuum pack. Its top surface is a smooth heightfield the particles sit on.
+// =====================================================================================
+const FL = 38, FW = 8.2, FH = 1.5;
+const halfW = x => { const u = clamp(Math.abs(x) / (FL / 2), 0, 1); return Math.max(0.05, (FW / 2) * Math.sqrt(Math.max(0, 1 - Math.pow(u, 6)))); };
+function topH(x, z) {
+  const hw = halfW(x), s = clamp(z / hw, -1, 1), u = clamp(Math.abs(x) / (FL / 2), 0, 1);
+  const dome = FH * (0.42 + 0.58 * Math.sqrt(Math.max(0, 1 - s * s))) * (1 - 0.45 * smooth01((u - 0.72) / 0.28));
+  const bumps = 0.1 * Math.sin(x * 0.85 + z * 0.7) * Math.cos(z * 1.6 - x * 0.35) + 0.05 * Math.sin(x * 2.1 + 1.3) + 0.04 * Math.cos(z * 3.1 + x * 0.6);
+  return 0.12 + dome + bumps * Math.sqrt(Math.max(0, 1 - s * s));
+}
+function slabGeometry(NX, NZ, fx, extra) {
+  // top heightfield fitted to the outline, side walls down to y = 0
+  const pos = [], uv = [], idx = [];
+  const xs = [];
+  for (let i = 0; i <= NX; i++) { const a = -1 + (2 * i) / NX; xs.push(Math.sign(a) * (1 - Math.pow(1 - Math.abs(a), 1.6)) * (FL / 2 + fx)); }
+  for (let i = 0; i <= NX; i++) for (let j = 0; j <= NZ; j++) {
+    const x = xs[i], hw = halfW(x * FL / (FL + 2 * fx)) + fx * 0.5, s = -1 + (2 * j) / NZ, z = s * hw;
+    pos.push(x, topH(x * FL / (FL + 2 * fx), s * halfW(x * FL / (FL + 2 * fx))) + extra, z); uv.push(i / NX, j / NZ);
+  }
+  for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++) { const a = i * (NZ + 1) + j, b = a + NZ + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+  // side walls along the perimeter
+  const ring = [];
+  for (let i = 0; i <= NX; i++) ring.push(i * (NZ + 1));
+  for (let j = 1; j <= NZ; j++) ring.push(NX * (NZ + 1) + j);
+  for (let i = NX - 1; i >= 0; i--) ring.push(i * (NZ + 1) + NZ);
+  for (let j = NZ - 1; j >= 1; j--) ring.push(j);
+  const base = pos.length / 3;
+  for (const k of ring) { pos.push(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]); uv.push(uv[k * 2], uv[k * 2 + 1]); pos.push(pos[k * 3], 0.05, pos[k * 3 + 2]); uv.push(uv[k * 2], uv[k * 2 + 1]); }
+  const n = ring.length;
+  for (let k = 0; k < n; k++) { const a = base + k * 2, b = base + ((k + 1) % n) * 2; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+const product = new THREE.Group();          // fillet + pack + particles; carried into and out of the refrigerator
+room.add(product);
+const P_BENCH = new THREE.Vector3(-6, 2.5, 4);
+product.position.copy(P_BENCH);
+const fillet = new THREE.Mesh(slabGeometry(150, 26, 0, 0), new THREE.MeshPhysicalMaterial({ map: fleshTex, color: '#b8978c', roughness: 0.45, clearcoat: 0.25, clearcoatRoughness: 0.35, sheen: 0.3, sheenColor: new THREE.Color('#e8b8a8'), envMapIntensity: 0.6, side: THREE.DoubleSide }));
+fillet.position.y = 0.1;
+product.add(fillet);
+const pack = new THREE.Group();
+product.add(pack);
+{
+  const film = new THREE.Mesh(slabGeometry(120, 20, 0.35, 0.3), new THREE.MeshPhysicalMaterial({ color: '#ffffff', transparent: true, opacity: 0.1, roughness: 0.12, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.1, envMapIntensity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
+  film.position.y = 0.1; film.renderOrder = 5; pack.add(film);
+  const outer = new THREE.Shape();
+  const RW = FL + 5, RD = FW + 5, rr = 1.6;
+  outer.moveTo(-RW / 2 + rr, -RD / 2); outer.lineTo(RW / 2 - rr, -RD / 2); outer.quadraticCurveTo(RW / 2, -RD / 2, RW / 2, -RD / 2 + rr); outer.lineTo(RW / 2, RD / 2 - rr); outer.quadraticCurveTo(RW / 2, RD / 2, RW / 2 - rr, RD / 2); outer.lineTo(-RW / 2 + rr, RD / 2); outer.quadraticCurveTo(-RW / 2, RD / 2, -RW / 2, RD / 2 - rr); outer.lineTo(-RW / 2, -RD / 2 + rr); outer.quadraticCurveTo(-RW / 2, -RD / 2, -RW / 2 + rr, -RD / 2);
+  const rim = new THREE.Mesh(new THREE.ShapeGeometry(outer, 8), new THREE.MeshPhysicalMaterial({ color: '#f4f6f8', transparent: true, opacity: 0.32, roughness: 0.3, clearcoat: 0.6, envMapIntensity: 1.2, depthWrite: false, side: THREE.DoubleSide }));
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.08; rim.renderOrder = 4; pack.add(rim);
+  const seal = new THREE.Mesh(new THREE.EdgesGeometry(new THREE.ShapeGeometry(outer, 8)), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35 }));
+  seal.rotation.x = -Math.PI / 2; seal.position.y = 0.1; pack.add(seal);
+}
+parts.pack = { obj: pack, from: pack.position.clone(), off: new THREE.Vector3(0, 12, 0) };
+// the red warning rim along the fillet outline (base temperature exceeded)
+const rimCurvePts = [];
+for (let i = 0; i <= 80; i++) { const x = -FL / 2 + (FL * i) / 80; rimCurvePts.push(new THREE.Vector3(x, topH(x, halfW(x) * 0.98) + 0.1, halfW(x) * 0.98)); }
+for (let i = 80; i >= 0; i--) { const x = -FL / 2 + (FL * i) / 80; rimCurvePts.push(new THREE.Vector3(x, topH(x, -halfW(x) * 0.98) + 0.1, -halfW(x) * 0.98)); }
+const warnRim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rimCurvePts, true), 320, 0.22, 8, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 0.22, 0.16), transparent: true, opacity: 0, depthWrite: false }));
+warnRim.position.y = 0.1; product.add(warnRim);
+const warnGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.0, 0.15, 0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+warnGlow.scale.set(46, 18, 1); warnGlow.position.y = 1.2; product.add(warnGlow);
+
+// =====================================================================================
+// Bacteria particles: rods on the flesh surface. The visible number follows the logarithm of the count.
+// =====================================================================================
+const V0 = 16, V_MAX = 304, D1 = 2, K_V = (V_MAX - V0 * 4) / (D_CAP - D1);
+const P_D = new Float32Array(V_MAX);   // log2 growth at which particle i appears
+for (let i = 0; i < V_MAX; i++) { const v = i + 1; P_D[i] = i < V0 ? -1 : v <= V0 * 4 ? Math.log2(v / V0) : D1 + (v - V0 * 4) / K_V; }
+const SPLIT_T = 0.45;                  // s: the split animation
+const PART = [];
+{
+  let s = 4242; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const inside = (x, z) => Math.abs(x) < FL / 2 - 1.6 && Math.abs(z) < halfW(x) * 0.8;
+  const free = (x, z, d) => PART.every(p => (p.x - x) ** 2 + (p.z - z) ** 2 > d * d);
+  for (let i = 0; i < V_MAX; i++) {
+    if (i < V0) {
+      let x = 0, z = 0;
+      for (let k = 0; k < 60; k++) { x = (r() - 0.5) * (FL - 5); z = (r() - 0.5) * 2 * halfW(x) * 0.75; if (inside(x, z) && free(x, z, 2.6)) break; }
+      PART.push({ x, z, a: r() * Math.PI, parent: -1 });
+    } else {
+      let placed = null;
+      for (let k = 0; k < 24 && !placed; k++) {
+        const parent = Math.floor(r() * i), P = PART[parent];
+        const a = P.a + (r() < 0.6 ? 0 : Math.PI / 2) + (r() - 0.5) * 0.9, d = 0.66 + r() * 0.3, sgn = r() < 0.5 ? -1 : 1;
+        const x = P.x + Math.cos(a) * d * sgn, z = P.z + Math.sin(a) * d * sgn;
+        if (inside(x, z) && free(x, z, 0.46)) placed = { x, z, a: P.a + (r() - 0.5) * 0.5, parent };
+      }
+      if (!placed) { const parent = Math.floor(r() * i); let x = 0, z = 0; for (let k = 0; k < 40; k++) { x = (r() - 0.5) * (FL - 5); z = (r() - 0.5) * 2 * halfW(x) * 0.75; if (inside(x, z) && free(x, z, 0.4)) break; } placed = { x, z, a: r() * Math.PI, parent }; }
+      PART.push(placed);
+    }
+    PART[i].y = topH(PART[i].x, PART[i].z) + 0.1 + 0.1;
+    PART[i].phase = r() * 6.28;
+  }
+}
+const rodGeo = new THREE.CapsuleGeometry(0.12, 0.38, 4, 10);
+rodGeo.rotateZ(Math.PI / 2);                   // lie along x
+const rodMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vCol; varying float vAx;
+    void main(){
+      vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      vN = normalize(normalMatrix * mat3(instanceMatrix) * normal);
+      vV = normalize(-mv.xyz);
+      vCol = instanceColor; vAx = position.x;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `varying vec3 vN; varying vec3 vV; varying vec3 vCol; varying float vAx;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 1.8);
+      vec3 core = vCol * (0.42 + 0.18 * (1.0 - f));
+      vec3 rim = vCol * 1.25 * f + vec3(0.18, 0.22, 0.28) * f;
+      gl_FragColor = vec4(core + rim, 1.0);
+    }`,
+});
+const rods = new THREE.InstancedMesh(rodGeo, rodMat, V_MAX);
+rods.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(V_MAX * 3), 3);
+rods.frustumCulled = false; rods.count = V0;
+product.add(rods);
+const glowGeo = new THREE.BufferGeometry();
+glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(V_MAX * 3), 3));
+glowGeo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(V_MAX), 1));
+const glowUniforms = { uScale: { value: 800 }, uTex: { value: glowTex }, uColor: { value: new THREE.Color(0.32, 0.6, 1.0) } };
+const glowPts = new THREE.Points(glowGeo, new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, uniforms: glowUniforms,
+  vertexShader: `attribute float aAlpha; varying float vA; uniform float uScale;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vA = aAlpha; gl_PointSize = clamp(1.0 * uScale / max(0.5, -mv.z), 4.0, 64.0); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform sampler2D uTex; uniform vec3 uColor; varying float vA;
+    void main(){ float g = texture2D(uTex, gl_PointCoord).r; gl_FragColor = vec4(uColor * g * vA, 1.0); }`,
+}));
+glowPts.frustumCulled = false; glowPts.renderOrder = 6;
+product.add(glowPts);
+
+// =====================================================================================
+// The magnified surface: a bubble above the bench with a patch of the flesh surface and the same kind of rods
+// =====================================================================================
+const LENS_C = new THREE.Vector3(-16, 50, 14), LENS_R = 17, MAG_R = 13.2;
+const lens = new THREE.Group();
+lens.position.copy(LENS_C);
+scene.add(lens);
+const lensUniforms = { uWarm: { value: 0 }, uCold: { value: 0 }, uInside: { value: 0 } };
+const lensOuter = new THREE.Mesh(new THREE.SphereGeometry(LENS_R, 64, 48), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: lensUniforms,
+  vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: `uniform float uInside; uniform float uWarm; uniform float uCold; varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.4);
+      vec3 rim = mix(vec3(0.75, 0.86, 1.0), vec3(1.0, 0.72, 0.42), uWarm * 0.7);
+      float spec = pow(clamp(dot(reflect(-V, N), normalize(vec3(-0.4, 0.8, 0.45))), 0.0, 1.0), 120.0) * 0.4;
+      gl_FragColor = vec4(rim * f * 1.1 + spec, (0.04 + 0.5 * f) * (1.0 - uInside));
+    }`,
+}));
+lensOuter.renderOrder = 9;
+lens.add(lensOuter);
+const lensInner = new THREE.Mesh(new THREE.SphereGeometry(LENS_R * 0.995, 48, 32), new THREE.ShaderMaterial({
+  side: THREE.BackSide, transparent: true, depthWrite: false, uniforms: lensUniforms,
+  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uWarm; uniform float uCold; uniform float uInside; varying vec3 vP;
+    void main(){
+      float g = 0.5 + 0.5 * vP.y;
+      vec3 c = mix(vec3(0.02, 0.025, 0.04), vec3(0.075, 0.09, 0.13), g);
+      c += vec3(0.16, 0.07, 0.015) * uWarm * (0.4 + 0.6 * g);
+      c += vec3(0.02, 0.07, 0.14) * uCold * (0.5 + 0.5 * g);
+      gl_FragColor = vec4(c, mix(0.9, 1.0, uInside));
+    }`,
+}));
+lensInner.renderOrder = 1;
+lens.add(lensInner);
+const lensRing = new THREE.Mesh(new THREE.TorusGeometry(LENS_R + 0.9, 0.11, 8, 128), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false }));
+lens.add(lensRing);
+const micro = new THREE.Group();               // the patch, tilted toward the viewer
+micro.rotation.x = 0.62;
+micro.position.y = -3.2;
+lens.add(micro);
+const microH = (x, z) => 0.85 * Math.sin(x * 0.32 + 0.4) * Math.cos(z * 0.27 - 0.3) + 0.45 * Math.sin(x * 0.7 + z * 0.45 + 1.1) + 0.22 * Math.cos(z * 0.95 - x * 0.2);
+const microFleshTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#e9c9bb'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) { x.strokeStyle = `rgba(206,150,138,${0.1 + rnd() * 0.1})`; x.lineWidth = 3 + rnd() * 4; const y0 = (i / 70) * h; x.beginPath(); x.moveTo(0, y0); x.bezierCurveTo(w * 0.3, y0 + (rnd() - 0.5) * 40, w * 0.7, y0 + (rnd() - 0.5) * 40, w, y0 + (rnd() - 0.5) * 20); x.stroke(); }
+  for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(255,240,232,${0.05 + rnd() * 0.08})`; x.beginPath(); x.arc(rnd() * w, rnd() * h, 1 + rnd() * 3, 0, Math.PI * 2); x.fill(); }
+});
+{
+  const NR = 34, NS = 140, pos = [], uv = [], idx = [];
+  pos.push(0, microH(0, 0), 0); uv.push(0.5, 0.5);
+  for (let i = 1; i <= NR; i++) for (let j = 0; j < NS; j++) {
+    const r = (i / NR) * MAG_R, a = (j / NS) * Math.PI * 2, x = Math.cos(a) * r, z = Math.sin(a) * r;
+    pos.push(x, microH(x, z), z); uv.push(0.5 + x / (2 * MAG_R), 0.5 + z / (2 * MAG_R));
+  }
+  for (let j = 0; j < NS; j++) idx.push(0, 1 + ((j + 1) % NS), 1 + j);
+  for (let i = 1; i < NR; i++) for (let j = 0; j < NS; j++) { const a = 1 + (i - 1) * NS + j, b = 1 + (i - 1) * NS + ((j + 1) % NS), c = a + NS, d = b + NS; idx.push(a, b, c, b, d, c); }
+  // a skirt down the edge, like a cut sample
+  const base = pos.length / 3, ring0 = 1 + (NR - 1) * NS;
+  for (let j = 0; j < NS; j++) { const k = ring0 + j; pos.push(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]); uv.push(j / NS, 0.02); pos.push(pos[k * 3], -3.2, pos[k * 3 + 2]); uv.push(j / NS, 0.2); }
+  for (let j = 0; j < NS; j++) { const a = base + j * 2, b = base + ((j + 1) % NS) * 2; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  const terrain = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ map: microFleshTex, color: '#8f6e66', roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.35, sheen: 0.3, sheenColor: new THREE.Color('#d9a898'), envMapIntensity: 0.5, side: THREE.DoubleSide }));
+  micro.add(terrain);
+}
+// rods in the magnified patch (their own layout, the same schedule of divisions)
+const M0 = 6, M_MAX = 92, MK = (M_MAX - M0 * 4) / (D_CAP - 2);
+const M_D = new Float32Array(M_MAX);
+for (let i = 0; i < M_MAX; i++) { const v = i + 1; M_D[i] = i < M0 ? -1 : v <= M0 * 4 ? Math.log2(v / M0) : 2 + (v - M0 * 4) / MK; }
+const MPART = [];
+{
+  let s2 = 777; const r = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
+  const ok = (x, z, d) => Math.hypot(x, z) < MAG_R - 2.2 && MPART.every(p => (p.x - x) ** 2 + (p.z - z) ** 2 > d * d);
+  for (let i = 0; i < M_MAX; i++) {
+    let placed = null;
+    if (i < M0) { for (let k = 0; k < 80 && !placed; k++) { const a = r() * 6.283, rr = Math.sqrt(r()) * (MAG_R - 4); const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if (ok(x, z, 5.5)) placed = { x, z, a: r() * Math.PI, parent: -1 }; } }
+    else for (let k = 0; k < 30 && !placed; k++) {
+      const parent = Math.floor(r() * i), P = MPART[parent];
+      const a = P.a + (r() < 0.6 ? 0 : Math.PI / 2) + (r() - 0.5) * 0.8, d = 2.5 + r() * 0.9, sg = r() < 0.5 ? -1 : 1;
+      const x = P.x + Math.cos(a) * d * sg, z = P.z + Math.sin(a) * d * sg;
+      if (ok(x, z, 1.7)) placed = { x, z, a: P.a + (r() - 0.5) * 0.5, parent };
+    }
+    if (!placed) { for (let k = 0; k < 200 && !placed; k++) { const a = r() * 6.283, rr = Math.sqrt(r()) * (MAG_R - 2.5); const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if (ok(x, z, 1.4)) placed = { x, z, a: r() * Math.PI, parent: Math.floor(r() * i) }; } }
+    if (!placed) placed = { x: 0, z: 0, a: 0, parent: 0 };
+    placed.phase = r() * 6.28;
+    MPART.push(placed);
+  }
+}
+const mRodGeo = new THREE.CapsuleGeometry(0.46, 1.5, 6, 14);
+mRodGeo.rotateZ(Math.PI / 2);
+const mRods = new THREE.InstancedMesh(mRodGeo, rodMat, M_MAX);
+mRods.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(M_MAX * 3), 3);
+mRods.frustumCulled = false; mRods.count = M0;
+micro.add(mRods);
+const mGlowGeo = new THREE.BufferGeometry();
+mGlowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(M_MAX * 3), 3));
+mGlowGeo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(M_MAX), 1));
+const mGlowUniforms = { uScale: glowUniforms.uScale, uTex: { value: glowTex }, uColor: { value: new THREE.Color(0.32, 0.6, 1.0) } };
+const mGlowPts = new THREE.Points(mGlowGeo, new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, uniforms: mGlowUniforms,
+  vertexShader: `attribute float aAlpha; varying float vA; uniform float uScale;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vA = aAlpha; gl_PointSize = clamp(2.6 * uScale / max(0.5, -mv.z), 5.0, 110.0); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform sampler2D uTex; uniform vec3 uColor; varying float vA;
+    void main(){ float g = texture2D(uTex, gl_PointCoord).r; gl_FragColor = vec4(uColor * g * vA, 1.0); }`,
+}));
+mGlowPts.frustumCulled = false; mGlowPts.renderOrder = 10;
+micro.add(mGlowPts);
+const mStretch = new Float32Array(M_MAX);
+const microWarn = new THREE.Mesh(new THREE.TorusGeometry(MAG_R + 0.2, 0.28, 10, 160), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 0.22, 0.16), transparent: true, opacity: 0, depthWrite: false }));
+microWarn.rotation.x = Math.PI / 2; microWarn.position.y = 0.35; micro.add(microWarn);
+// dashed leader from the fillet to the bubble
+const lensLeaderGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+const lensLeader = new THREE.Line(lensLeaderGeo, new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 1.4, gapSize: 1.1, transparent: true, opacity: 0.45 }));
+scene.add(lensLeader);
+
+// Warm air above the bench: amber shimmer (stronger when the room is warm)
+const hazeUniforms = { uTime: { value: 0 }, uAmt: { value: 0 } };
+const hazeMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: hazeUniforms,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform float uTime; uniform float uAmt; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }
+    void main(){
+      float x = vUv.x * 7.0 + sin(vUv.y * 9.0 - uTime * 2.2 + floor(vUv.x * 7.0) * 1.7) * 0.22;
+      float line = 1.0 - smoothstep(0.0, 0.07, abs(fract(x) - 0.5));
+      float flow = smoothstep(0.35, 0.75, n(vec2(floor(vUv.x * 7.0) * 3.1, vUv.y * 2.2 - uTime * 0.6)));
+      float edge = (1.0 - smoothstep(0.32, 0.5, abs(vUv.x - 0.5))) * smoothstep(0.0, 0.35, vUv.y) * (1.0 - smoothstep(0.5, 1.0, vUv.y));
+      gl_FragColor = vec4(vec3(1.0, 0.62, 0.24) * line * flow * edge * uAmt * 0.5, 1.0);
+    }`,
+});
+const hazes = [];
+for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(40, 26), hazeMat); m.position.set(-30 + i * 24, 16, 2 + (i % 2) * 8); room.add(m); hazes.push(m); }
+
+// =====================================================================================
+// Thermometer on the bench (the temperature of the place). Drag it up and down.
+// =====================================================================================
+const thermo = new THREE.Group();
+room.add(thermo);
+const THERMO_H = 40;
+let thermoColumn, redrawPlate = null;
+const thermoCanvas = document.createElement('canvas'); thermoCanvas.width = 256; thermoCanvas.height = 96;
+const thermoTex = new THREE.CanvasTexture(thermoCanvas); thermoTex.colorSpace = THREE.SRGBColorSpace;
+const colH = T => 3 + ((clamp(T, T_LO, T_HI) - T_LO) / (T_HI - T_LO)) * (THERMO_H - 6);
+{
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, THERMO_H, 24, 1, true), new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.05, transparent: true, opacity: 0.3, clearcoat: 1, depthWrite: false }));
+  glass.position.y = THERMO_H / 2; thermo.add(glass);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(2.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#ffb04a', emissive: '#ff8a1e', emissiveIntensity: 0.8, roughness: 0.3 }));
+  thermo.add(bulb);
+  thermoColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1, 16), bulb.material);
+  thermo.add(thermoColumn);
+  const drawPlate = (x, w, h) => {
+    x.fillStyle = '#f3f4f6'; x.fillRect(0, 0, w, h);
+    const Y = T => h - (h * (2 + colH(T))) / (THERMO_H + 4);
+    x.strokeStyle = '#2b2e34'; x.fillStyle = '#2b2e34'; x.font = '600 32px "JetBrains Mono"'; x.textAlign = 'right'; x.textBaseline = 'middle';
+    for (let T = T_LO; T <= T_HI; T += 5) { const major = T % 20 === 0; x.lineWidth = major ? 4 : 2.5; x.beginPath(); x.moveTo(major ? 96 : 112, Y(T)); x.lineTo(150, Y(T)); x.stroke(); if (major) x.fillText(String(T).replace('-', '−'), 88, Y(T)); }
+    x.setLineDash([10, 8]); x.lineWidth = 3; x.strokeStyle = '#5a5f68'; x.beginPath(); x.moveTo(8, Y(T_STD)); x.lineTo(150, Y(T_STD)); x.stroke(); x.setLineDash([]);
+    x.font = '600 26px "JetBrains Mono"'; x.fillStyle = '#5a5f68'; x.fillText('10', 88, Y(T_STD) - 16);
+    x.font = '600 30px "Noto Sans JP"'; x.textAlign = 'center'; x.fillStyle = '#2b2e34'; x.fillText('℃', 64, Y(T_HI) - 52);
+  };
+  const plateTex = canvasTex(160, 1024, drawPlate);
+  redrawPlate = () => { drawPlate(plateTex.image.getContext('2d'), 160, 1024); plateTex.needsUpdate = true; };
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(7, THERMO_H + 4, 0.8, 2, 0.35), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 }));
+  plate.position.set(-1.6, (THERMO_H + 4) / 2 - 2, -2.0); thermo.add(plate);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(6.4, THERMO_H + 3.4), new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.55 }));
+  face.position.set(-1.6, (THERMO_H + 4) / 2 - 2, -1.58); thermo.add(face);
+  const disp = new THREE.Mesh(new RoundedBoxGeometry(13, 5.2, 1.6, 2, 0.5), new THREE.MeshStandardMaterial({ color: '#1b1d22', roughness: 0.4 }));
+  disp.position.set(0, THERMO_H + 4, 0); thermo.add(disp);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(12, 4.4), new THREE.MeshBasicMaterial({ map: thermoTex, toneMapped: false }));
+  screen.position.set(0, THERMO_H + 4, 0.82); thermo.add(screen);
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.6, 1.2, 28), new THREE.MeshStandardMaterial({ color: '#2a2d33', roughness: 0.5, metalness: 0.3 }));
+  foot.position.y = -2.2; thermo.add(foot);
+  thermo.position.set(-52, 3.2, 8);
+}
+const thermoPick = new THREE.Mesh(new THREE.BoxGeometry(14, THERMO_H + 16, 12), new THREE.MeshBasicMaterial({ visible: false }));
+thermoPick.position.set(0, THERMO_H / 2 + 2, 0);
+thermo.add(thermoPick);
+
+// =====================================================================================
+// The refrigerator: stainless body, one tall door hinged on the right, wire shelves, an inside thermometer
+// =====================================================================================
+const FR = { x0: 78, x1: 158, y0: -85, y1: 112, z0: -92, z1: -20 };
+const fridge = new THREE.Group();
+room.add(fridge);
+const fridgeMatV = new THREE.MeshStandardMaterial({ color: '#e2e6eb', map: brushedTexV, metalness: 0.62, roughness: 0.3, envMapIntensity: 1.5 });
+const linerMat = new THREE.MeshStandardMaterial({ color: '#aeb9c6', roughness: 0.5, metalness: 0.15, side: THREE.BackSide });
+const SHELF_Y = [-42, -4, 34, 72];
+const P_FRIDGE = new THREE.Vector3(112, SHELF_Y[2] + 0.8, -58);
+let door, doorHinge, fridgeLight, fridgeDisp, fridgeDispTex, insideThermo, insideTex;
+{
+  const W = FR.x1 - FR.x0, H = FR.y1 - FR.y0, D = FR.z1 - FR.z0, cx = (FR.x0 + FR.x1) / 2, cy = (FR.y0 + FR.y1) / 2, cz = (FR.z0 + FR.z1) / 2;
+  const T = 3;
+  const panel = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, 0.6), fridgeMatV); m.position.set(x, y, z); fridge.add(m); return m; };
+  panel(T, H, D, FR.x0 + T / 2, cy, cz); panel(T, H, D, FR.x1 - T / 2, cy, cz);
+  panel(W, T, D, cx, FR.y1 - T / 2, cz); panel(W, 10, D, cx, FR.y0 + 5, cz); panel(W, H, T, cx, cy, FR.z0 + T / 2);
+  panel(W, 8, 2, cx, FR.y1 - 4, FR.z1 - 1); panel(W, 12, 2, cx, FR.y0 + 16, FR.z1 - 1);   // front frame
+  const liner = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * T - 0.4, H - T - 10 - 0.4, D - T - 0.4), linerMat);
+  liner.position.set(cx, (FR.y1 - T + FR.y0 + 10) / 2, (FR.z1 + FR.z0 + T) / 2); fridge.add(liner);
+  for (const y of SHELF_Y) {
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * T - 2, D - T - 6), new THREE.MeshStandardMaterial({ map: wireTex, transparent: true, alphaTest: 0.4, color: '#dfe3e8', metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide }));
+    s.rotation.x = -Math.PI / 2; s.position.set(cx, y, cz - 1.5); fridge.add(s);
+    const f = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * T - 2, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: '#e8ecf0', metalness: 0.6, roughness: 0.3 }));
+    f.position.set(cx, y, FR.z1 - 4); fridge.add(f);
+  }
+  const lightBar = new THREE.Mesh(new THREE.BoxGeometry(W - 20, 1.2, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.75, 1.9) }));
+  lightBar.position.set(cx, FR.y1 - T - 1.5, cz); fridge.add(lightBar);
+  fridgeLight = new THREE.PointLight('#cfe3ff', 0, 170, 2);
+  fridgeLight.position.set(cx, FR.y1 - 12, cz + 6); fridge.add(fridgeLight);
+  // the door, hinged at the right edge
+  doorHinge = new THREE.Group(); doorHinge.position.set(FR.x1, cy + 5, FR.z1 + 3); fridge.add(doorHinge);
+  door = new THREE.Group(); doorHinge.add(door);
+  const slab = new THREE.Mesh(new RoundedBoxGeometry(W, H - 12, 6, 3, 1.5), fridgeMatV); slab.position.set(-W / 2, 0, 0); door.add(slab);
+  const gasket = new THREE.Mesh(new THREE.BoxGeometry(W - 4, H - 16, 0.6), new THREE.MeshStandardMaterial({ color: '#2a2d33', roughness: 0.8 })); gasket.position.set(-W / 2, 0, -3.1); door.add(gasket);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 70, 16), new THREE.MeshStandardMaterial({ color: '#e7eaee', metalness: 0.9, roughness: 0.2 })); handle.position.set(-W + 7, -10, 5.5); door.add(handle);
+  for (const dy of [-35, 25]) { const post = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 4), handle.material); post.position.set(-W + 7, -10 + dy, 3.6); door.add(post); }
+  // the control display on the door (inside temperature)
+  const dispCanvas = document.createElement('canvas'); dispCanvas.width = 256; dispCanvas.height = 96;
+  fridgeDisp = dispCanvas; fridgeDispTex = new THREE.CanvasTexture(dispCanvas); fridgeDispTex.colorSpace = THREE.SRGBColorSpace;
+  const dispBox = new THREE.Mesh(new RoundedBoxGeometry(22, 8, 1.2, 2, 0.4), new THREE.MeshStandardMaterial({ color: '#15171b', roughness: 0.4 })); dispBox.position.set(-W / 2, H / 2 - 22, 3.4); door.add(dispBox);
+  const dispScreen = new THREE.Mesh(new THREE.PlaneGeometry(20, 6.6), new THREE.MeshBasicMaterial({ map: fridgeDispTex, toneMapped: false })); dispScreen.position.set(-W / 2, H / 2 - 22, 4.05); door.add(dispScreen);
+  // the thermometer inside (on the shelf, beside the food)
+  const inCanvas = document.createElement('canvas'); inCanvas.width = 192; inCanvas.height = 96;
+  insideTex = new THREE.CanvasTexture(inCanvas); insideTex.colorSpace = THREE.SRGBColorSpace;
+  insideThermo = new THREE.Group();
+  const ib = new THREE.Mesh(new RoundedBoxGeometry(8, 5.4, 2.4, 2, 0.6), new THREE.MeshStandardMaterial({ color: '#f1f3f5', roughness: 0.45 })); insideThermo.add(ib);
+  const isc = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.2), new THREE.MeshBasicMaterial({ map: insideTex, toneMapped: false })); isc.position.set(0, 0.3, 1.21); insideThermo.add(isc);
+  const probe = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 6, 8), new THREE.MeshStandardMaterial({ color: '#9aa0a8', metalness: 0.8, roughness: 0.3 })); probe.rotation.z = Math.PI / 2; probe.position.set(-6.5, -2, 0); insideThermo.add(probe);
+  insideThermo.position.set(136, SHELF_Y[2] + 3.6, -76); insideThermo.rotation.y = -0.5; fridge.add(insideThermo);
+}
+parts.fridge = { obj: fridge, from: fridge.position.clone(), off: new THREE.Vector3(30, 10, -4) };
+parts.insideThermo = { obj: insideThermo, from: insideThermo.position.clone(), off: new THREE.Vector3(-54, 22, 124) };
+const fridgeFlash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+fridgeFlash.scale.set(60, 60, 1); fridgeFlash.position.set(118, 40, -30); room.add(fridgeFlash);
+
+// =====================================================================================
+// Wall clock and the temperature record sheet
+// =====================================================================================
+const clockGroup = new THREE.Group();
+room.add(clockGroup);
+let hourHand, minHand;
+{
+  const face = canvasTex(512, 512, (x, w, h) => {
+    x.fillStyle = '#f4f5f7'; x.beginPath(); x.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#1d2026'; x.lineCap = 'round';
+    for (let i = 0; i < 60; i++) { const a = (i / 60) * Math.PI * 2, big = i % 5 === 0; x.lineWidth = big ? 9 : 3; const r0 = big ? 196 : 212; x.beginPath(); x.moveTo(w / 2 + Math.sin(a) * r0, h / 2 - Math.cos(a) * r0); x.lineTo(w / 2 + Math.sin(a) * 232, h / 2 - Math.cos(a) * 232); x.stroke(); }
+  });
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(15, 64), new THREE.MeshStandardMaterial({ map: face, roughness: 0.5 }));
+  clockGroup.add(disc);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(15.4, 1.1, 12, 64), new THREE.MeshStandardMaterial({ color: '#2b2e34', roughness: 0.4, metalness: 0.5 }));
+  clockGroup.add(ring);
+  const handMat = new THREE.MeshStandardMaterial({ color: '#15171b', roughness: 0.5 });
+  hourHand = new THREE.Group(); const hh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 8.5, 0.3), handMat); hh.position.y = 3.6; hourHand.add(hh); hourHand.position.z = 0.4; clockGroup.add(hourHand);
+  minHand = new THREE.Group(); const mh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12.5, 0.3), handMat); mh.position.y = 5.6; minHand.add(mh); minHand.position.z = 0.7; clockGroup.add(minHand);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.6, 16), handMat); cap.rotation.x = Math.PI / 2; cap.position.z = 1; clockGroup.add(cap);
+  clockGroup.position.set(-98, 90, -90.5);
+}
+const sheetCanvas = document.createElement('canvas'); sheetCanvas.width = 560; sheetCanvas.height = 780;
+const sheetTex = new THREE.CanvasTexture(sheetCanvas); sheetTex.colorSpace = THREE.SRGBColorSpace; sheetTex.anisotropy = 4;
+const recordSheet = new THREE.Group();
+room.add(recordSheet);
+{
+  const clip = new THREE.Mesh(new RoundedBoxGeometry(24, 33, 0.8, 2, 0.5), new THREE.MeshStandardMaterial({ color: '#4b5058', roughness: 0.6 }));
+  recordSheet.add(clip);
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(21.6, 30), new THREE.MeshStandardMaterial({ map: sheetTex, color: '#a9a9a5', roughness: 0.85, envMapIntensity: 0.3 }));
+  paper.position.set(0, -0.8, 0.45); recordSheet.add(paper);
+  const metal = new THREE.Mesh(new RoundedBoxGeometry(9, 3, 1.4, 2, 0.4), new THREE.MeshStandardMaterial({ color: '#c9cdd2', metalness: 0.9, roughness: 0.3 }));
+  metal.position.set(0, 15.6, 0.6); recordSheet.add(metal);
+  recordSheet.position.set(46, 50, -90.4);
+}
+parts.record = { obj: recordSheet, from: recordSheet.position.clone(), off: new THREE.Vector3(-10, 14, 70) };
+// bench disinfection: a plain spray bottle and a folded cloth
+const disinfect = new THREE.Group();
+room.add(disinfect);
+{
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: '#eef1f4', roughness: 0.35, clearcoat: 0.5 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 15, 28), bodyMat); body.position.y = 7.5; disinfect.add(body);
+  const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 3.2, 3, 28), bodyMat); shoulder.position.y = 16.5; disinfect.add(shoulder);
+  const headMat = new THREE.MeshStandardMaterial({ color: '#8b929b', roughness: 0.5 });
+  const head = new THREE.Mesh(new RoundedBoxGeometry(2.8, 3.4, 6, 2, 0.6), headMat); head.position.set(0, 19.6, 1.2); disinfect.add(head);
+  const trig = new THREE.Mesh(new RoundedBoxGeometry(1.2, 4, 1.2, 2, 0.4), headMat); trig.position.set(0, 16.8, 3.6); trig.rotation.x = 0.35; disinfect.add(trig);
+  const lab = canvasTex(256, 128, (x, w, h) => { x.fillStyle = '#dfe5ec'; x.fillRect(0, 0, w, h); x.fillStyle = '#3a4048'; x.font = '700 44px "Noto Sans JP"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('消毒用', w / 2, h / 2); });
+  disinfect.userData.lab = lab;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.3, 6, 28, 1, true, -0.9, 1.8), new THREE.MeshStandardMaterial({ map: lab, roughness: 0.6 })); band.position.y = 8; disinfect.add(band);
+  const cloth = new THREE.Mesh(new RoundedBoxGeometry(14, 1.2, 10, 2, 0.5), new THREE.MeshStandardMaterial({ color: '#c9d3dc', roughness: 0.95 })); cloth.position.set(12, 0.6, -1); disinfect.add(cloth);
+  disinfect.position.set(-86, 0, -16);
+}
+parts.disinfect = { obj: disinfect, from: disinfect.position.clone(), off: new THREE.Vector3(-4, 26, 34) };
+// enlarged bacteria for the exploded view (a model, not to scale)
+const bigBac = new THREE.Group();
+room.add(bigBac);
+bigBac.visible = false;
+{
+  const m = new THREE.MeshStandardMaterial({ color: '#1a2636', emissive: '#7fc0ff', emissiveIntensity: 1.35, roughness: 0.4 });
+  const mk = (x, y, a, len) => { const c = new THREE.Mesh(new THREE.CapsuleGeometry(1.9, len, 6, 20), m); c.rotation.z = Math.PI / 2 + a; c.position.set(x, y, 0); bigBac.add(c); };
+  mk(-9, 2, 0.2, 7); mk(3.2, -3.5, -0.15, 6.4); mk(9.8, -2.4, -0.15, 6.4);   // the last two: one cell dividing into two
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(0.45, 0.72, 1.0), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 }));
+  halo.scale.set(52, 30, 1); bigBac.add(halo);
+  bigBac.position.set(-6, 62, 30);
+}
+
+scene.add(new THREE.HemisphereLight('#dfe6f0', '#2c3036', 0.9));
+const keyLight = new THREE.SpotLight('#ffffff', 1.6e5, 1000, 0.7, 0.75, 2);
+keyLight.position.set(-30, 270, 110); keyLight.target.position.set(0, 0, -10); scene.add(keyLight, keyLight.target);
+const fridgeSpot = new THREE.SpotLight('#f2f6ff', 1.1e5, 1000, 0.5, 0.8, 2);
+fridgeSpot.position.set(40, 240, 160); fridgeSpot.target.position.set(118, 30, -20); scene.add(fridgeSpot, fridgeSpot.target);
+const fill = new THREE.DirectionalLight('#b8c6dc', 0.55); fill.position.set(160, 120, 220); scene.add(fill);
+const rimLight = new THREE.DirectionalLight('#dfe8f5', 0.35); rimLight.position.set(-200, 80, -60); scene.add(rimLight);
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), tval: $('tval'), tdval: $('tdval'), nval: $('nval'), stateTag: $('stateTag'), locTag: $('locTag'), roomNote: $('roomNote'),
+  tmeter: $('tmeter'), nmeter: $('nmeter'), tfill: document.querySelector('#tmeter .fill'), nfill: document.querySelector('#nmeter .fill'),
+  steps: [...document.querySelectorAll('#steps li')], counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'),
+};
+const tPct = T => ((T - T_LO) / (T_HI - T_LO)) * 100;
+$('thStd').style.left = `${tPct(T_STD)}%`;
+$('tticks').innerHTML = [-20, 0, 20, 40].map(v => `<span style="left:${tPct(v)}%">${String(v).replace('-', '−')}${v === 40 ? '℃' : ''}</span>`).join('');
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'), document.fonts.load('600 32px "JetBrains Mono"'),
+]).catch(() => {});
+const fmtH = h => { if (!isFinite(h)) return '増えない'; const m = Math.round(h * 60); if (m < 60) return `${m}分`; if (h >= 100) return '100時間以上'; return `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, '0')}分`; };
+const fmtClock = h => { const m = Math.floor(h * 60 + 1e-6); return `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, '0')}分`; };
+const fmtCount = n => { if (n >= N_CAP * 0.9999) return '数えきれない'; if (n < 10000) return Math.round(n).toLocaleString('ja-JP'); const man = n / 10000; return `${man < 10 ? man.toFixed(1) : Math.round(man)}万`; };
+const fmtTime = h => { const d = ((h % 24) + 24) % 24; const m = Math.floor(d * 60); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+const START_CLOCK = 21;       // 21:00, a night shift
+function freshState() {
+  const born = new Float32Array(V_MAX).fill(-1);
+  for (let i = 0; i < V0; i++) born[i] = -10;
+  const mBorn = new Float32Array(M_MAX).fill(-1);
+  for (let i = 0; i < M0; i++) mBorn[i] = -10;
+  return {
+    Troom: 6, T: 6, loc: 'bench', move: null, door: 0, carry: 0,
+    theta: 0, D: 0, nBorn: V0, born, mN: M0, mBorn,
+    elapsedH: 0, clockH: START_CLOCK,
+    over: false, success: false, failure: false, leave: false, failT: -1,
+    records: [{ h: START_CLOCK - 3, T: T_FRIDGE }, { h: START_CLOCK - 1, T: T_FRIDGE }],
+    flash: 0, enterFlash: false, phase: 0, speed: 'fast', exploded: false, explode: 0,
+    camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0, demoIn: false, demoOut: false,
+  };
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+const countNow = () => N0 * Math.pow(2, S.D);
+function startMove(dir) {
+  if (S.move) return;
+  if (dir === 'in' && S.loc !== 'bench') return;
+  if (dir === 'out' && S.loc !== 'fridge') return;
+  S.move = { dir, t: 0 }; S.enterFlash = false;
+  if (dir === 'out') S.success = false;
+}
+/** carry path: board → in front of the refrigerator → the middle shelf */
+const carryPath = new THREE.CubicBezierCurve3(P_BENCH.clone(), new THREE.Vector3(-4, 40, 16), new THREE.Vector3(104, 46, 22), P_FRIDGE.clone());
+function productPose() {
+  // 0 = on the board, 1 = on the shelf
+  if (!S.move) return S.loc === 'fridge' ? 1 : 0;
+  return S.carry;
+}
+function advanceMove(dt) {
+  const M = S.move; M.t += dt;
+  if (M.dir === 'in') {
+    const t = M.t;
+    S.door = t < DOOR_T ? ease(t / DOOR_T) : t < DOOR_T + CARRY_T ? 1 : 1 - ease(clamp((t - DOOR_T - CARRY_T) / CLOSE_T, 0, 1));
+    S.carry = ease(seg(t, DOOR_T, DOOR_T + CARRY_T));
+    if (!S.enterFlash && S.carry > 0.9) { S.enterFlash = true; S.flash = 1; }   // the moment it enters: white flash
+    if (t >= DOOR_T + CARRY_T + CLOSE_T) { S.move = null; S.loc = 'fridge'; S.door = 0; S.carry = 1; completeStore(); }
+  } else {
+    const t = M.t;
+    S.door = t < OUT_DOOR_T ? ease(t / OUT_DOOR_T) : 1 - ease(seg(t, OUT_DOOR_T + OUT_CARRY_T * 0.45, OUT_DOOR_T + OUT_CARRY_T));
+    S.carry = 1 - ease(seg(t, OUT_DOOR_T, OUT_DOOR_T + OUT_CARRY_T));
+    if (t >= OUT_DOOR_T + OUT_CARRY_T) { S.move = null; S.loc = 'bench'; S.door = 0; S.carry = 0; }
+  }
+}
+function completeStore() {
+  S.success = true;
+  S.records.push({ h: S.clockH, T: T_FRIDGE }); if (S.records.length > 9) S.records.shift();
+  showBubble('ok'); sound('ok'); logEvent('done');
+}
+/** fraction of the way into the cold (the product's place temperature blends while it passes the door) */
+function coldWeight() {
+  if (!S.move) return S.loc === 'fridge' ? 1 : 0;
+  return smooth01((S.carry - 0.55) / 0.3);
+}
+function speedFactor() {
+  if (S.speed === 'real') return 1;
+  if (S.move) return 1;                                 // handling runs in real time
+  return S.leave && S.loc === 'bench' ? LEAVE_FAST : FAST;
+}
+/** Advance by dt display-seconds. The model clock runs time-lapsed while the food is resting. */
+function stepState(dt) {
+  S.t += dt;
+  if (S.move) advanceMove(dt);
+  S.T = lerp(S.Troom, T_FRIDGE, coldWeight());
+  const dh = (dt * speedFactor()) / 3600;
+  S.elapsedH += dh; S.clockH += dh;
+  S.theta = Math.min(THETA_MAX, S.theta + growthRate(S.T) * dh);
+  S.D = Math.min(D_CAP, growthLog2(S.theta));
+  while (S.nBorn < V_MAX && S.D >= P_D[S.nBorn] - 1e-9) { S.born[S.nBorn] = S.t; S.nBorn++; }
+  while (S.mN < M_MAX && S.D >= M_D[S.mN] - 1e-9) { S.mBorn[S.mN] = S.t; S.mN++; }
+  // the base temperature (冷蔵の例 10 ℃)
+  if (!S.over && S.T > T_STD) { S.over = true; logEvent('over'); }
+  if (S.over && S.T <= T_STD) S.over = false;
+  // left out: the count runs to the top of the meter
+  if (S.leave && !S.failure && S.D >= D_CAP - 1e-9) { S.failure = true; S.failT = S.t; showBubble('err'); sound('err'); logEvent('fail'); if (!DEMO_ACTIVE) setCamera('fail'); }
+  if (!DEMO_ACTIVE && S.leave && S.failure && S.t - S.failT > RETURN_AFTER && !S.move) { S.leave = false; startMove('in'); setCamera('fridgeSide'); }
+  // steps
+  if (S.leave && S.loc === 'bench') S.phase = 3;
+  else if ((S.loc === 'fridge' && !(S.move && S.move.dir === 'out')) || (S.move && S.move.dir === 'in')) S.phase = S.success && !S.move ? 5 : 4;
+  else S.phase = S.elapsedH < 0.5 ? 0 : S.D < 0.35 ? 1 : S.D < 2 ? 2 : 3;
+  S.flash = Math.max(0, S.flash - dt * 1.6);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && (S.t > S.bubbleUntil || S.explode > 0.2)) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, S.T, Math.log10(countNow())]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 30; }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'err' ? 3.4 : 4.0); }
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') tone(2400, t0, 0.13, 0.16);
+  else for (let i = 0; i < 5; i++) tone(3000, t0 + i * 0.12, 0.07, 0.12);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-20, 100, 230], tgt: [20, 30, -25] },
+  approach: { pos: [-22, 42, 70], tgt: [-8, 6, 2] },
+  surface: { pos: [-3, 15.5, 16], tgt: [-6, 4.2, 2.5] },
+  fridgeSide: { pos: [-40, 92, 205], tgt: [48, 32, -30] },
+  record: { pos: [64, 60, -26], tgt: [48, 49, -90] },
+  fridge: { pos: [98, 56, -23], tgt: [122, 36, -56] },
+  bench: { pos: [20, 72, 170], tgt: [-30, 36, -24] },
+  lensWide: { pos: [-2, 60, 122], tgt: [-10, 27, 6] },
+  fail: { pos: [-30, 118, 290], tgt: [-20, 40, -30] },
+  exploded: { pos: [-30, 125, 300], tgt: [35, 45, -15] },
+};
+const CAMS_PORTRAIT = {
+  overview: { pos: [12, 124, 336], tgt: [23, 36, -20] },
+  lensWide: { pos: [-6, 66, 170], tgt: [-10, 30, 6] },
+  fridgeSide: { pos: [30, 110, 290], tgt: [52, 34, -30] },
+  record: { pos: [60, 62, 6], tgt: [48, 49, -90] },
+  bench: { pos: [-10, 86, 230], tgt: [-22, 40, -20] },
+  fail: { pos: [-10, 130, 360], tgt: [-6, 44, -30] },
+  exploded: { pos: [10, 150, 400], tgt: [34, 46, -18] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  if (name === 'surface') { micro.updateWorldMatrix(true, false); return { pos: micro.localToWorld(new THREE.Vector3(1.5, 8.5, 10.5)), tgt: micro.localToWorld(new THREE.Vector3(-1.5, 0.3, -1.5)) }; }
+  if (name === 'approach') { const portrait = innerWidth / innerHeight < 0.8; return { pos: LENS_C.clone().add(new THREE.Vector3(8, 12, portrait ? 70 : 52)), tgt: LENS_C.clone().add(new THREE.Vector3(0, portrait ? 4 : -2, 0)) }; }
+  const p = (innerWidth / innerHeight < 0.8 && CAMS_PORTRAIT[name]) || CAMS[name];
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const tmpV = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpC = new THREE.Color();
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const stretch = new Float32Array(V_MAX);
+let productHidden = false;
+let lastThermo = '', lastDisp = '', lastSheet = '';
+function drawThermo() {
+  const x = thermoCanvas.getContext('2d'), w = 256, h = 96;
+  x.fillStyle = '#07090c'; x.fillRect(0, 0, w, h);
+  x.fillStyle = S.Troom > T_STD ? '#ffd9a0' : '#e8edf5'; x.font = '500 58px "JetBrains Mono"'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(`${S.Troom.toFixed(1).replace('-', '−')}℃`, w / 2, h / 2 + 4);
+  thermoTex.needsUpdate = true;
+}
+function drawDisplays() {
+  const key = `${T_FRIDGE}`;
+  if (key === lastDisp) return;
+  lastDisp = key;
+  for (const [c, tex, w, h] of [[fridgeDisp, fridgeDispTex, 256, 96], [insideTex.image, insideTex, 192, 96]]) {
+    const x = c.getContext('2d');
+    x.fillStyle = '#060a10'; x.fillRect(0, 0, w, h);
+    x.fillStyle = '#cfe8ff'; x.font = `500 ${Math.round(h * 0.6)}px "JetBrains Mono"`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(`${T_FRIDGE.toFixed(1)}℃`, w / 2, h / 2 + 3);
+    tex.needsUpdate = true;
+  }
+}
+function drawSheet() {
+  const key = S.records.map(r => r.h.toFixed(3)).join(',');
+  if (key === lastSheet) return;
+  lastSheet = key;
+  const x = sheetCanvas.getContext('2d'), w = 560, h = 780;
+  x.fillStyle = '#fbfbf8'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#1f2328'; x.textBaseline = 'middle';
+  x.font = '700 38px "Noto Sans JP"'; x.textAlign = 'center'; x.fillText('冷蔵庫の温度の記録', w / 2, 70);
+  x.font = '500 24px "Noto Sans JP"'; x.fillStyle = '#4b5058'; x.fillText('冷蔵の例：10℃以下', w / 2, 118);
+  const cols = [40, 200, 400, 520], top = 160, rowH = 62;
+  x.strokeStyle = '#1f2328'; x.lineWidth = 2.5;
+  x.strokeRect(cols[0], top, cols[3] - cols[0], rowH * 10);
+  for (let i = 1; i <= 9; i++) { x.lineWidth = i === 1 ? 2.5 : 1.2; x.beginPath(); x.moveTo(cols[0], top + i * rowH); x.lineTo(cols[3], top + i * rowH); x.stroke(); }
+  for (const c of [cols[1], cols[2]]) { x.lineWidth = 1.2; x.beginPath(); x.moveTo(c, top); x.lineTo(c, top + rowH * 10); x.stroke(); }
+  x.font = '700 26px "Noto Sans JP"'; x.fillStyle = '#1f2328';
+  x.fillText('時刻', (cols[0] + cols[1]) / 2, top + rowH / 2); x.fillText('庫内の温度', (cols[1] + cols[2]) / 2, top + rowH / 2); x.fillText('確認', (cols[2] + cols[3]) / 2, top + rowH / 2);
+  S.records.forEach((r, i) => {
+    const y = top + (i + 1.5) * rowH, last = i === S.records.length - 1 && S.success;
+    x.fillStyle = last ? '#0b5cad' : '#2a2f36'; x.font = `500 30px "JetBrains Mono"`;
+    x.fillText(fmtTime(r.h), (cols[0] + cols[1]) / 2, y); x.fillText(`${r.T}℃`, (cols[1] + cols[2]) / 2, y);
+    x.font = '700 28px "Noto Sans JP"'; x.fillText('済', (cols[2] + cols[3]) / 2, y);
+  });
+  sheetTex.needsUpdate = true;
+}
+function applyScene(time) {
+  const e = ease(S.explode);
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  // the door and the product
+  doorHinge.rotation.y = Math.max(1.75 * S.door, 1.1 * e);
+  insideThermo.scale.setScalar(1 + 1.3 * e);
+  recordSheet.scale.setScalar(1 + 0.35 * e);
+  const pose = productPose();
+  if (pose <= 0) product.position.copy(P_BENCH);
+  else if (pose >= 1) product.position.copy(P_FRIDGE).addScaledVector(parts.fridge.off, e);
+  else product.position.copy(carryPath.getPoint(pose));
+  product.rotation.y = -0.25 * Math.sin(Math.PI * pose);
+  // inside the bubble: the room is hidden, the magnified world floats in the dark
+  const cp = camera.position;
+  const inLens = cp.distanceTo(LENS_C) < LENS_R * 0.97 ? 1 : 0;
+  room.visible = !inLens;
+  lensUniforms.uInside.value = inLens;
+  lensUniforms.uWarm.value = smooth01((S.T - 12) / 14);
+  lensUniforms.uCold.value = smooth01((6 - S.T) / 6) * (S.loc === 'fridge' || S.move ? 1 : 0.4);
+  lens.visible = e < 0.98;
+  lens.scale.setScalar(Math.max(0.001, 1 - e));
+  lensRing.quaternion.copy(camera.quaternion); lensRing.material.opacity = 0.35 * (1 - inLens);
+  lensRing.material.color.set(S.over && productPose() < 0.9 ? '#ff6a5e' : '#ffffff');
+  const inFridge = cp.x > FR.x0 + 3 && cp.x < FR.x1 - 3 && cp.y > FR.y0 + 10 && cp.y < FR.y1 - 3 && cp.z > FR.z0 + 3 && cp.z < FR.z1 + 7;
+  door.visible = !inFridge || S.door > 0.3;
+  fridgeLight.intensity = (inFridge ? 1400 : 0) + 1700 * S.door + 7000 * S.flash;
+  fridgeFlash.material.opacity = Math.min(0.75, S.flash * 0.9) * (inFridge ? 0.25 : 1);
+  fridgeFlash.scale.setScalar(30 + 50 * S.flash);
+  gradePass.uniforms.uFlash.value = 0.22 * Math.pow(S.flash, 3);
+  // warmth: amber shimmer over the bench, strength from the room temperature
+  const warm = smooth01((S.Troom - 12) / 16);
+  hazeUniforms.uTime.value = time; hazeUniforms.uAmt.value = warm * (1 - e);
+  hazes.forEach(m => { m.quaternion.copy(camera.quaternion); m.visible = warm > 0.01 && !inFridge; });
+  // the warning rim while the food sits above the base temperature
+  const warnOn = S.over && pose < 0.9 ? 1 : 0;
+  const pulse = 0.6 + 0.4 * Math.sin(time * 6);
+  warnRim.material.opacity = warnOn * (0.55 + 0.45 * pulse);
+  warnGlow.material.opacity = warnOn * 0.42 * pulse;
+  microWarn.material.opacity = warnOn * (0.55 + 0.45 * pulse);
+  // bacteria: brighter and livelier when they are growing fast, calm in the cold
+  const act = clamp(growthRate(S.T) / 2.5, 0, 1);
+  const bright = 0.3 + 0.62 * Math.pow(act, 0.7);
+  stretch.fill(0);
+  for (let i = V0; i < S.nBorn; i++) { const s = (S.t - S.born[i]) / SPLIT_T; if (s < 1) stretch[PART[i].parent] = Math.max(stretch[PART[i].parent], 1 - s); }
+  const gp = glowGeo.attributes.position.array, ga = glowGeo.attributes.aAlpha.array;
+  for (let i = 0; i < S.nBorn; i++) {
+    const P = PART[i];
+    let x = P.x, z = P.z, sc = 1, a = P.a, fl = 0;
+    if (i >= V0) {
+      const s = clamp((S.t - S.born[i]) / SPLIT_T, 0, 1);
+      if (s < 1) { const Q = PART[P.parent], k = 1 - Math.pow(1 - s, 2); x = lerp(Q.x, P.x, k); z = lerp(Q.z, P.z, k); a = lerp(Q.a, P.a, k); sc = 0.55 + 0.45 * k; }
+      fl = Math.max(0, 1 - (S.t - S.born[i]) / 0.5);
+    }
+    const jig = 0.05 * act;
+    x += Math.sin(time * 5.1 + P.phase) * jig; z += Math.cos(time * 4.3 + P.phase * 1.7) * jig;
+    const y = topH(x, z) + 0.1 + 0.1;
+    const st = 1 + 0.55 * stretch[i];
+    tmpQ.setFromAxisAngle(Y_AXIS, a);
+    tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(sc * st, sc, sc));
+    rods.setMatrixAt(i, tmpM);
+    const b = Math.min(0.95, bright * (0.85 + 0.15 * Math.sin(time * 2.2 + P.phase)) + 0.35 * fl);
+    rods.setColorAt(i, tmpC.setRGB(0.4 * b, 0.7 * b, 1.0 * b));
+    gp[i * 3] = x; gp[i * 3 + 1] = y + 0.05; gp[i * 3 + 2] = z;
+    ga[i] = (0.08 + 0.26 * bright) * (0.8 + 0.2 * Math.sin(time * 2.2 + P.phase)) * (0.7 + 0.3 * sc) + 0.3 * fl;
+  }
+  // the magnified patch
+  mStretch.fill(0);
+  for (let i = M0; i < S.mN; i++) { const s = (S.t - S.mBorn[i]) / SPLIT_T; if (s < 1) mStretch[MPART[i].parent] = Math.max(mStretch[MPART[i].parent], 1 - s); }
+  const mp = mGlowGeo.attributes.position.array, ma = mGlowGeo.attributes.aAlpha.array;
+  for (let i = 0; i < S.mN; i++) {
+    const P = MPART[i];
+    let x = P.x, z = P.z, sc = 1, a = P.a, fl = 0;
+    if (i >= M0) {
+      const s = clamp((S.t - S.mBorn[i]) / SPLIT_T, 0, 1);
+      if (s < 1) { const Q = MPART[P.parent], k = 1 - Math.pow(1 - s, 2); x = lerp(Q.x, P.x, k); z = lerp(Q.z, P.z, k); a = lerp(Q.a, P.a, k); sc = 0.55 + 0.45 * k; }
+      fl = Math.max(0, 1 - (S.t - S.mBorn[i]) / 0.5);
+    }
+    const jig = 0.25 * act;
+    x += Math.sin(time * 4.1 + P.phase) * jig; z += Math.cos(time * 3.7 + P.phase * 1.7) * jig;
+    const y = microH(x, z) + 0.42;
+    tmpQ.setFromAxisAngle(Y_AXIS, a + Math.sin(time * 1.3 + P.phase) * 0.08 * act);
+    tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(sc * (1 + 0.55 * mStretch[i]), sc, sc));
+    mRods.setMatrixAt(i, tmpM);
+    const b = Math.min(0.95, bright * (0.85 + 0.15 * Math.sin(time * 2.2 + P.phase)) + 0.35 * fl);
+    mRods.setColorAt(i, tmpC.setRGB(0.4 * b, 0.7 * b, 1.0 * b));
+    mp[i * 3] = x; mp[i * 3 + 1] = y + 0.2; mp[i * 3 + 2] = z;
+    ma[i] = (0.06 + 0.2 * bright) * (0.8 + 0.2 * Math.sin(time * 2.2 + P.phase)) * (0.7 + 0.3 * sc) + 0.22 * fl;
+  }
+  mRods.count = S.mN;
+  mRods.instanceMatrix.needsUpdate = true; mRods.instanceColor.needsUpdate = true;
+  mGlowGeo.setDrawRange(0, S.mN);
+  mGlowGeo.attributes.position.needsUpdate = true; mGlowGeo.attributes.aAlpha.needsUpdate = true;
+  mGlowPts.visible = lens.visible;
+  // leader from the food to the bubble
+  const hidden = pose >= 1 && S.door < 0.05 && !inFridge;
+  productHidden = hidden;
+  const fp = product.localToWorld(new THREE.Vector3(-4, topH(-4, 0) + 0.4, 0));
+  const lp = LENS_C.clone().addScaledVector(fp.clone().sub(LENS_C).normalize(), LENS_R);
+  const la = lensLeaderGeo.attributes.position.array; la.set([fp.x, fp.y, fp.z, lp.x, lp.y, lp.z]); lensLeaderGeo.attributes.position.needsUpdate = true;
+  lensLeader.computeLineDistances();
+  lensLeader.visible = !hidden && !inLens && e < 0.3;
+  rods.count = S.nBorn;
+  glowPts.visible = !hidden;   // hidden behind the closed door
+  rods.instanceMatrix.needsUpdate = true; rods.instanceColor.needsUpdate = true;
+  glowGeo.setDrawRange(0, S.nBorn);
+  glowGeo.attributes.position.needsUpdate = true; glowGeo.attributes.aAlpha.needsUpdate = true;
+  // thermometer column and displays
+  const ch = colH(S.Troom);
+  thermoColumn.scale.y = ch; thermoColumn.position.y = ch / 2;
+  const key = S.Troom.toFixed(1) + (S.Troom > T_STD);
+  if (key !== lastThermo) { lastThermo = key; drawThermo(); }
+  drawDisplays(); drawSheet();
+  // clock
+  const hm = ((S.clockH % 12) + 12) % 12;
+  hourHand.rotation.z = -(hm / 12) * Math.PI * 2;
+  const mf = ((S.clockH % 1) + 1) % 1;
+  minHand.rotation.z = -mf * Math.PI * 2;
+  // exploded: the enlarged model of the bacteria
+  bigBac.visible = e > 0.02;
+  bigBac.scale.setScalar(Math.max(0.001, 2.2 * e));
+  bigBac.rotation.y = Math.sin(time * 0.4) * 0.25;
+  ui.imageTag.classList.toggle('show', inLens === 1 || S.explode > 0.3);
+  return { inFridge, inLens };
+}
+
+// =====================================================================================
+// Graph (temperature → doubling time, log scale) and the record trace
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const G_TMIN = T_LO, G_TMAX = T_HI, G_YMIN = Math.log10(5), G_YMAX = Math.log10(60 * 60);   // 5 min … 60 h
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 44, r: w - 10, t: 12, b: h - 26 });
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = T => g.l + ((T - G_TMIN) / (G_TMAX - G_TMIN)) * (g.r - g.l);
+  const Y = min => g.b - ((clamp(Math.log10(min), G_YMIN, G_YMAX) - G_YMIN) / (G_YMAX - G_YMIN)) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8a8e96'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (const T of [-20, 0, 20, 40]) x.fillText(`${String(T).replace('-', '−')}`, X(T), g.b + 12);
+  x.textAlign = 'right'; x.font = '10px "Noto Sans JP"';
+  for (const [m, lab] of [[10, '10分'], [60, '1時間'], [600, '10時間']]) { x.fillText(lab, g.l - 4, Y(m) + 3); x.strokeStyle = 'rgba(255,255,255,0.07)'; x.beginPath(); x.moveTo(g.l, Y(m)); x.lineTo(g.r, Y(m)); x.stroke(); }
+  x.textAlign = 'left';
+  x.fillText('温度 ℃', g.r - 36, g.b + 23); x.fillText('倍になるまでの時間', g.l + 4, g.t + 2);
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.65)';
+  x.beginPath(); x.moveTo(X(T_STD), g.t); x.lineTo(X(T_STD), g.b); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#c3c6cc'; x.fillText('冷蔵の例 10℃', X(T_STD) + 5, g.t + 22);
+  x.strokeStyle = '#bfe3ff'; x.lineWidth = 1.8; x.beginPath();
+  let started = false;
+  for (let T = G_TMIN; T <= G_TMAX + 1e-9; T += 0.25) { const td = doublingH(T) * 60; if (!isFinite(td) || td > 60 * 60 * 1.2) { started = false; continue; } const px = X(T), py = Y(td); if (!started) { x.moveTo(px, py); started = true; } else x.lineTo(px, py); }
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, graphCanvas.width, graphCanvas.height); x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const td = doublingH(S.T) * 60;
+  const px = g.l + ((clamp(S.T, G_TMIN, G_TMAX) - G_TMIN) / (G_TMAX - G_TMIN)) * (g.r - g.l);
+  const py = isFinite(td) ? g.b - ((clamp(Math.log10(td), G_YMIN, G_YMAX) - G_YMIN) / (G_YMAX - G_YMIN)) * (g.b - g.t) : g.t;
+  x.fillStyle = S.T > T_STD ? '#ff8a7e' : '#ffffff';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 34, t = 6, b = h - 6;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  const yT = T => b - ((T - T_LO) / (T_HI - T_LO)) * (b - t);
+  x.setLineDash([3, 3]); x.strokeStyle = 'rgba(255,255,255,0.3)'; x.beginPath(); x.moveTo(l, yT(T_STD)); x.lineTo(r, yT(T_STD)); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#8a8e96'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('40℃', l - 3, t + 7); x.fillText('−20', l - 3, b); x.textAlign = 'left'; x.fillText('100万', r + 3, t + 7); x.fillText('1000', r + 3, b);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  x.strokeStyle = '#ffb04a'; x.lineWidth = 1.6; x.beginPath();
+  H.forEach((p, i) => { const y = yT(p[1]); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+  x.strokeStyle = '#bfe3ff'; x.beginPath();
+  H.forEach((p, i) => { const y = b - clamp((p[2] - 3) / 3, 0, 1) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const partWorld = (i, dy = 0) => product.localToWorld(tmpV.set(PART[i].x, PART[i].y + dy, PART[i].z)).clone();
+const LABELS = [
+  { id: 'eel', text: '鰻の身', cls: 'key', pri: 96, mode: 'normal', vis: () => !productHidden, anchor: () => product.localToWorld(tmpV.set(-9, 1.6, 3.2)).clone() },
+  { id: 'bac', text: '細菌（模式図）', cls: 'key bac', pri: 98, mode: 'normal', anchor: () => micro.localToWorld(tmpV.set(MPART[1].x, microH(MPART[1].x, MPART[1].z) + 0.6, MPART[1].z)).clone() },
+  { id: 'lens', text: '身の表面（拡大）', cls: '', pri: 93, mode: 'normal', anchor: () => LENS_C.clone().add(new THREE.Vector3(-LENS_R * 0.72, LENS_R * 0.62, 4)) },
+  { id: 'fridge', text: '冷蔵庫', cls: 'key', pri: 95, mode: 'normal', anchor: () => new THREE.Vector3(96, 62, FR.z1 + 6) },
+  { id: 'thermo', text: '温度計', cls: 'key amber', pri: 94, mode: 'normal', anchor: () => thermo.localToWorld(tmpV.set(0, THERMO_H * 0.62, 1.6)).clone() },
+  { id: 'clock', text: '時計', cls: '', pri: 80, mode: 'normal', anchor: () => clockGroup.localToWorld(tmpV.set(10, -10, 1)).clone() },
+  { id: 'rec', text: '温度の記録表', cls: '', pri: 82, mode: 'normal', anchor: () => recordSheet.localToWorld(tmpV.set(11.5, 12, 1)).clone() },
+  { id: 'board', text: 'まな板', cls: '', pri: 70, mode: 'normal', anchor: () => new THREE.Vector3(18, 2.6, 16) },
+  { id: 'fridgeIn', text: '鰻の身（冷蔵庫の中）', cls: '', pri: 90, mode: 'normal', vis: () => productHidden, anchor: () => new THREE.Vector3(FR.x0 + 30, P_FRIDGE.y, FR.z1 + 6) },
+  // close to the surface
+  { id: 'sbac', text: '細菌（模式図）', cls: 'key bac', pri: 98, mode: 'surface', anchor: () => micro.localToWorld(tmpV.set(MPART[0].x, microH(MPART[0].x, MPART[0].z) + 0.6, MPART[0].z)).clone() },
+  { id: 'sflesh', text: '鰻の身の表面（拡大）', cls: '', pri: 90, mode: 'surface', anchor: () => micro.localToWorld(tmpV.set(-6, microH(-6, 3) + 0.1, 3)).clone() },
+  // inside the refrigerator
+  { id: 'ibac', text: '細菌（模式図）', cls: 'key bac', pri: 98, mode: 'inside', anchor: () => partWorld(3) },
+  { id: 'ieel', text: '鰻の身', cls: '', pri: 90, mode: 'inside', anchor: () => product.localToWorld(tmpV.set(-10, 1.6, 3)).clone() },
+  { id: 'ith', text: '庫内の温度計', cls: 'key', pri: 94, mode: 'inside', anchor: () => insideThermo.localToWorld(tmpV.set(0, 2.8, 1.2)).clone() },
+  // exploded
+  { id: 'xfr', text: '冷蔵庫の本体', cls: 'key', pri: 90, mode: 'x', anchor: () => fridge.localToWorld(tmpV.set(FR.x0 + 6, FR.y1 - 20, FR.z1)).clone() },
+  { id: 'xith', text: '庫内の温度計', cls: '', pri: 88, mode: 'x', anchor: () => insideThermo.localToWorld(tmpV.set(0, 2.8, 1.2)).clone() },
+  { id: 'xrec', text: '温度の記録表', cls: '', pri: 87, mode: 'x', anchor: () => recordSheet.localToWorld(tmpV.set(0, 10, 1)).clone() },
+  { id: 'xpack', text: '真空包装', cls: '', pri: 86, mode: 'x', anchor: () => pack.localToWorld(tmpV.set(FL / 2 + 1.5, 0.2, 0)).clone() },
+  { id: 'xdis', text: '作業台の消毒', cls: '', pri: 85, mode: 'x', anchor: () => disinfect.localToWorld(tmpV.set(0, 19, 0)).clone() },
+  { id: 'xbac', text: '細菌（模式図、大きさと数は実際と異なる）', cls: 'key bac', pri: 96, mode: 'x', anchor: () => bigBac.localToWorld(tmpV.set(-9, 5, 0)).clone() },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+let labelMode = 'normal';
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false;
+    if (L.mode === labelMode && (!L.vis || L.vis())) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        for (const [dx, dy] of [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]]) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+function updateUI() {
+  const where = S.move ? '移動中' : S.loc === 'fridge' ? '冷蔵庫の中' : '作業台';
+  if (ui.locTag.textContent !== where) ui.locTag.textContent = where;
+  ui.locTag.className = `tag ${S.loc === 'fridge' && !S.move ? 'cold' : S.T > T_STD ? 'warn' : 'amber'}`;
+  ui.tval.innerHTML = `${S.T.toFixed(1).replace('-', '−')}<span class="unit">℃</span>`;
+  ui.roomNote.textContent = S.loc === 'fridge' || S.move ? `作業台の温度 ${S.Troom.toFixed(1).replace('-', '−')}℃` : '';
+  ui.tfill.style.width = `${tPct(clamp(S.T, T_LO, T_HI)).toFixed(1)}%`;
+  ui.tmeter.classList.toggle('cold', S.T <= T_STD);
+  const tdTxt = fmtH(doublingH(S.T));
+  if (ui.tdval.textContent !== tdTxt) ui.tdval.textContent = tdTxt;
+  const n = countNow(), maxed = S.D >= D_CAP - 1e-9;
+  ui.nval.innerHTML = maxed ? '数えきれない' : `${fmtCount(n)}<span class="unit">個</span>`;
+  ui.nval.classList.toggle('max', maxed);
+  ui.nfill.style.width = `${(clamp((Math.log10(n) - 3) / 3, 0, 1) * 100).toFixed(1)}%`;
+  ui.nmeter.classList.toggle('max', maxed);
+  const r = growthRate(S.T);
+  const tag = maxed ? '数えきれない' : r <= 0 ? '増えない' : r < 0.9 ? 'ゆっくり増える' : r < 2 ? '増える' : 'どんどん増える';
+  if (ui.stateTag.textContent !== tag) ui.stateTag.textContent = tag;
+  ui.stateTag.className = `tag ${maxed || S.T > T_STD ? 'warn' : 'bac'}`;
+  if (document.activeElement !== ui.range) ui.range.value = S.Troom.toFixed(1);
+  const hot = S.phase === 3 && S.T > T_STD;
+  ui.steps.forEach((li, i) => { li.classList.toggle('active', i === S.phase); li.classList.toggle('done', i < S.phase); li.classList.toggle('hot', i === S.phase && hot); });
+  ui.counter.textContent = `経過 ${fmtClock(S.elapsedH)}`;
+  ui.stateText.textContent = S.failure && S.leave ? '置きっぱなし：数えきれないほど増えました' : S.leave && S.loc === 'bench' ? '置きっぱなし：数が倍々で膨らんでいます'
+    : S.move ? (S.move.dir === 'in' ? '冷蔵庫へ入れています' : '冷蔵庫から出しています')
+    : S.loc === 'fridge' ? (S.success ? '増える速さ 大きく低下　温度記録 済み' : '冷蔵庫の中で、増える速さが落ちています')
+    : S.T > T_STD ? '基準の温度を越えています' : S.phase <= 1 ? '最初はほとんど増えません' : '1つが2つに分かれています';
+  ui.realnote.classList.toggle('show', S.success && S.loc === 'fridge');
+  const f = speedFactor();
+  ui.speedTag.textContent = S.speed === 'real' ? '実時間' : S.move ? '出し入れは実時間' : `早回し表示（約${f.toLocaleString('ja-JP')}倍）`;
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  document.querySelectorAll('[data-act=leave]').forEach(b => b.classList.toggle('on', S.leave));
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? '置きっぱなし　すぐに冷蔵庫へ<small>肉や魚などの生鮮食品やお総菜などは、購入後、できるだけ早く冷蔵庫に入れましょう（政府広報オンライン）</small>' : 'ピッ　増える速さ 大きく低下　温度記録 済み<small>冷蔵庫に入れても、細菌はゆっくりと増えます（政府広報オンライン）</small>';
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const p = screenOf(new THREE.Vector3(FR.x0 + 8, FR.y1 - 30, FR.z1 + 4));
+    const rr = b.getBoundingClientRect();
+    let x = p.ok ? p.x - 36 : (innerWidth - rr.width) / 2, y = p.ok ? p.y - rr.height - 24 : 70;
+    x = Math.max(12, Math.min(innerWidth - rr.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + rr.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - rr.width);
+    }
+    const sub = ui.subtitle.classList.contains('show') ? ui.subtitle.getBoundingClientRect().top : innerHeight;
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - rr.height - 8 : Math.min(innerHeight, sub) - rr.height - 16;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: thermometer drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setRoomUser(T) { S.Troom = clamp(T, T_LO, T_HI); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(thermoPick, false).length) { dragging = { y: e.clientY, T: S.Troom }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) { setRoomUser(dragging.T + (dragging.y - e.clientY) * 0.12); return; }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(thermoPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setRoomUser(S.Troom - e.deltaY * 0.02); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setRoomUser(S.Troom + 0.5); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setRoomUser(S.Troom - 0.5); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setRoomUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.act === 'leave') leaveOut(!S.leave);
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** 冷蔵庫へ: carry the food into the refrigerator, close the door and record the temperature. */
+function tap() {
+  S.leave = false;
+  if (S.loc === 'bench' && !S.move) { startMove('in'); if (!DEMO_ACTIVE) setCamera('fridgeSide'); }
+  else if (S.loc === 'fridge' && !S.move) completeStore();
+  stepState(0);
+}
+/** 置きっぱなし: take the food out and leave it on the bench at room temperature. */
+function leaveOut(on) {
+  if (on) {
+    S.leave = true; S.failure = false; S.failT = -1;
+    S.Troom = Math.max(S.Troom, T_LEAVE);
+    if (S.loc === 'fridge' && !S.move) startMove('out');
+    if (!DEMO_ACTIVE) setCamera('bench');
+  } else {
+    S.leave = false;
+    if (S.loc === 'bench' && !S.move) startMove('in');
+  }
+  stepState(0);
+}
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '食品を冷やして管理するのには、理由があります'],
+  [3, 7, '身の表面には、目に見えない細菌が付いています'],
+  [7, 12, '細菌は、1つが2つ、2つが4つと倍々で増えます'],
+  [12, 14, '基準の温度を越えると、増える速さはどんどん上がります'],
+  [14, 18.5, '冷やすと、細菌が倍になるまでの時間がぐっと延びます'],
+  [18.5, 23, '冷やすのは殺すためではなく、増える速さを落とすためです'],
+  [23, 27, '少しの置きっぱなしでも、数は倍々で膨らみます'],
+  [27, 30, 'だから温度と時間を決めて、毎日記録します'],
+];
+const DEMO_IN = 16.7, DEMO_OUT = 23.0;
+function demoRoom(t) {
+  if (t < 7) return 6;
+  if (t < 12.2) { const u = seg(t, 7, 12.2); return lerp(6, T_STD + 0.05, u * u * (1.8 - 0.8 * u)); }
+  return lerp(T_STD + 0.05, T_LEAVE, ease(seg(t, 12.2, 13.4)));
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'approach'], [4.4, 'surface'], [11.3, 'lensWide'], [14, 'fridgeSide'], [18.8, 'record'], [20.4, 'fridge'], [23.0, 'bench'], [25.7, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'surface' ? 1.4 : name === 'fridge' ? 1.1 : 1.3)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * (name === 'surface' ? 0.08 : 0.035);
+  pos.sub(tgt).applyAxisAngle(Y_AXIS, ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  S.Troom = demoRoom(t);
+  if (t >= DEMO_IN && !S.demoIn) { S.demoIn = true; tap(); }
+  if (t >= DEMO_OUT && !S.demoOut) { S.demoOut = true; leaveOut(true); }
+  S.exploded = t >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'fast'; stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 52 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  glowUniforms.uScale.value = (h * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift();
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld();
+  const where = applyScene(time);
+  labelMode = S.explode > 0.5 ? 'x' : where.inFridge ? 'inside' : where.inLens ? 'surface' : 'normal';
+  updateUI(); layoutLabels(); drawGraph(); drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  const n = countNow();
+  return {
+    ready: window.__lab.ready,
+    temperature: +S.T.toFixed(2),
+    roomTemperature: +S.Troom.toFixed(2),
+    fridgeTemperature: T_FRIDGE,
+    location: S.move ? `moving-${S.move.dir}` : S.loc,
+    doublingTimeMin: isFinite(doublingH(S.T)) ? +(doublingH(S.T) * 60).toFixed(2) : null,
+    growthRatePerHour: +growthRate(S.T).toFixed(4),
+    overBaseTemperature: S.T > T_STD,
+    count: Math.round(n),
+    countShown: S.D >= D_CAP - 1e-9 ? '数えきれない' : fmtCount(n),
+    log2Growth: +S.D.toFixed(4),
+    countMaxed: S.D >= D_CAP - 1e-9,
+    visibleParticles: S.nBorn,
+    success: S.success,
+    failure: S.failure,
+    leaveOut: S.leave,
+    phase: S.phase,
+    phaseLabel: PHASES[S.phase].label,
+    elapsedHours: +S.elapsedH.toFixed(3),
+    clock: fmtTime(S.clockH),
+    records: S.records.map(r => `${fmtTime(r.h)} ${r.T}℃`),
+    speedFactor: speedFactor(),
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setTemperature(c) { DEMO_ACTIVE = false; markInteraction(); setRoomUser(c); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); return getState(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  leaveOut(on) { DEMO_ACTIVE = false; markInteraction(); leaveOut(!!on); return getState(); },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  growthRate: T => growthRate(T),
+  doublingTimeMin: T => doublingH(T) * 60,
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  await fontsReady;
+  drawGraphStatic(); drawThermo(); redrawPlate(); lastDisp = ''; lastSheet = '';
+  { const lab = disinfect.userData.lab; const x = lab.image.getContext('2d'); x.fillStyle = '#dfe5ec'; x.fillRect(0, 0, 256, 128); x.fillStyle = '#3a4048'; x.font = '700 44px "Noto Sans JP"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('消毒用', 128, 64); lab.needsUpdate = true; }
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
