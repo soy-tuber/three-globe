@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>なぜ鰻は生で食べないのか</title>
+<meta name="description" content="鰻の血液に含まれる毒のたんぱく質が、加熱で形を変えて働きを失う仕組みを、光るたんぱく質の模式図と温度の操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #07070a;
+    --ink: #f2f1ee;
+    --sub: #c4c2bd;
+    --muted: #8d8b86;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --tox: #ff4d5e;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.4vw, 64px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(22, 20, 22, 0.66), rgba(10, 9, 11, 0.56)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 34px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; }
+  #tmeter .fill { background: linear-gradient(90deg, rgba(255, 176, 74, 0.25), var(--amber)); box-shadow: 0 0 16px rgba(255, 176, 74, 0.5); }
+  #fmeter .fill { background: linear-gradient(90deg, rgba(255, 77, 94, 0.3), var(--tox)); box-shadow: 0 0 16px rgba(255, 77, 94, 0.5); }
+  #fmeter.safe .fill { background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), #fff); box-shadow: 0 0 16px rgba(255, 255, 255, 0.4); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th.ref { border-left: 1.5px solid rgba(255, 176, 74, 0.9); top: -4px; bottom: -4px; }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .th-label.l { right: 5px; }
+  .meter .th-label.r { left: 5px; color: #ffcf94; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.tox { color: #ffd0d6; border-color: rgba(255, 77, 94, 0.8); }
+  #fval.safe { color: #fff; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.warn.on { background: rgba(255, 84, 72, 0.18); color: #ffd6d2; border-color: var(--err); }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 620px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(560px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 5, 7, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 7, 9, 0.88); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); white-space: normal; width: min(560px, 60vw); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.52em; font-weight: 500; color: var(--sub); margin-top: 4px; letter-spacing: 0.03em; line-height: 1.6; }
+  #bubble.err small { color: #ffe3df; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 7, 9, 0.74); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.tox { border-color: rgba(255, 77, 94, 0.85); color: #ffe0e4; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.82); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 21px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 14px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 6px; right: 12px; font-size: 12px; padding: 4px 10px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #bubble.err { width: calc(100vw - 24px); }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="まな板の上の鰻と、拡大した血液の中のたんぱく質の3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>なぜ鰻は生で食べないのか</h1>
+  <p class="lead">鰻の血液には、毒のたんぱく質が含まれています。でも加熱すると、たんぱく質の形がほどけて毒として働かなくなります。温度を上げて、その瞬間を見てください。</p>
+</header>
+<div id="imageTag">たんぱく質の形は模式図です（実際の立体構造とは異なります）</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">加熱</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn warn" data-act="splash">生の血が飛ぶと</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">加熱の温度</span><span class="big-num" id="tval">20.0<span class="unit">℃</span></span></div>
+  <div class="meter" id="tmeter">
+    <div class="fill"></div>
+    <div class="th" id="thUnfold"><span class="th-label l">形がほどけ始める温度</span></div>
+    <div class="th ref" id="th60"><span class="th-label r">60℃</span></div>
+    <div class="ticks" id="tticks"></div>
+  </div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">毒として働くたんぱく質の割合（模型の値）</span></div>
+  <div class="row" style="margin-top: 6px"><span class="tag tox" id="stateTag">毒として働く</span><span class="big-num" id="fval">100<span class="unit">%</span></span></div>
+  <div class="meter" id="fmeter" style="margin-top: 14px"><div class="fill"></div><div class="ticks"><span style="left:0%">0</span><span style="left:50%">50</span><span style="left:100%">100%</span></div></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">温度と、たんぱく質がほどける速さ（模型の値）</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">ある温度を越えると、たんぱく質がほどける速さは急に上がります</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">加熱で起きること</span><span class="k" id="speedTag">早回し表示（約52倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>折りたたみ</b><small>決まった形に折りたたまれている</small></li>
+    <li><span class="n">②</span><b>揺れる</b><small>熱で分子が激しく動く</small></li>
+    <li><span class="n">③</span><b>ほどける</b><small>形を保つ結びつきが切れる</small></li>
+    <li><span class="n">④</span><b>広がる</b><small>ひものように伸びる</small></li>
+    <li><span class="n">⑤</span><b>働きを失う</b><small>毒として働かなくなる</small></li>
+    <li><span class="n">⑥</span><b>安全</b><small>加熱した鰻は安心して食べられる</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">温度を上げてください</span><span id="counter">経過 0分00秒</span></div>
+  <p id="realnote">60℃、5分の加熱で、完全に毒性を失います</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">温度の変化と、割合の減り方（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--amber)"></i>温度</span><span><i style="background: var(--tox)"></i>毒として働く割合</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">加熱</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+    <button class="btn warn" data-act="splash">生の血が飛ぶと</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="blood">血液の中</button>
+    <button class="btn sm" data-cam="protein">たんぱく質</button>
+    <button class="btn sm" data-cam="bench">作業台</button>
+  </div>
+  <label class="slider"><span>低い</span><input type="range" id="range" min="20" max="80" step="0.1" value="20" aria-label="加熱の温度" /><span>高い</span></label>
+</section>
+
+<div id="notes">60℃、5分は厚生労働省の資料の値です。それ以外の温度と速さは、原理を示すための模型の値です。たんぱく質の形は模式図で、実際の立体構造とは異なります。変化は目で見える速さに変えた模式表示です。</div>
+<div id="hint">温度計を上下にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>ウナギ目魚類（ウナギ、アナゴ、ハモ、ウツボ）は、血液（血清）に毒があります。ウナギの血清の毒は、100 kDaのたんぱく質です。<span class="src"><a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/shokuhin/syokuchu/poison/animal_06.html" target="_blank" rel="noopener">厚生労働省「自然毒のリスクプロファイル：魚類：血清毒」</a></span></li>
+    <li>ウナギ毒およびマアナゴ毒は、いずれも60℃、5分の加熱で完全に毒性を失います。通常の加熱調理をすれば、食品衛生上の問題はありません。加熱で毒性を失うのは、毒のたんぱく質が熱で変性するためと説明されています。東京都島しょ農林水産総合センターは「ウナギは血液に毒があるため刺身では食べない。しかし、この毒は加熱分解するので、蒲焼きなどに調理すれば問題ない」としています。一般に、たんぱく質は折りたたまれた立体的な形で特有の働きをし、熱などで形が壊れると働きを失います（変性）。多くのたんぱく質は、特定の形に折りたたまれて初めて働きます。<span class="src"><a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/shokuhin/syokuchu/poison/animal_det_06.html" target="_blank" rel="noopener">厚生労働省「自然毒のリスクプロファイル：魚類：血清毒」詳細版</a>　<a href="https://osakana.suisankai.or.jp/health_safe/7957" target="_blank" rel="noopener">大日本水産会 魚食普及推進センター「ウナギとアナゴに毒があっても食べられるのはナゼ？」</a>　<a href="https://www.ifarc.metro.tokyo.lg.jp/archive/27,930,55,225.html" target="_blank" rel="noopener">東京都島しょ農林水産総合センター「ウナギ」</a>　<a href="https://nutrition.nuas.ac.jp/tips/000082.html" target="_blank" rel="noopener">名古屋学芸大学 管理栄養学部「タンパク質の変性と消化」</a>　<a href="https://folding.c.u-tokyo.ac.jp/research_folding.html" target="_blank" rel="noopener">東京大学 新井研究室「研究内容」</a></span></li>
+    <li>血液が目や口、傷口に入ると局所的な炎症が引き起こされます。目に入ると激しい灼熱感を覚えるとともに、結膜炎、流涙、まぶたの腫れが引き起こされます。目に異物が入った感じは数日残ります。口に入ると灼熱感や粘膜の発赤、流涎が、傷口に入ると炎症、化膿、浮腫などが引き起こされます。<span class="src"><a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/shokuhin/syokuchu/poison/animal_det_06.html" target="_blank" rel="noopener">厚生労働省「自然毒のリスクプロファイル：魚類：血清毒」詳細版</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// =====================================================================================
+// Kinetics (model values except the 60 °C / 5 min heating condition from MHLW)
+// =====================================================================================
+const R_GAS = 8.314, EA = 300000;                 // J/mol (model)
+const LN_A = Math.log(0.02) + EA / (R_GAS * 333.15); // k(60 °C) = 0.02 /s → 0.25 % left after 5 min
+const rateK = T => Math.exp(Math.min(50, LN_A - EA / (R_GAS * (T + 273.15))));   // /s, guarded against overflow
+const K_ON = 1e-3;                                // "starts to unfold" when k passes this (half-life ≈ 12 min)
+const T_UNFOLD = (() => { let lo = 20, hi = 80; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (rateK(m) > K_ON) hi = m; else lo = m; } return (lo + hi) / 2; })();
+const T_MIN = 20, T_MAX = 80;
+const FAST = 52;                                  // time-lapse while the proteins unfold
+const F_DONE = Math.exp(-6);                      // "0 %" on screen: what is left after exactly 5 min at 60 °C in this model
+const NPROT = 10, NB = 40;                        // proteins, beads per chain
+const PHASES = [{ label: '折りたたみ' }, { label: '揺れる' }, { label: 'ほどける' }, { label: '広がる' }, { label: '働きを失う' }, { label: '安全' }];
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+const hash = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#0d0e12', 0.0016);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.2; controls.maxPolarAngle = 1.7;
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.88);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 }, uDark: { value: 0 }, uFlash: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; uniform float uDark; uniform float uFlash; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c.rgb *= mix(0.72 - 0.3 * uDark, 1.0, 1.0 - smoothstep(0.25, 1.15, length(q)));
+      c.rgb = mix(c.rgb, vec3(1.0), uFlash * (1.0 - 0.5 * smoothstep(0.1, 0.9, length(q))));
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#9aa0a8');
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.25, 2.35), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.y = 3; env.add(top);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({ color: '#2a2c30', side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -2; env.add(floor);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.55;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 23;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.28, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#c9ccd0'; x.fillRect(0, 0, w, h);
+  const n = 10, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 232 + rnd() * 12; x.fillStyle = `rgb(${v},${v + 1},${v + 3})`; x.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
+}, { repeat: [8, 4] });
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b9bdc2'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2400; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.026; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [5, 2] });
+const boardTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#f2f0ec'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 140; i++) { x.strokeStyle = `rgba(160,150,140,${0.04 + rnd() * 0.06})`; x.lineWidth = 0.5 + rnd(); const x0 = rnd() * w, y0 = rnd() * h; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + (rnd() - 0.5) * 60, y0 + (rnd() - 0.5) * 8); x.stroke(); }
+});
+const fleshTex = canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = '#e3c3b6'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 26; i++) { x.strokeStyle = `rgba(190,130,120,${0.18 + rnd() * 0.12})`; x.lineWidth = 2; const x0 = (i / 26) * w; x.beginPath(); x.moveTo(x0, 0); x.quadraticCurveTo(x0 + 18, h / 2, x0, h); x.stroke(); }
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(60,62,70,0.9)'); g.addColorStop(0.1, 'rgba(60,62,70,0)'); g.addColorStop(0.9, 'rgba(60,62,70,0)'); g.addColorStop(1, 'rgba(60,62,70,0.9)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const thermoCanvas = document.createElement('canvas'); thermoCanvas.width = 256; thermoCanvas.height = 96;
+const thermoTex = new THREE.CanvasTexture(thermoCanvas); thermoTex.colorSpace = THREE.SRGBColorSpace;
+
+// =====================================================================================
+// Prep room: white tiles, stainless bench, cutting board, eel, pick, hand-wash sink
+// =====================================================================================
+const parts = {};
+const room = new THREE.Group();
+scene.add(room);
+{
+  const bg = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), new THREE.MeshBasicMaterial({ color: '#15171c', side: THREE.BackSide, fog: false }));
+  room.add(bg);
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(600, 300), new THREE.MeshStandardMaterial({ map: tileTex, color: '#dfe2e6', roughness: 0.35, envMapIntensity: 0.5 }));
+  wall.position.set(0, 100, -48); room.add(wall);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshStandardMaterial({ color: '#5a5e66', roughness: 0.6, metalness: 0.1 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -86; room.add(floor);
+}
+const benchMat = new THREE.MeshStandardMaterial({ color: '#d4d8dc', map: brushedTex, metalness: 0.85, roughness: 0.32, envMapIntensity: 1.1 });
+const bench = new THREE.Mesh(new RoundedBoxGeometry(200, 4, 80, 3, 1.2), benchMat);
+bench.position.set(0, -2, -4); room.add(bench);
+{
+  const legMat = new THREE.MeshStandardMaterial({ color: '#b8bcc1', metalness: 0.85, roughness: 0.35 });
+  for (const [x, z] of [[-95, -40], [95, -40], [-95, 32], [95, 32]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(4, 82, 4), legMat); l.position.set(x, -45, z); room.add(l); }
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(190, 2, 70), benchMat); shelf.position.set(0, -62, -4); room.add(shelf);
+}
+const board = new THREE.Group();
+room.add(board);
+{
+  const b = new THREE.Mesh(new RoundedBoxGeometry(64, 3, 34, 3, 0.8), new THREE.MeshStandardMaterial({ map: boardTex, color: '#d8d5cf', roughness: 0.72, envMapIntensity: 0.6 }));
+  b.position.set(-18, 1.5, 0); board.add(b);
+}
+parts.board = { obj: board, from: board.position.clone(), off: new THREE.Vector3(0, 10, 30) };
+// raw eel piece on the board, and a small drop of blood beside it
+const eelPiece = new THREE.Mesh(new RoundedBoxGeometry(30, 1.4, 8, 3, 0.6), new THREE.MeshPhysicalMaterial({ map: fleshTex, color: '#ffffff', roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.25 }));
+eelPiece.position.set(-20, 3.7, 0); board.add(eelPiece);
+const dropMat = new THREE.MeshPhysicalMaterial({ color: '#9b0f1c', roughness: 0.05, transmission: 0.2, thickness: 0.6, clearcoat: 1, transparent: true, opacity: 0.9, emissive: '#3a0006', emissiveIntensity: 0.3 });
+const smallDrop = new THREE.Mesh(new THREE.SphereGeometry(0.9, 20, 14), dropMat);
+smallDrop.scale.set(1, 0.45, 1); smallDrop.position.set(-3, 3.4, 5); board.add(smallDrop);
+// eel pick (目打ち)
+const pick = new THREE.Group();
+{
+  const spike = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.02, 9, 10), new THREE.MeshStandardMaterial({ color: '#5a5d63', metalness: 0.9, roughness: 0.35 }));
+  spike.position.y = -4.5; pick.add(spike);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.9, 7, 16), new THREE.MeshStandardMaterial({ color: '#b28a5a', roughness: 0.6 }));
+  handle.position.y = 3.5; pick.add(handle);
+  pick.position.set(-36, 12, 2); pick.rotation.z = 0.12;
+  room.add(pick);
+}
+parts.pick = { obj: pick, from: pick.position.clone(), off: new THREE.Vector3(10, 30, 26) };
+// hand-wash sink at the left end
+const sink = new THREE.Group();
+{
+  const sinkMat = new THREE.MeshStandardMaterial({ color: '#d9dde1', map: brushedTex, metalness: 0.8, roughness: 0.3, envMapIntensity: 1.2 });
+  for (const [w, h, d, x, y, z] of [[34, 12, 1.4, 0, -5, 14.3], [34, 12, 1.4, 0, -5, -14.3], [1.4, 12, 27.2, 16.3, -5, 0], [1.4, 12, 27.2, -16.3, -5, 0], [31.2, 1.2, 27.2, 0, -10.4, 0]]) {
+    const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, 0.5), sinkMat); m.position.set(x, y, z); sink.add(m);
+  }
+  const drain = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.3, 24), new THREE.MeshStandardMaterial({ color: '#6c7076', metalness: 0.9, roughness: 0.3 }));
+  drain.position.set(0, -9.6, 0); sink.add(drain);
+  const tap = new THREE.Mesh(new THREE.TorusGeometry(5, 0.7, 10, 24, Math.PI), new THREE.MeshStandardMaterial({ color: '#e0e3e6', metalness: 0.9, roughness: 0.2 }));
+  tap.rotation.y = Math.PI / 2; tap.position.set(0, 9, -9); sink.add(tap);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 9, 12), tap.material); post.position.set(0, 4.5, -14); sink.add(post);
+  sink.position.set(-78, 0.5, -8);
+  room.add(sink);
+}
+parts.sink = { obj: sink, from: sink.position.clone(), off: new THREE.Vector3(18, 26, 22) };
+scene.add(new THREE.HemisphereLight('#f4f6fb', '#6b6f78', 1.15));
+const keyLight = new THREE.DirectionalLight('#ffffff', 1.3);
+keyLight.position.set(-60, 180, 140); scene.add(keyLight);
+const heatLight = new THREE.PointLight('#ffa040', 0, 120, 2);
+scene.add(heatLight);
+const flashLight = new THREE.PointLight('#ffffff', 0, 120, 2);
+scene.add(flashLight);
+
+// =====================================================================================
+// The magnified drop of blood: a translucent red bubble with the protein models inside
+// =====================================================================================
+const DROP_C = new THREE.Vector3(40, 34, -2), DROP_R = 19;
+const dropWorld = new THREE.Group();
+dropWorld.position.copy(DROP_C);
+scene.add(dropWorld);
+const dropShellUniforms = { uHeat: { value: 0 }, uTime: { value: 0 }, uInside: { value: 0 } };
+const dropOuter = new THREE.Mesh(new THREE.SphereGeometry(DROP_R, 64, 48), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.FrontSide, uniforms: dropShellUniforms,
+  vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uHeat; uniform float uInside; varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.2);
+      vec3 body = vec3(0.34, 0.02, 0.05);
+      vec3 rim = mix(vec3(1.0, 0.35, 0.4), vec3(1.0, 0.72, 0.4), uHeat);
+      float a = (0.16 + 0.55 * f) * (1.0 - uInside);
+      vec3 spec = vec3(1.0) * pow(clamp(dot(reflect(-V, N), normalize(vec3(-0.4, 0.8, 0.45))), 0.0, 1.0), 140.0) * 0.45;
+      gl_FragColor = vec4(body * (1.0 - f) + rim * f * 1.3 + spec, a);
+    }`,
+}));
+dropOuter.renderOrder = 8;
+dropWorld.add(dropOuter);
+const dropInner = new THREE.Mesh(new THREE.SphereGeometry(DROP_R * 0.995, 48, 32), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, transparent: true, uniforms: dropShellUniforms,
+  vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uHeat; uniform float uTime; uniform float uInside; varying vec3 vP;
+    void main(){
+      float g = 0.5 + 0.5 * vP.y;
+      vec3 c = mix(vec3(0.05, 0.004, 0.012), vec3(0.16, 0.02, 0.03), g);
+      c += vec3(0.22, 0.09, 0.02) * uHeat * (0.6 + 0.4 * g);
+      gl_FragColor = vec4(c, 0.28 * uInside);
+    }`,
+}));
+dropInner.renderOrder = 1;
+dropWorld.add(dropInner);
+// magnifier ring and the leader to the small drop on the board
+const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false });
+const magRing = new THREE.Mesh(new THREE.TorusGeometry(DROP_R + 1.2, 0.12, 8, 128), ringMat);
+dropWorld.add(magRing);
+const leaderGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-21, 3.6, 5), DROP_C.clone().add(new THREE.Vector3(-DROP_R * 0.72, -DROP_R * 0.62, 0))]);
+const magLeader = new THREE.Line(leaderGeo, new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 1.2, gapSize: 1.0, transparent: true, opacity: 0.4 }));
+magLeader.computeLineDistances();
+room.add(magLeader);
+const heatHaze = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.0, 0.55, 0.15), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+heatHaze.scale.set(70, 70, 1); dropWorld.add(heatHaze);
+const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+dropWorld.add(flashSprite);
+
+const SPECK_N = 260;
+const speckGeo = new THREE.BufferGeometry();
+{
+  const p = new Float32Array(SPECK_N * 3);
+  for (let i = 0; i < SPECK_N; i++) { const v = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize().multiplyScalar(Math.cbrt(rnd()) * DROP_R * 0.95); p.set([v.x, v.y, v.z], i * 3); }
+  speckGeo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+}
+const specks = new THREE.Points(speckGeo, new THREE.PointsMaterial({ color: new THREE.Color(0.55, 0.12, 0.14), size: 0.2, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, map: glowTex }));
+dropWorld.add(specks);
+// Protein models: bead-and-spring chains. Folded = compact globule with contacts (結びつき); unfolded = extended string.
+// [centre in the drop, rank]: a protein unfolds when the toxic share F falls below its rank, so the folded share follows F
+const PROT_LAYOUT = [
+  [[-1.0, 1.0, 0.5], 0.95], [[-6.4, 3.0, -2.0], 0.75], [[6.0, 3.4, -3.5], 0.85], [[-3.8, -3.6, 1.0], 0.55], [[1.2, -4.6, -3.0], 0.65],
+  [[0.4, 5.4, -6.0], 0.45], [[-8.6, -1.2, -6.5], 0.35], [[9.0, -2.2, -7.0], 0.25], [[-2.6, -1.8, -9.0], 0.15], [[4.4, -1.4, 3.2], 0.05],
+];
+const CLOSE = 9;   // the protein the close-up camera follows (the last one to unfold)
+const PROTEINS = [];
+{
+  const inBall = (p, r) => p.length() < r;
+  for (let n = 0; n < NPROT; n++) {
+    let s = n * 977 + 13; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const c = new THREE.Vector3(...PROT_LAYOUT[n][0]);
+    // folded: compact walk confined to a small ball
+    const fold = [new THREE.Vector3()];
+    let dir = new THREE.Vector3(1, 0, 0);
+    for (let i = 1; i < NB; i++) {
+      for (let tries = 0; tries < 40; tries++) {
+        const nd = dir.clone().add(new THREE.Vector3((r() - 0.5) * 1.8, (r() - 0.5) * 1.8, (r() - 0.5) * 1.8)).normalize();
+        const np = fold[i - 1].clone().addScaledVector(nd, 0.55);
+        if (inBall(np, 1.7) && fold.every((q, k) => k >= i - 1 || q.distanceTo(np) > 0.42)) { fold.push(np); dir = nd; break; }
+        if (tries === 39) { fold.push(fold[i - 1].clone().addScaledVector(nd.negate(), 0.55)); dir = nd; }
+      }
+    }
+    // unfolded: an extended, gently wandering string
+    const open = [new THREE.Vector3()];
+    let od = new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
+    for (let i = 1; i < NB; i++) { od = od.clone().add(new THREE.Vector3((r() - 0.5) * 0.7, (r() - 0.5) * 0.7, (r() - 0.5) * 0.7)).normalize(); open.push(open[i - 1].clone().addScaledVector(od, 0.5)); }
+    const mid = open[NB >> 1].clone(); open.forEach(p => p.sub(mid));
+    // contacts in the folded state
+    const contacts = [];
+    for (let i = 0; i < NB; i++) for (let j = i + 4; j < NB; j++) if (fold[i].distanceTo(fold[j]) < 0.75) contacts.push([i, j]);
+    const SC = 1.25; fold.forEach(p => p.multiplyScalar(SC)); open.forEach(p => p.multiplyScalar(SC * 0.8));
+    PROTEINS.push({ c, fold, open, contacts, rank: PROT_LAYOUT[n][1], phase: r() * 6.28, spin: new THREE.Euler(r() * 6.28, r() * 6.28, r() * 6.28) });
+  }
+}
+const beadGeo = new THREE.SphereGeometry(0.21, 14, 10);
+const beadMat = new THREE.MeshStandardMaterial({ color: '#2c2c30', roughness: 0.45, metalness: 0.0, emissive: '#ffffff', emissiveIntensity: 1 });
+const beads = new THREE.InstancedMesh(beadGeo, beadMat, NPROT * NB);
+beads.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NPROT * NB * 3), 3);
+beads.frustumCulled = false;
+dropWorld.add(beads);
+beadMat.onBeforeCompile = sh => {
+  sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance *= vColor.rgb;');
+};
+const backbonePos = new Float32Array(NPROT * (NB - 1) * 6), backboneCol = new Float32Array(NPROT * (NB - 1) * 6);
+const backboneGeo = new THREE.BufferGeometry();
+backboneGeo.setAttribute('position', new THREE.BufferAttribute(backbonePos, 3));
+backboneGeo.setAttribute('color', new THREE.BufferAttribute(backboneCol, 3));
+const backbone = new THREE.LineSegments(backboneGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+backbone.frustumCulled = false;
+dropWorld.add(backbone);
+const NCONT = PROTEINS.reduce((a, p) => a + p.contacts.length, 0);
+const contactPos = new Float32Array(NCONT * 6), contactCol = new Float32Array(NCONT * 6);
+const contactGeo = new THREE.BufferGeometry();
+contactGeo.setAttribute('position', new THREE.BufferAttribute(contactPos, 3));
+contactGeo.setAttribute('color', new THREE.BufferAttribute(contactCol, 3));
+const contactLines = new THREE.LineSegments(contactGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+contactLines.frustumCulled = false;
+dropWorld.add(contactLines);
+const protGlows = PROTEINS.map(() => { const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.0, 0.18, 0.25), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); g.scale.set(7, 7, 1); dropWorld.add(g); return g; });
+
+// Exploded view: one protein, much larger, shown as fold / contacts / string
+const protX = new THREE.Group();
+scene.add(protX);
+protX.visible = false;
+const PX = PROTEINS[0];
+const protXParts = [];
+{
+  const mk = (pts, color, emissive) => {
+    const g = new THREE.Group();
+    const m = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 14, 10), new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 0.9, roughness: 0.35 }), pts.length);
+    const M = new THREE.Matrix4();
+    pts.forEach((p, i) => { M.makeTranslation(p.x, p.y, p.z); m.setMatrixAt(i, M); });
+    g.add(m);
+    const lg = new THREE.BufferGeometry().setFromPoints(pts);
+    g.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color })));
+    return g;
+  };
+  const folded = mk(PX.fold, '#ff5a6a', '#b0102a');
+  const rods = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.13, 0.13, 1, 8), new THREE.MeshStandardMaterial({ color: '#ffd0d6', emissive: '#ff6a7c', emissiveIntensity: 0.7, roughness: 0.4 }), PX.contacts.length);
+  PX.contacts.forEach(([i, j], k) => {
+    const a = PX.fold[i], b = PX.fold[j], d = b.clone().sub(a), len = Math.max(0.01, d.length());
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    rods.setMatrixAt(k, new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), q, new THREE.Vector3(1, len, 1)));
+  });
+  const ghostFold = new THREE.Line(new THREE.BufferGeometry().setFromPoints(PX.fold), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.22 }));
+  const cGroup = new THREE.Group(); cGroup.add(rods, ghostFold);
+  const string = mk(PX.open.map(p => p.clone().multiplyScalar(0.5)), '#e8e8ea', '#303036');
+  [folded, cGroup, string].forEach((g, i) => { g.position.set(0, 6.5 - i * 6.5, 0); protX.add(g); protXParts.push(g); });
+  protX.position.set(34, 44, 56);
+}
+
+// Thermometer: glass tube with an amber column and a small display. Drag it up and down.
+const thermo = new THREE.Group();
+room.add(thermo);
+let redrawPlate = null;
+const THERMO_H = 40;
+let thermoColumn;
+{
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, THERMO_H, 24, 1, true), new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.05, transmission: 0.9, thickness: 0.5, transparent: true, opacity: 0.35, clearcoat: 1 }));
+  glass.position.y = THERMO_H / 2; thermo.add(glass);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(2.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#ffb04a', emissive: '#ff8a1e', emissiveIntensity: 0.8, roughness: 0.3 }));
+  thermo.add(bulb);
+  thermoColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1, 16), bulb.material);
+  thermo.add(thermoColumn);
+  const drawPlate = (x, w, h) => {
+    x.fillStyle = '#f3f4f6'; x.fillRect(0, 0, w, h);
+    const Y = T => h - (h * (2 + 3 + ((T - T_MIN) / (T_MAX - T_MIN)) * (THERMO_H - 6))) / (THERMO_H + 4);
+    x.strokeStyle = '#2b2e34'; x.fillStyle = '#2b2e34'; x.font = '600 34px "JetBrains Mono"'; x.textAlign = 'right'; x.textBaseline = 'middle';
+    for (let T = T_MIN; T <= T_MAX; T += 5) { const major = T % 20 === 0; x.lineWidth = major ? 4 : 2.5; x.beginPath(); x.moveTo(major ? 96 : 112, Y(T)); x.lineTo(150, Y(T)); x.stroke(); if (major) x.fillText(String(T), 88, Y(T)); }
+    x.font = '600 30px "Noto Sans JP"'; x.textAlign = 'center'; x.fillText('℃', 64, Y(T_MAX) - 52);
+  };
+  const plateTex = canvasTex(160, 1024, drawPlate);
+  redrawPlate = () => { drawPlate(plateTex.image.getContext('2d'), 160, 1024); plateTex.needsUpdate = true; };
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(7, THERMO_H + 4, 0.8, 2, 0.35), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 }));
+  plate.position.set(-1.6, (THERMO_H + 4) / 2 - 2, -2.0); thermo.add(plate);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(6.4, THERMO_H + 3.4), new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.55 }));
+  face.position.set(-1.6, (THERMO_H + 4) / 2 - 2, -1.58); thermo.add(face);
+  const disp = new THREE.Mesh(new RoundedBoxGeometry(13, 5.2, 1.6, 2, 0.5), new THREE.MeshStandardMaterial({ color: '#1b1d22', roughness: 0.4 }));
+  disp.position.set(0, THERMO_H + 4, 0); thermo.add(disp);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(12, 4.4), new THREE.MeshBasicMaterial({ map: thermoTex, toneMapped: false }));
+  screen.position.set(0, THERMO_H + 4, 0.82); thermo.add(screen);
+  thermo.position.set(72, 6, 8);
+}
+const thermoPick = new THREE.Mesh(new THREE.BoxGeometry(12, THERMO_H + 16, 10), new THREE.MeshBasicMaterial({ visible: false }));
+thermoPick.position.set(0, THERMO_H / 2 + 2, 0);
+thermo.add(thermoPick);
+parts.thermo = { obj: thermo, from: thermo.position.clone(), off: new THREE.Vector3(26, 0, 10) };
+
+// Splash scene: an abstract worker at the front of the bench, the path of a drop toward the eye
+const worker = new THREE.Group();
+room.add(worker);
+const workerSolids = [];
+let eyeRing;
+const EYE = new THREE.Vector3(-16, 63, 45.2);
+// a see-through schematic figure (fresnel outline), not a realistic person
+const ghostUniforms = { uOp: { value: 1 } };
+const ghostMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: ghostUniforms,
+  vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uOp; varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vV);
+      float f = pow(1.0 - clamp(abs(dot(N, V)), 0.0, 1.0), 2.4);
+      vec3 c = mix(vec3(0.62, 0.68, 0.76), vec3(0.95, 0.97, 1.0), f);
+      gl_FragColor = vec4(c, (0.07 + 0.5 * f) * uOp);
+    }`,
+});
+{
+  const limb = (a, b, r) => {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, d.length()), 6, 16), ghostMat);
+    m.position.copy(A).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    worker.add(m);
+  };
+  const head = new THREE.Mesh(new THREE.SphereGeometry(8.2, 32, 24), ghostMat); head.scale.set(0.9, 1.12, 0.98); head.position.set(-16, 64, 53); worker.add(head);
+  limb([-16, 50, 58], [-16, 56, 56], 3.4);                        // neck
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(10, 18, 8, 24), ghostMat); torso.scale.set(1.45, 1, 0.72); torso.position.set(-16, 30, 62); worker.add(torso);
+  limb([-31, 45, 60], [-30, 22, 44], 3.2); limb([-30, 22, 44], [-24, 7, 18], 2.8);   // left arm to the board
+  limb([-1, 45, 60], [0, 22, 44], 3.2); limb([0, 22, 44], [-6, 7, 16], 2.8);          // right arm with the knife
+  // a plain knife in the right hand
+  const knife = new THREE.Group();
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.35, 2.2, 13), new THREE.MeshStandardMaterial({ color: '#d7dbe0', metalness: 0.9, roughness: 0.25, transparent: true }));
+  blade.position.z = -7.5; knife.add(blade);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 8), new THREE.MeshStandardMaterial({ color: '#4a3c30', roughness: 0.6, transparent: true }));
+  workerSolids.push(blade.material, grip.material);
+  grip.position.z = 3; knife.add(grip);
+  knife.position.set(-7, 5.6, 12); knife.rotation.set(-0.12, -0.35, 0);
+  worker.add(knife);
+  eyeRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.22, 10, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true }));
+  eyeRing.position.copy(EYE); worker.add(eyeRing); workerSolids.push(eyeRing.material);
+  worker.visible = false;
+}
+// a parabola with a vertical axis: a uniformly parameterised quadratic Bezier has constant acceleration, so this is projectile motion
+const SPLASH_P0 = new THREE.Vector3(-9, 4.8, 6);
+const splashPath = new THREE.QuadraticBezierCurve3(SPLASH_P0, new THREE.Vector3((SPLASH_P0.x + EYE.x) / 2, 70, (SPLASH_P0.z + EYE.z) / 2), EYE.clone());
+const splashLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(splashPath.getPoints(60)), new THREE.LineDashedMaterial({ color: '#ff5448', dashSize: 1.6, gapSize: 1.0, transparent: true, opacity: 0 }));
+splashLine.computeLineDistances();
+scene.add(splashLine);
+const splashDrops = Array.from({ length: 5 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 10), dropMat); m.visible = false; scene.add(m); return m; });
+const warnRing = new THREE.Mesh(new THREE.RingGeometry(3.4, 3.9, 48), new THREE.MeshBasicMaterial({ color: '#ff5448', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+warnRing.position.copy(EYE); scene.add(warnRing);
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), tval: $('tval'), fval: $('fval'), stateTag: $('stateTag'), tmeter: $('tmeter'), fmeter: $('fmeter'),
+  tfill: document.querySelector('#tmeter .fill'), ffill: document.querySelector('#fmeter .fill'),
+  steps: [...document.querySelectorAll('#steps li')], stepsEl: $('steps'), counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'),
+};
+const tPct = T => ((T - T_MIN) / (T_MAX - T_MIN)) * 100;
+$('thUnfold').style.left = `${tPct(T_UNFOLD)}%`;
+$('th60').style.left = `${tPct(60)}%`;
+$('tticks').innerHTML = [20, 40, 60, 80].map(v => `<span style="left:${tPct(v)}%">${v}${v === 80 ? '℃' : ''}</span>`).join('');
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+function freshState() {
+  return {
+    T: 20, F: 1, k: rateK(20),
+    status: 'idle',            // idle | run | done
+    tProc: 0, phase: 0, speed: 'fast',
+    splash: false, splashT: -1, warned: false, splashEnd: -1,
+    unfold: new Float32Array(NPROT),  // 0 folded → 1 unfolded, per protein (visual, follows F)
+    uStart: new Float32Array(NPROT).fill(-1),
+    flash: 0, exploded: false, explode: 0,
+    camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0,
+  };
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+function startUnfold() { S.status = 'run'; S.tProc = 0; S.flash = 1; logEvent('unfold'); }
+function completeHeating() { S.status = 'done'; showBubble('ok'); sound('ok'); logEvent('done'); }
+function triggerSplash() {
+  S.splash = true; S.splashT = S.t; S.warned = false;
+  if (!DEMO_ACTIVE) setCamera('bench');
+}
+function endSplash() { S.splash = false; S.splashT = -1; S.warned = false; S.splashEnd = S.t; if (!DEMO_ACTIVE) setCamera('overview'); }
+
+/** Advance by dt display-seconds; while proteins unfold, the heating time runs time-lapsed. */
+function stepState(dt) {
+  S.t += dt;
+  S.k = rateK(S.T);
+  const fast = S.status === 'run' && S.speed === 'fast' ? FAST : 1;
+  const dtm = dt * fast;
+  if (dtm > 0) S.F *= Math.exp(-S.k * dtm);   // exact first-order step for this interval
+  if (S.status === 'idle' && S.T >= T_UNFOLD) startUnfold();
+  if (S.status === 'run') { S.tProc += dtm; if (S.F <= F_DONE) completeHeating(); }
+  // phases of the timeline
+  S.phase = S.status === 'done' ? 5 : S.status === 'run' ? (S.F > 0.7 ? 2 : S.F > 0.3 ? 3 : 4) : S.T >= 34 ? 1 : 0;
+  // proteins unfold one by one so that the folded share matches F
+  for (let i = 0; i < NPROT; i++) {
+    const target = S.F < PROTEINS[i].rank ? 1 : 0;
+    S.unfold[i] = clamp(S.unfold[i] + clamp(target - S.unfold[i], -dt * 2.2, dt * 1.6), 0, 1);
+    if (S.unfold[i] > 0 && S.uStart[i] < 0) S.uStart[i] = S.t;
+    if (S.unfold[i] === 0) S.uStart[i] = -1;
+  }
+  // the splash scene: a drop leaves the board and reaches the eye after 0.9 s
+  if (S.splash && !S.warned && S.t - S.splashT >= 0.9) { S.warned = true; showBubble('err'); sound('err'); logEvent('splash'); if (!DEMO_ACTIVE) setCamera('fail'); }
+  if (!DEMO_ACTIVE && S.splash && S.warned && S.t - S.splashT > 4.5) endSplash();   // back to the first scene after a few seconds
+  S.flash = Math.max(0, S.flash - dt * 1.2);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, S.T, S.F]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 30; }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'err' ? 3.6 : 4.2); }
+
+// =====================================================================================
+// Sound (Web Audio; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.14) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') { tone(2093, t0, 1.0, 0.16); tone(5230, t0, 0.35, 0.04); }
+  else for (let i = 0; i < 5; i++) tone(3000, t0 + i * 0.12, 0.07, 0.12);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-78, 86, 150], tgt: [14, 22, -4] },
+  blood: { pos: [40, 35.5, 14.5], tgt: [40.5, 34, -4] },
+  protein: { pos: [46, 38, 4], tgt: [38, 32, -8] },
+  bench: { pos: [92, 58, 132], tgt: [-14, 32, 22] },
+  fail: { pos: [128, 88, 196], tgt: [-18, 30, 20] },
+  approach: { pos: [10, 50, 70], tgt: [38, 32, -4] },
+  exploded: { pos: [-14, 92, 196], tgt: [6, 26, 12] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+const CAMS_PORTRAIT = {
+  overview: { pos: [-2, 118, 258], tgt: [25, 26, 0] },
+  bench: { pos: [84, 84, 214], tgt: [-12, 36, 24] },
+  fail: { pos: [104, 104, 262], tgt: [-14, 34, 20] },
+  exploded: { pos: [-4, 126, 272], tgt: [4, 30, 16] },
+  approach: { pos: [18, 58, 96], tgt: [38, 32, -4] },
+};
+function presetVectors(name) {
+  const p = (innerWidth / innerHeight < 0.8 && CAMS_PORTRAIT[name]) || CAMS[name];
+  if (name === 'protein') {
+    // close on the last protein to unfold
+    const c = DROP_C.clone().add(PROTEINS[CLOSE].c);
+    return { pos: c.clone().add(new THREE.Vector3(1.5, 1.8, 9)), tgt: c };
+  }
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+const INSIDE_BG = new THREE.Color('#12030a');
+const tmpV = new THREE.Vector3(), tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpC = new THREE.Color();
+const tmpC2 = new THREE.Color(), tmpC3 = new THREE.Color();
+const RED = new THREE.Color(1.0, 0.09, 0.15), GREY = new THREE.Color(0.62, 0.62, 0.66), WHITE = new THREE.Color(1, 1, 1);
+function drawThermo() {
+  const x = thermoCanvas.getContext('2d'), w = 256, h = 96;
+  x.fillStyle = '#07090c'; x.fillRect(0, 0, w, h);
+  x.fillStyle = S.T >= T_UNFOLD ? '#ffd9a0' : '#e8edf5'; x.font = '500 64px "JetBrains Mono"'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(`${S.T.toFixed(1)}℃`, w / 2, h / 2 + 4);
+  thermoTex.needsUpdate = true;
+}
+let lastThermo = '';
+function applyScene(time) {
+  const e = ease(S.explode);
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  // heat
+  const heat = smooth01((S.T - 20) / 50);
+  dropShellUniforms.uHeat.value = heat;
+  dropShellUniforms.uTime.value = time;
+  const inside = camera.position.distanceTo(DROP_C) < DROP_R * 0.98 ? 1 : 0;
+  room.visible = !inside;
+  scene.background = inside ? INSIDE_BG : null;
+  scene.fog.color.set(inside ? '#1a0306' : '#0d0e12');
+  dropShellUniforms.uInside.value = inside;
+  gradePass.uniforms.uDark.value = inside;
+  heatHaze.material.opacity = heat * 0.35 * (1 - e) * (1 - inside);
+  heatLight.position.copy(DROP_C).add(tmpV.set(0, -6, DROP_R + 8)); heatLight.intensity = inside ? 0 : 520 * heat;   // amber light from the drop onto the bench
+  flashSprite.material.opacity = Math.min(0.6, S.flash * 0.8) * (1 - 0.8 * inside);
+  flashSprite.scale.setScalar(8 + 30 * S.flash);
+  flashLight.position.copy(DROP_C); flashLight.intensity = 900 * S.flash * S.flash;
+  gradePass.uniforms.uFlash.value = 0.32 * Math.pow(S.flash, 3);
+  specks.rotation.y = time * (0.015 + 0.05 * heat); specks.rotation.x = Math.sin(time * 0.3) * 0.05 * heat;
+  specks.material.color.setRGB(lerp(0.55, 0.9, heat), lerp(0.12, 0.45, heat), lerp(0.14, 0.12, heat));
+  magRing.material.opacity = 0.35 * (1 - inside) * (1 - e);
+  magRing.lookAt(camera.position);
+  magRing.quaternion.copy(camera.quaternion);
+  magLeader.visible = e < 0.3;
+  dropWorld.visible = e < 0.98;
+  // proteins
+  const amp = 0.02 + 0.16 * heat * heat;           // thermal jiggle grows with temperature
+  let bi = 0, li = 0, ci = 0;
+  for (let n = 0; n < NPROT; n++) {
+    const P = PROTEINS[n], u = ease(S.unfold[n]);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3.1 + P.phase);
+    const active = 1 - u;
+    const fl = S.uStart[n] >= 0 ? Math.exp(-(S.t - S.uStart[n]) / 0.28) : 0;   // white flash as it starts to unfold
+    const glowCol = tmpC2.copy(GREY).multiplyScalar(0.3).lerp(tmpC3.copy(RED).multiplyScalar(0.42 + 0.5 * pulse), active).lerp(tmpC3.setScalar(1.05), fl);
+    P._euler = P._euler || new THREE.Euler();
+    P._euler.set(P.spin.x + Math.sin(time * 1.7 + n) * 0.25 * heat, P.spin.y + time * 0.08 + Math.sin(time * 2.3 + n * 2) * 0.25 * heat, P.spin.z);
+    for (let i = 0; i < NB; i++) {
+      const f = P.fold[i], o = P.open[i];
+      // unzip from one end: beads further along the chain follow later
+      const ui2 = smooth01(u * 1.6 - (i / NB) * 0.6);
+      const jx = Math.sin(time * 11.3 + i * 1.7 + n) * amp, jy = Math.sin(time * 9.7 + i * 2.3 + n * 2) * amp, jz = Math.sin(time * 12.1 + i * 0.9 + n * 3) * amp;
+      tmpV.set(lerp(f.x, o.x, ui2) + jx, lerp(f.y, o.y, ui2) + jy, lerp(f.z, o.z, ui2) + jz).applyEuler(P._euler).add(P.c);
+      tmpS.setScalar(1);
+      tmpM.compose(tmpV, tmpQ.identity(), tmpS);
+      beads.setMatrixAt(bi, tmpM);
+      beads.setColorAt(bi, glowCol);
+      P._pos = P._pos || Array.from({ length: NB }, () => new THREE.Vector3());
+      P._pos[i].copy(tmpV);
+      bi++;
+    }
+    for (let i = 0; i < NB - 1; i++) {
+      const a = P._pos[i], b = P._pos[i + 1];
+      backbonePos.set([a.x, a.y, a.z, b.x, b.y, b.z], li * 6);
+      const lc = tmpC.copy(GREY).multiplyScalar(0.5).lerp(RED, active * (0.55 + 0.3 * pulse)).lerp(WHITE, fl);
+      backboneCol.set([lc.r, lc.g, lc.b, lc.r, lc.g, lc.b], li * 6);
+      li++;
+    }
+    for (const [i, j] of P.contacts) {
+      const a = P._pos[i], b = P._pos[j];
+      contactPos.set([a.x, a.y, a.z, b.x, b.y, b.z], ci * 6);
+      const vis = clamp(1 - u * 2.2, 0, 1) * (0.35 + 0.25 * pulse);
+      contactCol.set([vis, vis * 0.55, vis * 0.6, vis, vis * 0.55, vis * 0.6], ci * 6);
+      ci++;
+    }
+    protGlows[n].position.copy(P.c);
+    protGlows[n].material.color.copy(RED).lerp(WHITE, fl);
+    protGlows[n].material.opacity = active * (0.14 + 0.2 * pulse) + 0.45 * fl;
+    protGlows[n].scale.setScalar(7 + 3 * fl);
+  }
+  beads.instanceMatrix.needsUpdate = true; beads.instanceColor.needsUpdate = true;
+  backboneGeo.attributes.position.needsUpdate = true; backboneGeo.attributes.color.needsUpdate = true;
+  contactGeo.attributes.position.needsUpdate = true; contactGeo.attributes.color.needsUpdate = true;
+  // exploded protein
+  protX.visible = e > 0.02;
+  protX.scale.setScalar(Math.max(0.001, 3.4 * e));
+  protXParts.forEach((g, i) => { g.rotation.y = time * 0.3; });
+  // thermometer column
+  const colH = 3 + ((S.T - T_MIN) / (T_MAX - T_MIN)) * (THERMO_H - 6);
+  thermoColumn.scale.y = colH; thermoColumn.position.y = colH / 2;
+  const key = S.T.toFixed(1) + (S.T >= T_UNFOLD);
+  if (key !== lastThermo) { lastThermo = key; drawThermo(); }
+  // splash scene
+  const st = S.splash ? S.t - S.splashT : -1;
+  worker.visible = S.splash || (S.splashEnd > 0 && S.t - S.splashEnd < 0.6);
+  ghostUniforms.uOp.value = S.splash ? smooth01(st / 0.4) : clamp(1 - (S.t - S.splashEnd) / 0.6, 0, 1);
+  workerSolids.forEach(m => (m.opacity = ghostUniforms.uOp.value));
+  eyeRing.quaternion.copy(camera.quaternion);
+  splashLine.material.opacity = S.splash ? smooth01(st / 0.5) * 0.95 : 0;
+  splashDrops.forEach((d, i) => {
+    const u = st >= 0 ? clamp((st - i * 0.08) / 0.9, 0, 1) : -1;
+    d.visible = u > 0 && u < 1;
+    if (d.visible) d.position.copy(splashPath.getPoint(u));
+  });
+  warnRing.material.opacity = S.warned ? 0.6 + 0.4 * Math.sin(time * 8) : 0;
+  warnRing.quaternion.copy(camera.quaternion);
+  ui.imageTag.classList.toggle('show', inside === 1 || S.camera === 'protein' || S.explode > 0.3);
+}
+
+// =====================================================================================
+// Graph (temperature → unfolding speed) and the record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const G_TMIN = 20, G_TMAX = 70, G_KMAX = 0.1;
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 38, r: w - 10, t: 12, b: h - 26 });
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = T => g.l + ((T - G_TMIN) / (G_TMAX - G_TMIN)) * (g.r - g.l), Y = k => g.b - (clamp(k, 0, G_KMAX) / G_KMAX) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (let T = 20; T <= 70; T += 10) x.fillText(`${T}`, X(T), g.b + 12);
+  x.textAlign = 'right';
+  for (const k of [0, 0.05, 0.1]) x.fillText(`${k}`, g.l - 5, Y(k) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('温度 ℃', g.r - 36, g.b + 23); x.fillText('ほどける速さ /秒', g.l + 4, g.t + 2);
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,255,255,0.65)';
+  x.beginPath(); x.moveTo(X(T_UNFOLD), g.t); x.lineTo(X(T_UNFOLD), g.b); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#c4c2bd'; x.fillText('ほどけ始める温度', X(T_UNFOLD) - 84, g.t + 20);
+  const grad = x.createLinearGradient(0, g.t, 0, g.b); grad.addColorStop(0, 'rgba(255,176,74,0.3)'); grad.addColorStop(1, 'rgba(255,176,74,0)');
+  x.fillStyle = grad; x.beginPath(); x.moveTo(X(G_TMIN), g.b);
+  for (let T = G_TMIN; T <= G_TMAX + 1e-9; T += 0.25) x.lineTo(X(T), Y(rateK(T)));
+  x.lineTo(X(G_TMAX), g.b); x.closePath(); x.fill();
+  x.strokeStyle = '#ffb04a'; x.lineWidth = 1.8; x.beginPath();
+  for (let T = G_TMIN; T <= G_TMAX + 1e-9; T += 0.25) { const px = X(T), py = Y(rateK(T)); T === G_TMIN ? x.moveTo(px, py) : x.lineTo(px, py); }
+  x.stroke();
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, graphCanvas.width, graphCanvas.height); x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const px = g.l + ((clamp(S.T, G_TMIN, G_TMAX) - G_TMIN) / (G_TMAX - G_TMIN)) * (g.r - g.l), py = g.b - (clamp(S.k, 0, G_KMAX) / G_KMAX) * (g.b - g.t);
+  x.fillStyle = S.T >= T_UNFOLD ? '#ffffff' : '#ffb04a';
+  x.beginPath(); x.arc(px, py, 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 30, t = 6, b = h - 6;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  x.fillStyle = '#8d8b86'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('80℃', l - 3, t + 7); x.fillText('20', l - 3, b); x.textAlign = 'left'; x.fillText('100%', r + 3, t + 7); x.fillText('0', r + 3, b);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  x.strokeStyle = '#ffb04a'; x.lineWidth = 1.6; x.beginPath();
+  H.forEach((p, i) => { const y = b - ((p[1] - 20) / 60) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+  x.strokeStyle = '#ff4d5e'; x.beginPath();
+  H.forEach((p, i) => { const y = b - p[2] * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const LABELS = [
+  { id: 'eel', text: '鰻の身', cls: 'key', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(-28, 4.6, 2) },
+  { id: 'drop', text: '血液（拡大）', cls: 'key tox', pri: 98, mode: 'normal', anchor: () => DROP_C.clone().add(new THREE.Vector3(-DROP_R * 0.7, DROP_R * 0.55, 4)) },
+  { id: 'prot', text: '毒のたんぱく質（模式図）', cls: 'tox', pri: 97, mode: 'normal', anchor: () => DROP_C.clone().add(PROTEINS[0].c) },
+  { id: 'thermo', text: '温度計', cls: 'key amber', pri: 95, mode: 'normal', anchor: () => thermo.localToWorld(tmpV.set(0, THERMO_H * 0.6, 1.6)).clone() },
+  { id: 'board', text: 'まな板', cls: '', pri: 70, mode: 'normal', anchor: () => new THREE.Vector3(8, 3, 14) },
+  { id: 'eye', text: '', cls: 'warn', pri: 99, mode: 'normal', anchor: () => EYE.clone(), dyn: () => (S.warned ? '目' : '') },
+  // exploded
+  { id: 'xboard', text: 'まな板', cls: '', pri: 84, mode: 'x', anchor: () => board.localToWorld(tmpV.set(10, 3, 16)).clone() },
+  { id: 'xpick', text: '目打ち', cls: '', pri: 86, mode: 'x', anchor: () => pick.localToWorld(tmpV.set(0, 7, 0)).clone() },
+  { id: 'xsink', text: '手洗い場', cls: '', pri: 82, mode: 'x', anchor: () => sink.localToWorld(tmpV.set(0, 7, 0)).clone() },
+  { id: 'xfold', text: '折りたたみ', cls: 'tox', pri: 94, mode: 'x', anchor: () => protXParts[0].localToWorld(tmpV.set(2.2, 0.4, 0)).clone() },
+  { id: 'xcont', text: '結びつき', cls: '', pri: 93, mode: 'x', anchor: () => protXParts[1].localToWorld(tmpV.set(2.0, 0, 0)).clone() },
+  { id: 'xstr', text: 'ひも', cls: '', pri: 92, mode: 'x', anchor: () => protXParts[2].localToWorld(tmpV.copy(PX.open[NB - 1]).multiplyScalar(0.5)).clone() },
+  { id: 'xnote', text: 'たんぱく質（模式図、大きさは実際と異なる）', cls: 'key', pri: 96, mode: 'x', anchor: () => protX.localToWorld(tmpV.set(0, 9.5, 0)).clone() },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div'); L.el.className = `lbl ${L.cls}`; L.el.textContent = L.text; labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)'); L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [], blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id)).filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const inside = camera.position.distanceTo(DROP_C) < DROP_R * 0.98;
+  const mode = S.explode > 0.5 ? 'x' : inside ? 'inside' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  for (const L of [...LABELS].sort((a, b) => b.pri - a.pri)) {
+    let show = false, text = L.text;
+    if (L.dyn) { text = L.dyn(); if (L.el.textContent !== text) { L.el.textContent = text; L.size = null; } }
+    if (L.mode === mode && text) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        for (const [dx, dy] of [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]]) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p)) || blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1)); L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true; break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+const fmtClock = s => { const m = Math.floor(s / 60), r = Math.floor(s % 60); return `${m}分${String(r).padStart(2, '0')}秒`; };
+const WARN_TEXT = '目に入ると激しい灼熱感を覚えるとともに、結膜炎、流涙、まぶたの腫れが引き起こされます';
+function updateUI() {
+  ui.tval.innerHTML = `${S.T.toFixed(1)}<span class="unit">℃</span>`;
+  ui.tfill.style.width = `${tPct(S.T).toFixed(1)}%`;
+  const fPct = S.F <= F_DONE ? 0 : Math.max(1, Math.round(S.F * 100));
+  ui.fval.innerHTML = `${fPct}<span class="unit">%</span>`;
+  ui.fval.classList.toggle('safe', S.status === 'done');
+  ui.ffill.style.width = `${(S.F <= F_DONE ? 0 : S.F * 100).toFixed(1)}%`;
+  ui.fmeter.classList.toggle('safe', S.status === 'done');
+  const tag = S.status === 'done' ? '加熱済み' : S.status === 'run' ? 'ほどけている' : '毒として働く';
+  if (ui.stateTag.textContent !== tag) ui.stateTag.textContent = tag;
+  ui.stateTag.className = `tag ${S.status === 'done' ? 'on' : 'tox'}`;
+  if (document.activeElement !== ui.range) ui.range.value = S.T.toFixed(1);
+  ui.steps.forEach((li, i) => { li.classList.toggle('active', i === S.phase); li.classList.toggle('done', i < S.phase); });
+  ui.counter.textContent = `経過 ${fmtClock(S.tProc)}`;
+  ui.stateText.textContent = S.status === 'done' ? '毒として働く割合 0%　加熱済み' : S.status === 'run' ? `${PHASES[S.phase].label}：たんぱく質の形が変わっています` : S.T >= 34 ? 'たんぱく質が熱で揺れています' : '温度を上げてください';
+  ui.realnote.classList.toggle('show', S.status === 'done');
+  ui.speedTag.textContent = S.speed === 'fast' ? `早回し表示（約${FAST}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'fast' ? '実時間にする' : '早回しにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  document.querySelectorAll('[data-act=splash]').forEach(b => { b.classList.toggle('on', S.splash); b.textContent = S.splash ? '元の場面に戻る' : '生の血が飛ぶと'; });
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? `生の血が目に入ると<small>${WARN_TEXT}（厚生労働省）</small>` : 'チン　毒として働く割合 0%<small>加熱済み。60℃、5分の加熱で、完全に毒性を失います</small>';
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const anchor = isErr ? EYE.clone().add(new THREE.Vector3(6, 10, 0)) : thermo.localToWorld(new THREE.Vector3(0, THERMO_H + 8, 0));
+    const p = screenOf(anchor);
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: thermometer drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null, tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setTempUser(T) { tapPlan = null; S.T = clamp(T, T_MIN, T_MAX); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(thermoPick, false).length) { dragging = { y: e.clientY, T: S.T }; controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction(); }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) { setTempUser(dragging.T + (dragging.y - e.clientY) * 0.12); return; }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(thermoPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setTempUser(S.T - e.deltaY * 0.02); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setTempUser(S.T + 0.5); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setTempUser(S.T - 0.5); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setTempUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'fast' ? 'real' : 'fast';
+  else if (btn.dataset.act === 'splash') setSplash(!S.splash);
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** 加熱: fresh (raw) blood, heated to 60 °C and held until the toxic share reaches 0 %. */
+function tap() {
+  const keep = { speed: S.speed, camera: S.camera, exploded: S.exploded, explode: S.explode, interacted: S.interacted, t: S.t, events: S.events };
+  S = Object.assign(freshState(), keep);
+  tapPlan = { from: S.T, t: 0 };
+  stepState(0);
+}
+function updateTap(dt) {
+  if (!tapPlan) return;
+  tapPlan.t += dt;
+  S.T = lerp(tapPlan.from, 60, ease(Math.min(1, tapPlan.t / 3.5)));
+  if (S.status === 'done') tapPlan = null;
+}
+function setSplash(on) { if (on) triggerSplash(); else endSplash(); stepState(0); }
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '鰻を刺身で見かけないのには、理由があります'],
+  [3, 7, '鰻の血液には、毒のたんぱく質が含まれています'],
+  [7, 12, '多くのたんぱく質は、決まった形に折りたたまれて働きます'],
+  [12, 14, 'ある温度を越えた瞬間、その形がほどけ始めます'],
+  [14, 18.5, 'ほどけたたんぱく質は、もう毒として働きません'],
+  [18.5, 23, 'だから火を通した鰻は、安心して食べられます'],
+  [23, 27, 'ただし捌くときは、生の血が目に入らないよう注意が必要です'],
+  [27, 30, 'だから、火を通すことと、捌くときの生の血への注意が大切です'],
+];
+function demoTemp(t) {
+  if (t < 7) return 20;
+  if (t < 12.25) { const u = seg(t, 7, 12.25); return lerp(20, T_UNFOLD + 0.15, u * u * (1.8 - 0.8 * u)); }
+  return lerp(T_UNFOLD + 0.15, 60, ease(seg(t, 12.25, 13.6)));
+}
+const DEMO_CAMS = [[0, 'overview'], [3, 'approach'], [4.6, 'blood'], [13.6, 'protein'], [18.4, 'overview'], [23, 'bench'], [24.4, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name), prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'blood' ? 1.6 : name === 'fail' ? 1.1 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * (name === 'blood' || name === 'protein' ? 0.12 : 0.04);
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  const t = tt + dt;
+  S.T = demoTemp(t);
+  const wantSplash = t >= 23.2 && t < 26.4;
+  if (wantSplash && !S.splash) triggerSplash();
+  if (!wantSplash && S.splash) endSplash();
+  S.exploded = t >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'fast'; stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t); demoSubtitle(t);
+  camera.updateMatrixWorld(); refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr); composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h; camera.fov = w / h < 0.8 ? 52 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift(); applyScene(time);
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld(); updateUI(); layoutLabels(); drawGraph(); drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt); stepState(dt); updateCameraAnim(dt);
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  return {
+    ready: window.__lab.ready,
+    temperature: +S.T.toFixed(2),
+    rateConstant: +S.k.toExponential(4),
+    unfoldTemperature: +T_UNFOLD.toFixed(2),
+    toxicShare: +S.F.toFixed(5),
+    toxicPercentShown: S.F <= F_DONE ? 0 : Math.max(1, Math.round(S.F * 100)),
+    unfolding: S.status !== 'idle',
+    heated: S.status === 'done',
+    status: S.status,
+    success: S.status === 'done',
+    splash: S.splash,
+    failure: S.warned,
+    phase: S.phase,
+    phaseLabel: PHASES[S.phase].label,
+    heatingElapsed: +S.tProc.toFixed(2),
+    unfoldedProteins: Array.from(S.unfold).filter(u => u > 0.5).length,
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setTemperature(c) { DEMO_ACTIVE = false; markInteraction(); setTempUser(c); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'fast'; },
+  setSplash(on) { DEMO_ACTIVE = false; markInteraction(); setSplash(!!on); return getState(); },
+  setGoggles(on) { return window.__lab.setSplash(!on); },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  rateK: T => rateK(T),
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  stepState(0);
+  await fontsReady;
+  drawGraphStatic(); drawThermo(); redrawPlate();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
