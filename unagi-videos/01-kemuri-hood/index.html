@@ -1,0 +1,1675 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>焼き台の煙はどこへ行くのか</title>
+<meta name="description" content="鰻店の焼き台の煙と熱がどう昇り、排気フードがそれをどう受け止めるのかを、光る気流と風量の操作で体感する3D解説" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@600;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #060607;
+    --ink: #f2f1ee;
+    --sub: #c4c2bd;
+    --muted: #8d8b86;
+    --line: rgba(255, 255, 255, 0.14);
+    --line-strong: rgba(255, 255, 255, 0.4);
+    --panel: rgba(12, 11, 12, 0.56);
+    --air: #bfe2ff;
+    --amber: #ffb04a;
+    --err: #ff5448;
+    --font: 'Noto Sans JP', system-ui, sans-serif;
+    --serif: 'Noto Serif JP', 'Noto Sans JP', serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font-family: var(--font); }
+
+  /* ---------------------------------------------------------------- title */
+  #title { position: fixed; left: 50%; top: 6vh; translate: -50% 0; text-align: center; pointer-events: none; width: min(1240px, 94vw); transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: clamp(26px, 3.4vw, 64px); letter-spacing: 0.04em; line-height: 1.3; text-shadow: 0 2px 34px rgba(0, 0, 0, 0.8); transition: font-size 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #title .lead { margin: 1.1em auto 0; max-width: 44em; font-size: clamp(14px, 1.12vw, 20px); line-height: 1.95; color: var(--sub); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+  #title.small { left: 26px; top: 20px; translate: 0 0; text-align: left; width: auto; }
+  #title.small h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.05em; }
+  #title.small .lead { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+
+  /* ---------------------------------------------------------------- panels */
+  .panel { position: fixed; background: linear-gradient(180deg, rgba(22, 20, 21, 0.64), rgba(10, 9, 10, 0.54)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+  .k { font-size: 12px; color: var(--muted); letter-spacing: 0.05em; }
+  .big-num { font-family: var(--mono); font-size: 27px; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .mid-num { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.55em; color: var(--muted); margin-left: 0.25em; }
+  #left { left: 24px; top: 72px; width: 344px; }
+  #right { right: 24px; top: 24px; width: 348px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .row + .row { margin-top: 4px; }
+  .sep { height: 1px; background: var(--line); margin: 12px 0 10px; }
+  .meter { position: relative; height: 10px; margin: 36px 2px 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px; background: linear-gradient(90deg, rgba(191, 226, 255, 0.2), var(--air)); box-shadow: 0 0 16px rgba(191, 226, 255, 0.45); }
+  .meter.bad .fill { background: linear-gradient(90deg, rgba(255, 84, 72, 0.3), var(--err)); box-shadow: 0 0 18px rgba(255, 84, 72, 0.6); }
+  .meter .th { position: absolute; top: -8px; bottom: -8px; width: 0; border-left: 1.5px dashed rgba(255, 255, 255, 0.85); }
+  .meter .th-label { position: absolute; bottom: calc(100% + 3px); right: 5px; font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .meter .ticks { position: absolute; left: 0; right: 0; top: calc(100% + 5px); font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .meter .ticks span { position: absolute; translate: -50% 0; }
+  .tag { white-space: nowrap; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; border-color: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+  .tag.err { color: #ffd6d2; border-color: var(--err); box-shadow: 0 0 12px rgba(255, 84, 72, 0.4); }
+  #capval.on { color: #fff; }
+  #capval.err { color: #ffb3ab; }
+  #dpval.err { color: #ffb3ab; }
+  .graph-wrap { margin-top: 12px; }
+  canvas.plot { width: 100%; height: 148px; display: block; margin-top: 6px; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.65; margin: 6px 0 0; }
+  .opener { display: none; }
+
+  #steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 3px; }
+  #steps li { display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); transition: all 0.25s; }
+  #steps li .n { grid-row: span 2; font-size: 17px; line-height: 1.2; text-align: center; }
+  #steps li b { font-size: 14px; font-weight: 700; color: var(--sub); }
+  #steps li small { font-size: 11.5px; }
+  #steps li.done { color: var(--sub); }
+  #steps li.done .n { color: #fff; }
+  #steps li.active { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.07); color: #fff; }
+  #steps li.active b { color: #fff; }
+  #steps.aborted li.active { border-color: rgba(255, 84, 72, 0.7); background: rgba(255, 84, 72, 0.1); }
+  .counter-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 8px; }
+  #counter { font-family: var(--mono); font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #realnote { font-size: 12px; color: #fff; margin: 6px 0 0; min-height: 1.2em; opacity: 0; transition: opacity 0.4s; }
+  #realnote.show { opacity: 1; }
+  .scope-wrap { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  canvas#scope { height: 104px; }
+  #scopeLegend { display: flex; gap: 14px; font-size: 11px; color: var(--sub); margin-top: 4px; }
+  #scopeLegend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .btn { appearance: none; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.04); color: var(--ink); font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .btn.primary { border-color: #fff; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+  .btn.on { background: #fff; color: #0a0909; border-color: #fff; }
+  .btn.warn.on { background: rgba(255, 84, 72, 0.18); color: #ffd6d2; border-color: var(--err); }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .cams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .cams .k { width: 100%; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  input[type='range'] { width: 100%; accent-color: #fff; }
+
+  #notes { position: fixed; left: 24px; bottom: 16px; max-width: 600px; font-size: 11px; line-height: 1.7; color: var(--muted); pointer-events: none; }
+  #moreBtn { position: fixed; right: 24px; bottom: 16px; }
+  #more { position: fixed; right: 24px; bottom: 62px; width: min(560px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; display: none; }
+  #more.open { display: block; }
+  #more h2 { font-size: 15px; margin: 0 0 8px; }
+  #more ol { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 13px; line-height: 1.75; color: var(--sub); }
+  #more a { color: #e6e3de; font-size: 11px; word-break: break-all; }
+  #more .src { display: block; font-size: 11px; color: var(--muted); }
+
+  #subtitle { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 90vw; bottom: 8.5vh; font-size: clamp(20px, 2.1vw, 40px); font-weight: 700; letter-spacing: 0.04em; line-height: 1.5; padding: 0.42em 1.1em 0.46em; background: rgba(6, 5, 6, 0.66); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; opacity: 0; transition: opacity 0.35s; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+  #subtitle.show { opacity: 1; }
+
+  #bubble { position: fixed; left: 0; top: 0; padding: 14px 22px 15px; border-radius: 14px; font-family: var(--serif); font-size: clamp(18px, 1.6vw, 30px); font-weight: 900; letter-spacing: 0.04em; background: rgba(8, 7, 8, 0.86); border: 2px solid #fff; white-space: nowrap; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  #bubble::after { content: ''; position: absolute; left: 32px; bottom: -12px; width: 20px; height: 20px; background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit; rotate: 45deg; }
+  #bubble.show { opacity: 1; }
+  #bubble.err { border-color: var(--err); color: #ffd6d2; box-shadow: 0 0 34px rgba(255, 84, 72, 0.38); }
+  #bubble.ok { box-shadow: 0 0 34px rgba(255, 255, 255, 0.22); }
+  #bubble small { display: block; font-family: var(--font); font-size: 0.5em; font-weight: 500; color: var(--sub); margin-top: 3px; letter-spacing: 0.03em; }
+
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  #labels svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 6px; background: rgba(8, 7, 8, 0.72); color: var(--ink); opacity: 0; transition: opacity 0.25s; }
+  .lbl.show { opacity: 1; }
+  .lbl.key { font-size: 15px; font-weight: 700; border-color: rgba(255, 255, 255, 0.62); }
+  .lbl.air { border-color: rgba(191, 226, 255, 0.85); color: #e6f4ff; }
+  .lbl.amber { border-color: rgba(255, 176, 74, 0.85); }
+  .lbl.warn { border-color: var(--err); color: #ffd6d2; background: rgba(40, 8, 8, 0.8); font-weight: 700; }
+  #imageTag { position: fixed; left: 50%; top: 18px; translate: -50% 0; font-size: 12px; color: var(--sub); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: rgba(0, 0, 0, 0.45); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  #imageTag.show { opacity: 1; }
+  #hint { position: fixed; left: 50%; top: 26px; translate: -50% 0; font-size: 13px; color: var(--sub); pointer-events: none; transition: opacity 0.4s; white-space: nowrap; }
+
+  #mobileTop { display: none; }
+  body:not(.collapsed) #left, body:not(.collapsed) #right, body:not(.collapsed) #notes, body:not(.collapsed) #hint, body:not(.collapsed) #moreBtn { opacity: 0; pointer-events: none; }
+  #left, #right, #notes, #hint, #moreBtn { transition: opacity 0.6s; }
+  #title h1, #title .lead, #subtitle, #bubble, #more li, .note { word-break: auto-phrase; text-wrap: balance; }
+  body.frozen *, body.frozen *::before, body.frozen *::after { transition: none !important; }
+  body.demo #hint, body.demo #moreBtn { display: none; }
+
+  /* ---------------------------------------------------------------- phone */
+  @media (max-width: 600px) {
+    #title.small, #title { left: 12px; right: 12px; top: 10px; translate: 0 0; width: auto; text-align: left; }
+    #title h1 { font-size: 21px; }
+    #title .lead { font-size: 12.5px; margin-top: 0.6em; line-height: 1.75; }
+    #title.small h1 { font-size: 14px; }
+    #mobileTop { display: flex; position: fixed; left: 12px; right: 12px; top: 40px; gap: 6px; flex-wrap: wrap; }
+    body:not(.collapsed) #mobileTop { top: auto; bottom: calc(46vh + 10px); }
+    #left, #right { position: fixed; left: 0; right: 0; width: auto; border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px; }
+    #left { top: auto; bottom: 30vh; max-height: 26vh; overflow: auto; border-bottom: 0; border-radius: 16px 16px 0 0; padding-bottom: 4px; }
+    #right { top: auto; bottom: 0; height: 30vh; overflow: auto; border-top: 0; padding-top: 0; }
+    .meter { margin: 30px 2px 22px; }
+    .big-num { font-size: 19px; }
+    .sep { margin: 8px 0 6px; }
+    #steps { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    #steps li { grid-template-columns: 1fr; padding: 4px 6px; text-align: center; }
+    #steps li .n { grid-row: auto; font-size: 13px; }
+    #steps li b { font-size: 11.5px; }
+    #steps li small { display: none; }
+    .opener { display: inline-block; margin-top: 6px; }
+    .graph-wrap .plot-body, .scope-wrap .plot-body { display: none; }
+    .graph-wrap.open .plot-body, .scope-wrap.open .plot-body { display: block; }
+    .scope-wrap { margin-top: 6px; padding-top: 6px; }
+    #right .primary-btns { display: none; }
+    #notes { display: none; }
+    #moreBtn { bottom: auto; top: 40px; right: 12px; }
+    #more { right: 8px; left: 8px; width: auto; bottom: auto; top: 86px; max-height: 60vh; }
+    #subtitle { font-size: 15px; bottom: auto; top: 86px; }
+    #hint { display: none; }
+    #bubble { font-size: 16px; }
+    #imageTag { top: auto; bottom: calc(56vh + 8px); font-size: 11px; }
+    .counter-row { margin-top: 4px; }
+    #counter { font-size: 15px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="鰻店の厨房の焼き台と排気フードの3D表示"></canvas>
+<div id="labels"><svg id="leaders"></svg></div>
+
+<header id="title">
+  <h1>焼き台の煙はどこへ行くのか</h1>
+  <p class="lead">鰻を焼くと、たくさんの煙と熱が出ます。フードはそれを吸い上げているのではなく、昇ってきた煙を口の近くで受け止めています。風量を上げて、煙がフードに収まる瞬間を見てください。</p>
+</header>
+<div id="imageTag">ダクトの中と屋上の設備は公開情報をもとにしたイメージです</div>
+
+<div id="mobileTop">
+  <button class="btn primary" data-act="tap">自動調整</button>
+  <button class="btn" data-act="explode">分解</button>
+  <button class="btn warn" data-act="supply">給気口を閉じる</button>
+  <button class="btn" data-act="speed">実時間にする</button>
+</div>
+
+<section id="left" class="panel">
+  <div class="row"><span class="k">フードの風量（目盛り）</span><span class="big-num" id="airval">32<span class="unit">%</span></span></div>
+  <div class="row"><span class="k">実際に吸っている量（模型の値）</span><span class="mid-num" id="qval">15 m³/分</span></div>
+  <div class="row"><span class="k">店内の気圧（外との差）</span><span class="mid-num" id="dpval">0 Pa</span></div>
+  <div class="sep"></div>
+  <div class="row"><span class="k">捕集率（模型の値）</span><span class="tag" id="stateTag">あふれている</span></div>
+  <div class="meter" id="meter">
+    <div class="fill"></div>
+    <div class="th" id="thCap"><span class="th-label">煙がすべて収まる最低ライン</span></div>
+    <div class="ticks" id="ticks"></div>
+  </div>
+  <div class="row"><span class="k">フードに収まる煙</span><span class="big-num" id="capval">50<span class="unit">%</span></span></div>
+  <div class="graph-wrap" id="graphBox">
+    <button class="btn sm opener" data-toggle="graphBox">グラフを開く</button>
+    <div class="plot-body">
+      <div class="k">フードからの距離と、吸い込みの速さ</div>
+      <canvas class="plot" id="graph"></canvas>
+      <p class="note">フードの吸い込みは、口から離れると距離の2乗に近い割合で弱まります</p>
+    </div>
+  </div>
+</section>
+
+<section id="right" class="panel">
+  <div class="row"><span class="k">煙の粒の旅</span><span class="k" id="speedTag">スロー表示（約3.5倍）</span></div>
+  <ol id="steps">
+    <li><span class="n">①</span><b>発生</b><small>炭の熱で空気が軽くなる</small></li>
+    <li><span class="n">②</span><b>上昇</b><small>煙が熱と一緒に昇る</small></li>
+    <li><span class="n">③</span><b>接近</b><small>フードの口に近づく</small></li>
+    <li><span class="n">④</span><b>捕集</b><small>吸い込みにつかまる</small></li>
+    <li><span class="n">⑤</span><b>ろ過</b><small>フィルターで油を落とす</small></li>
+    <li><span class="n">⑥</span><b>排気</b><small>ダクトから外へ出る</small></li>
+  </ol>
+  <div class="counter-row"><span class="k" id="stateText">風量を上げてください</span><span id="counter">経過 0.0秒</span></div>
+  <p id="realnote">煙が焼き台からダクトに入るまで、この模型の実時間で約2秒です</p>
+  <div class="scope-wrap" id="scopeBox">
+    <button class="btn sm opener" data-toggle="scopeBox">記録を開く</button>
+    <div class="plot-body">
+      <div class="k">ファンの回転数と店内の気圧（模型の値）</div>
+      <canvas class="plot" id="scope"></canvas>
+      <div id="scopeLegend"><span><i style="background: var(--amber)"></i>ファンの回転数</span><span><i style="background: var(--air)"></i>店内の気圧</span></div>
+    </div>
+  </div>
+  <div class="btns primary-btns">
+    <button class="btn primary" data-act="tap">自動調整</button>
+    <button class="btn" data-act="explode">分解</button>
+    <button class="btn" data-act="speed">実時間にする</button>
+    <button class="btn warn" data-act="supply">給気口を閉じる</button>
+  </div>
+  <div class="cams">
+    <span class="k">カメラ</span>
+    <button class="btn sm" data-cam="overview">全体</button>
+    <button class="btn sm" data-cam="grill">焼き台</button>
+    <button class="btn sm" data-cam="hoodIn">フードの中</button>
+    <button class="btn sm" data-cam="seats">客席から</button>
+  </div>
+  <label class="slider"><span>弱い</span><input type="range" id="range" min="0" max="1" step="0.005" value="0.32" aria-label="フードの風量" /><span>強い</span></label>
+</section>
+
+<div id="notes">風量や速さは原理を示すための模型の値です。ダクトの中と屋上の設備は公開情報をもとにしたイメージです。煙の流れは目で見える速さに落とした模式表示です。給気口を閉じたときの動きも模式表示です。</div>
+<div id="hint">フードの上のつまみを左右にドラッグ（ホイール、↑↓キーでも）　それ以外のドラッグでカメラを回せます</div>
+<div id="subtitle"></div>
+<div id="bubble"></div>
+
+<button class="btn" id="moreBtn" aria-expanded="false">もっと知る</button>
+<aside class="panel" id="more">
+  <h2>もっと知る</h2>
+  <ol id="moreList">
+    <li>飲食店の厨房の排気フードや排気ダクトは油脂やほこりがたまりやすく、適切な維持管理を怠ると、火災や一酸化炭素中毒事故につながる危険性があります。<span class="src"><a href="https://www.tfd.metro.tokyo.lg.jp/kouhyou/kijun/chubou_kasai_guideline.html" target="_blank" rel="noopener">東京消防庁「飲食店の厨房設備等に係る火災予防対策ガイドライン」</a></span></li>
+    <li>東京都の火災予防条例は、天蓋（排気フード）、天蓋と接続する排気ダクトの内部、グリス除去装置（グリスフィルターなど）、火炎伝送防止装置を清掃し、火災予防上支障のないよう維持管理することを定めています。東京消防庁のガイドラインは、天蓋やグリス除去装置など外から確認できる部分は日常的に、排気ダクトの内部など外から確認しにくい部分は概ね1年ごとに点検し、その結果に基づいて清掃するよう示しています。点検の頻度は目安で、店舗の規模や機器の使用状態に応じて決めます。出店先が東京都以外なら、その自治体の条例と基準を確認します。<span class="src"><a href="https://www.reiki.metro.tokyo.lg.jp/reiki/reiki_honbun/g101RG00002311.html" target="_blank" rel="noopener">東京都「火災予防条例」第3条の2</a>　<a href="https://www.tfd.metro.tokyo.lg.jp/content/000020602.pdf" target="_blank" rel="noopener">東京消防庁「飲食店の厨房設備等に係る火災予防対策ガイドライン」</a></span></li>
+    <li>厨房は、においが客席などへ漏れないよう、給気量を排気量より少なめにして負圧ぎみにすることが多く、業務用電化厨房向けの設計指針は、給気量を排気量の85％程度としています。ただし、客席から厨房へ流れ込む空気を多くしすぎると、客席の空調の負荷や隙間風が増える原因になり得ます。<span class="src"><a href="https://denkachubo.com/material/202110kanki_shishin_kaisetsu.pdf" target="_blank" rel="noopener">日本エレクトロヒートセンター「業務用電化厨房施設の換気設備設計指針［解説編］」</a>　<a href="https://www.jtccm.or.jp/sites/default/files/2024-09/%E2%98%85%E6%A5%AD%E5%8B%99%E7%94%A8%E3%81%A1%E3%82%85%E3%81%86(%E5%8E%A8)%E6%88%BF%E5%86%85%E7%A9%BA%E6%B0%97%E7%92%B0%E5%A2%83%E3%82%92%E9%81%A9%E6%AD%A3%E3%81%AA%E7%8A%B6%E6%85%8B%E3%81%AB%E7%B6%AD%E6%8C%81%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E6%8F%9B%E6%B0%97%E9%87%8F%E3%81%AE%E7%AE%97%E5%AE%9A%E6%96%B9%E6%B3%95.pdf" target="_blank" rel="noopener">建材試験センター「業務用ちゅう（厨）房内空気環境を適正な状態に維持するための換気量の算定方法」</a></span></li>
+    <li>外付け式フードでは、開口面では速い風速が得られても、距離が離れると吸引風速が激減します。フードの設計には Dalla Valle の式が用いられることが多く、自由空間に設けた外付け式円形フードの排風量は Q＝60・V<sub>X</sub>・（10X<sup>2</sup>＋A）で求めます（Q：排風量［m<sup>3</sup>/min］、V<sub>X</sub>：開口面から距離Xの点の風速［m/sec］、X：開口面からの距離［m］、A：開口面積［m<sup>2</sup>］）。フランジを取り付けると、同じ制御風速を得るのに必要な排気風量が25％減少するとされます。<span class="src"><a href="https://www.mhlw.go.jp/content/11300000/001240051.pdf" target="_blank" rel="noopener">厚生労働省「作業環境管理専門家の指導用マニュアル」</a>　<a href="https://www.jstage.jst.go.jp/article/juoeh/33/4/33_KJ00007695226/_article/-char/ja/" target="_blank" rel="noopener">産業医科大学雑誌「局所排気装置における外付け式フードの形状と風速の関係」</a>　<a href="https://www.jstage.jst.go.jp/article/sangyoeisei/59/1/59_16-018-C/_html/-char/ja" target="_blank" rel="noopener">産業衛生学雑誌「外付け式プレーン円形フードの排風量予測式」</a>　<a href="https://www.jstage.jst.go.jp/article/shase/48/319/48_41/_article/-char/ja/" target="_blank" rel="noopener">空気調和・衛生工学会論文集「ポテンシャル流れの数値解析による円形フードの排気風量計算」</a></span></li>
+    <li>環境省の飲食業向けの臭気対策マニュアルによると、飲食店のにおいの発生源の割合は調理臭が71％で（平成22年度の地方公共団体アンケート結果）、飲食店では調理臭が原因となって近隣から苦情が多いことが分かっています。<span class="src"><a href="https://www.env.go.jp/air/akushu/manual/manual_01.pdf" target="_blank" rel="noopener">環境省「飲食業の方のための『臭気対策マニュアル』」</a></span></li>
+  </ol>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// =====================================================================================
+// Physics (positions in cm, speeds in cm/s, airflow in m³/s). Model values, principle only.
+// =====================================================================================
+const GRILL = { x0: -45, x1: 45, z0: -50, z1: -10, cz: -30 };     // grill surface 90 × 40 at y = 0
+const HOOD = { x0: -60, x1: 60, z0: -60, z1: 0, y: 90, cx: 0, cz: -30 }; // hood mouth 120 × 60, 90 cm above the grill
+const A_MOUTH = 1.2 * 0.6;               // m²
+const FLANGE = 0.75;                     // a flange cuts the airflow needed for the same capture speed by 25 %
+const Q_MAX = 0.78;                      // m³/s at 100 % on the dial
+const W0 = 42, Z_PL = 40;                // plume: 0.42 m/s at the grill, slowing as it rises
+const B0X = 30, B0Z = 13, SPREAD = 0.36; // plume half-widths grow with height
+const CAP_TH = 0.95;                     // capture line on the meter
+const SLOW = 3.5;                        // slow-motion factor while the marked smoke parcel travels
+const DP_FAN = 60, C_OPEN = 0.5, C_LEAK = 0.037; // fan stall pressure (Pa), opening coefficients (m³/s per √Pa)
+const DOOR_AREA = 0.9 * 2.0;             // m²
+const LIFE = 11;                         // s, smoke particle lifetime
+const PHASES = [
+  { label: '発生' }, { label: '上昇' }, { label: '接近' }, { label: '捕集' }, { label: 'ろ過' }, { label: '排気' },
+];
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth01 = x => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+const hash = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+/** Rising plume above the grill: vertical speed with a Gaussian profile, plus the sideways spread that keeps the profile self-similar. */
+function plumeVel(x, y, z, out) {
+  if (y < 0) { out[0] = out[1] = out[2] = 0; return out; }
+  const bx = B0X + SPREAD * y, bz = B0Z + SPREAD * y, dz = z - GRILL.cz;
+  const w = W0 * Math.pow(1 + y / Z_PL, -1 / 3) * Math.exp(-((x * x) / (bx * bx) + (dz * dz) / (bz * bz)));
+  out[0] = (w * SPREAD * x) / bx; out[1] = w; out[2] = (w * SPREAD * dz) / bz;
+  return out;
+}
+/** Suction toward the hood mouth: Dalla Valle, flanged — V = Q / (0.75 · (10x² + A)), x in metres from the mouth centre. */
+function suctionSpeed(Q, dCm) { const x = dCm / 100; return (100 * Q) / (FLANGE * (10 * x * x + A_MOUTH)); }
+const insideFootprint = (x, z) => x > HOOD.x0 && x < HOOD.x1 && z > HOOD.z0 && z < HOOD.z1;
+const tmpP = [0, 0, 0];
+/** The whole model field: plume + sink toward the mouth; inside the canopy the air converges up into the duct;
+ *  uncaptured smoke that rises past the rim spreads outward under the ceiling. */
+let TM = 0;   // model time used by the turbulence (set from the state before each step)
+function fieldVel(x, y, z, Q, spill, out, noSink = false) {
+  plumeVel(x, y, z, out);
+  const tb = 7 * smooth01(y / 40);
+  out[0] += tb * Math.sin(0.071 * y + 1.3 * TM + 0.043 * z); out[2] += tb * 0.7 * Math.cos(0.063 * y + 1.1 * TM + 0.051 * x);
+  if (y >= HOOD.y && insideFootprint(x, z)) {
+    const f = clamp((y - HOOD.y) / 60, 0, 1), area = A_MOUTH + (0.09 - A_MOUTH) * f;
+    const up = (100 * Q) / area;
+    out[0] = (0 - x) * up * 0.012; out[1] = up + out[1] * 0.3; out[2] = (HOOD.cz - z) * up * 0.012;
+    return out;
+  }
+  const dx = HOOD.cx - x, dy = HOOD.y - y, dz = HOOD.cz - z, L = Math.hypot(dx, dy, dz);
+  // a flanged mouth draws only from the space below its plane: above the rim, outside the hood, there is no suction
+  const reach = 1 - smooth01((y - (HOOD.y - 8)) / 10);
+  if (!noSink && L > 1e-6 && reach > 0) { const V = suctionSpeed(Q, L) * reach; out[0] += (dx / L) * V; out[1] += (dy / L) * V; out[2] += (dz / L) * V; }
+  if (y > HOOD.y + 4 && !insideFootprint(x, z)) {
+    // ceiling jet: escaped smoke is pushed outward (away from the wall) and toward the dining room
+    const hx = x - HOOD.cx, hz = z - HOOD.cz, h = Math.hypot(hx, hz) || 1;
+    const k = 16 * smooth01((y - HOOD.y) / 30) * (0.35 + 3.4 * spill);
+    out[0] += (hx / h) * k; out[2] += (hz / h) * k + 60 * spill; out[1] -= 14 * spill * smooth01((y - 120) / 50);
+  }
+  if (y > 196) out[1] = Math.min(out[1], 0);   // ceiling
+  return out;
+}
+
+/** Capture ratio: along the rim, compare the suction just outside the rim with the rising smoke there, weighted by the smoke flux. */
+const RIM = [];
+{
+  const per = 2 * (120 + 60), N = 96;
+  for (let i = 0; i < N; i++) {
+    const s = (i / N) * per;
+    let x, z, nx = 0, nz = 0;
+    if (s < 120) { x = HOOD.x0 + s; z = HOOD.z0; nz = -1; }
+    else if (s < 180) { x = HOOD.x1; z = HOOD.z0 + (s - 120); nx = 1; }
+    else if (s < 300) { x = HOOD.x1 - (s - 180); z = HOOD.z1; nz = 1; }
+    else { x = HOOD.x0; z = HOOD.z1 - (s - 300); nx = -1; }
+    const px = x + nx * 6, pz = z + nz * 6, py = HOOD.y - 8;
+    const w = plumeVel(px, py, pz, [0, 0, 0])[1];
+    RIM.push({ x, z, w, d: Math.hypot(px - HOOD.cx, py - HOOD.y, pz - HOOD.cz) });
+  }
+}
+function captureRatio(Q) {
+  let num = 0, den = 0;
+  for (const r of RIM) { const v = suctionSpeed(Q, r.d); num += r.w / (1 + Math.exp(-(v - r.w) / 2.0)); den += r.w; }
+  return clamp(num / den, 0, 1);
+}
+/** Room pressure with the supply-air inlet open or shut: fan curve Q(1 − ΔP/ΔPmax) = C√ΔP. */
+function pressureBalance(Qdial, open) {
+  const C = open ? C_OPEN : C_LEAK;
+  let lo = 0, hi = DP_FAN;
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (Qdial * (1 - m / DP_FAN) > C * Math.sqrt(m)) lo = m; else hi = m; }
+  const dp = (lo + hi) / 2;
+  return { dp, Q: Qdial * (1 - dp / DP_FAN) };
+}
+// capture threshold on the dial (supply open)
+const DIAL_TH = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (captureRatio(pressureBalance(Q_MAX * m, true).Q) >= CAP_TH) hi = m; else lo = m; } return hi; })();
+
+// =====================================================================================
+// Renderer, scene, post-processing
+// =====================================================================================
+const params = new URLSearchParams(location.search);
+const DEMO = params.get('demo') === '1';
+if (DEMO) document.body.classList.add('demo');
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = Math.min(1, DPR_MAX) * 0.85;
+renderer.setPixelRatio(dpr);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#0a0807', 0.0011);
+const camera = new THREE.PerspectiveCamera(36, 1, 1, 6000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.minPolarAngle = 0.2;
+controls.maxPolarAngle = 1.75;
+
+const composerTarget = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.85);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 1.78 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAspect; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c.rgb *= mix(0.72, 1.0, 1.0 - smoothstep(0.25, 1.15, length(q)));
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(gradePass);
+
+{
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#0d0b0a');
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 0.9, 0.35), side: THREE.DoubleSide }));
+  glow.rotation.x = -Math.PI / 2; glow.position.y = -1.4; env.add(glow);
+  const warm = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 0.85, 0.6), side: THREE.DoubleSide }));
+  warm.position.set(0, 0.8, 4); env.add(warm);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(6, 2.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 1.1, 1.15), side: THREE.DoubleSide }));
+  top.rotation.x = Math.PI / 2; top.position.set(0, 3, 1.5); env.add(top);
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(6, 2.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.5, 0.45), side: THREE.DoubleSide }));
+  front.position.set(0, 1.6, 4.5); env.add(front);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  scene.environmentIntensity = 0.8;
+}
+
+// =====================================================================================
+// Canvas textures
+// =====================================================================================
+function canvasTex(w, h, draw, { color = true, repeat } = {}) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+let seed = 17;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+const glowTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.28, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+const brushedTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#b9bdc2'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const y = rnd() * h, l = 40 + rnd() * 240, a = 0.012 + rnd() * 0.028; x.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(30,32,36,${a})`; x.lineWidth = 0.6 + rnd(); const x0 = rnd() * w; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + l, y + (rnd() - 0.5) * 0.6); x.stroke(); }
+}, { repeat: [4, 2] });
+const tileTex = canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = '#141211'; x.fillRect(0, 0, w, h);
+  const nx = 6, ny = 12, sx = w / nx, sy = h / ny;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const off = (j % 2) * sx * 0.5, v = 38 + rnd() * 10;
+    x.fillStyle = `rgb(${v + 4},${v + 2},${v})`; x.fillRect(i * sx + off + 2, j * sy + 2, sx - 4, sy - 4);
+  }
+}, { repeat: [6, 3] });
+const floorTex = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = '#1a1817'; x.fillRect(0, 0, w, h);
+  const n = 4, s = w / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 30 + rnd() * 10; x.fillStyle = `rgb(${v},${v - 1},${v - 3})`; x.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
+}, { repeat: [30, 30] });
+const woodTex = canvasTex(1024, 256, (x, w, h) => {
+  x.fillStyle = '#d9c3a0'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { x.strokeStyle = `rgba(150,110,70,${0.05 + rnd() * 0.12})`; x.lineWidth = 1 + rnd() * 2; x.beginPath(); const y = rnd() * h; x.moveTo(0, y); for (let k = 0; k <= 10; k++) x.lineTo((k / 10) * w, y + Math.sin(k * 0.8 + i) * 4 + (rnd() - 0.5) * 3); x.stroke(); }
+}, { repeat: [3, 1] });
+const netTex = canvasTex(256, 256, (x, w, h) => {
+  x.clearRect(0, 0, w, h); x.strokeStyle = 'rgba(255,255,255,1)'; x.lineWidth = 3;
+  for (let i = 0; i <= 16; i++) { const p = (i / 16) * w; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, h); x.stroke(); x.beginPath(); x.moveTo(0, p); x.lineTo(w, p); x.stroke(); }
+}, { color: false, repeat: [6, 3] });
+const smokeTex = canvasTex(128, 128, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.35, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+
+// =====================================================================================
+// Kitchen and dining room
+// =====================================================================================
+const ROOM = { floor: -85, ceil: 200, back: -62 };
+const steel = new THREE.MeshStandardMaterial({ color: '#d7dade', map: brushedTex, metalness: 0.9, roughness: 0.3, envMapIntensity: 1.45 });
+const steelDark = new THREE.MeshStandardMaterial({ color: '#7d8187', map: brushedTex, metalness: 0.85, roughness: 0.4, envMapIntensity: 0.9 });
+const ironMat = new THREE.MeshStandardMaterial({ color: '#232121', roughness: 0.62, metalness: 0.55, envMapIntensity: 0.6 });
+{
+  // background dome
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `varying vec3 vP; void main(){ float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0); gl_FragColor = vec4(mix(vec3(0.03, 0.022, 0.018), vec3(0.008, 0.008, 0.012), smoothstep(0.4, 0.8, h)), 1.0); }`,
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(4000, 32, 16), m));
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(700, ROOM.ceil - ROOM.floor), new THREE.MeshStandardMaterial({ map: tileTex, color: '#6f655c', roughness: 0.6, envMapIntensity: 0.3 }));
+  back.position.set(0, (ROOM.ceil + ROOM.floor) / 2, ROOM.back); scene.add(back);
+  const splash = new THREE.Mesh(new THREE.PlaneGeometry(300, 100), steelDark);
+  splash.position.set(0, -10, ROOM.back + 0.3); scene.add(splash);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({ color: '#171412', roughness: 0.9 }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.ceil, 300); scene.add(ceil);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({ map: floorTex, color: '#8a8580', roughness: 0.7, metalness: 0.05 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(0, ROOM.floor, 300); scene.add(floor);
+  // side wall with the entrance
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(700, ROOM.ceil - ROOM.floor), new THREE.MeshStandardMaterial({ color: '#2a2522', roughness: 0.85 }));
+  side.rotation.y = Math.PI / 2; side.position.set(-222, (ROOM.ceil + ROOM.floor) / 2, 280); scene.add(side);
+  // kitchen counters either side of the grill
+  for (const x of [-110, 110]) { const c = new THREE.Mesh(new RoundedBoxGeometry(120, 85, 56, 3, 1), steelDark); c.position.set(x, -42.5, -32); scene.add(c); }
+}
+// Dining counter (white wood) and stools, pendant lights
+const dining = new THREE.Group();
+scene.add(dining);
+{
+  const woodMat = new THREE.MeshStandardMaterial({ map: woodTex, color: '#ead6b4', roughness: 0.55, envMapIntensity: 0.5 });
+  const top = new THREE.Mesh(new RoundedBoxGeometry(460, 5, 44, 3, 1.5), woodMat);
+  top.position.set(0, 22, 76); dining.add(top);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(456, 105, 30), new THREE.MeshStandardMaterial({ color: '#3a2e25', roughness: 0.8 }));
+  body.position.set(0, -32, 76); dining.add(body);
+  const stoolMat = new THREE.MeshStandardMaterial({ color: '#4a3b30', roughness: 0.6 });
+  for (let i = -3; i <= 3; i++) {
+    const seatTop = new THREE.Mesh(new THREE.CylinderGeometry(17, 17, 5, 24), stoolMat);
+    seatTop.position.set(i * 62, -10, 132); dining.add(seatTop);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3, 70, 10), stoolMat);
+    leg.position.set(i * 62, -47, 132); dining.add(leg);
+  }
+}
+const pendants = [];
+for (const x of [-150, 0, 150]) {
+  const bulb = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.6, 1.15, 0.7), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }));
+  bulb.scale.set(6, 6, 1); bulb.material.opacity = 0.3; bulb.position.set(x, 170, 190); scene.add(bulb);
+  const l = new THREE.PointLight('#ffc98f', 7000, 360, 2); l.position.set(x, 160, 190); scene.add(l); pendants.push(l);
+}
+// bokeh deep in the dining room
+{
+  const bokehMat = new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.5, 1.05, 0.6), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  for (let i = 0; i < 18; i++) { const s = new THREE.Sprite(bokehMat.clone()); s.position.set((rnd() - 0.5) * 900, 20 + rnd() * 160, 600 + rnd() * 500); const sc = 18 + rnd() * 30; s.scale.set(sc, sc, 1); s.material.opacity = 0.05 + rnd() * 0.14; scene.add(s); }
+}
+scene.add(new THREE.HemisphereLight('#4a4a5a', '#1a120c', 0.45));
+const keyLight = new THREE.DirectionalLight('#e4e8ff', 0.4);
+keyLight.position.set(-160, 260, 220); scene.add(keyLight);
+const showLight = new THREE.DirectionalLight('#f4efe8', 0);   // presentation light for the exploded view
+showLight.position.set(-200, 260, 420); scene.add(showLight);
+const coalLight = new THREE.PointLight('#ff5a1e', 0, 260, 2);
+coalLight.position.set(0, -4, GRILL.cz); scene.add(coalLight);
+const flashLight = new THREE.PointLight('#ffffff', 0, 200, 2);
+flashLight.position.set(0, 88, HOOD.cz); scene.add(flashLight);
+
+// =====================================================================================
+// Grill (炭床 / 焼き網) with kabayaki on the net
+// =====================================================================================
+const parts = {};
+const grillBody = new THREE.Group();   // 炭床
+scene.add(grillBody);
+{
+  const box = new THREE.Mesh(new RoundedBoxGeometry(100, 85, 50, 3, 1.2), ironMat);
+  box.position.set(0, -42.5 - 0.5, GRILL.cz); grillBody.add(box);
+  // coal bed seen through the net
+  const bedMat = new THREE.MeshStandardMaterial({ color: '#1a1614', emissive: '#ff4a14', emissiveIntensity: 0.9, roughness: 0.9 });
+  const geos = [];
+  for (let r = 0; r < 4; r++) for (let i = 0; i < 9; i++) {
+    const g = new THREE.CylinderGeometry(1.4, 1.5, 9 + rnd() * 3, 9);
+    g.rotateX(Math.PI / 2); g.rotateY((rnd() - 0.5) * 0.4);
+    g.translate(-40 + i * 10 + (rnd() - 0.5) * 2, -3.2 + (rnd() - 0.5) * 0.6, GRILL.cz - 13 + r * 8.6);
+    geos.push(g);
+  }
+  const coals = new THREE.Mesh(mergeGeometries(geos), new THREE.MeshStandardMaterial({ color: '#8f8a84', roughness: 0.8, emissive: '#ff4410', emissiveIntensity: 0.55 }));
+  grillBody.add(coals);
+  const glowBed = new THREE.Mesh(new THREE.PlaneGeometry(90, 40), bedMat);
+  glowBed.rotation.x = -Math.PI / 2; glowBed.position.set(0, -5, GRILL.cz); grillBody.add(glowBed);
+  const haze = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.0, 0.36, 0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.22 }));
+  haze.scale.set(130, 34, 1); haze.position.set(0, 4, GRILL.cz); grillBody.add(haze);
+}
+parts.grillBody = { obj: grillBody, from: grillBody.position.clone(), off: new THREE.Vector3(0, -30, 30) };
+const netGroup = new THREE.Group();    // 焼き網 + kabayaki
+scene.add(netGroup);
+{
+  const net = new THREE.Mesh(new THREE.PlaneGeometry(92, 42), new THREE.MeshStandardMaterial({ color: '#6d6864', metalness: 0.8, roughness: 0.4, alphaMap: netTex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide }));
+  net.rotation.x = -Math.PI / 2; net.position.set(0, 0, GRILL.cz); netGroup.add(net);
+  const kabaMat = new THREE.MeshPhysicalMaterial({ color: '#6b2f10', roughness: 0.25, clearcoat: 0.8, clearcoatRoughness: 0.2, emissive: '#ff5a1e', emissiveIntensity: 0.08 });
+  for (let i = 0; i < 4; i++) {
+    const k = new THREE.Mesh(new RoundedBoxGeometry(18, 1.3, 7.5, 3, 0.55), kabaMat);
+    k.position.set(-30 + i * 20, 0.8, GRILL.cz + (i % 2 ? 4 : -4)); k.rotation.y = (i % 2 ? 0.06 : -0.05); netGroup.add(k);
+  }
+}
+parts.net = { obj: netGroup, from: netGroup.position.clone(), off: new THREE.Vector3(0, 22, 30) };
+
+// =====================================================================================
+// Hood (本体 / グリスフィルター / 油受け), duct, fan, supply-air inlet
+// =====================================================================================
+const hoodBody = new THREE.Group();
+scene.add(hoodBody);
+{
+  // canopy: from the mouth (120 × 60 at y = 90) up to a 70 × 40 top at y = 135
+  const g = new THREE.BufferGeometry();
+  const b0 = [[-60, 90, -60], [60, 90, -60], [60, 90, 0], [-60, 90, 0]];
+  const b1 = [[-35, 135, -58], [35, 135, -58], [35, 135, -18], [-35, 135, -18]];
+  const pos = [], uv = [];
+  const quad = (a, b, c, d) => { pos.push(...a, ...b, ...c, ...a, ...c, ...d); uv.push(0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1); };
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(b0[i], b0[j], b1[j], b1[i]); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  const canopyMat = steel.clone(); canopyMat.side = THREE.DoubleSide;
+  hoodBody.add(new THREE.Mesh(g, canopyMat));
+  // skirt (a short vertical lip round the mouth) and the top plate
+  const lip = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 10, d), steel); m.position.set(x, 95, z); hoodBody.add(m); };
+  lip(121, 1, 0, -59.5); lip(121, 1, 0, -0.5); lip(1, 60, -60, -30); lip(1, 60, 60, -30);
+  const topPlate = new THREE.Mesh(new THREE.BoxGeometry(72, 1, 42), steel); topPlate.position.set(0, 135.5, -38); hoodBody.add(topPlate);
+}
+parts.hoodBody = { obj: hoodBody, from: hoodBody.position.clone(), off: new THREE.Vector3(0, 40, 0) };
+// grease filter bank (baffle filters, shown larger in the exploded view)
+const filterGroup = new THREE.Group();
+scene.add(filterGroup);
+const filterInner = new THREE.Group();
+filterGroup.add(filterInner);
+{
+  const frameMat = new THREE.MeshStandardMaterial({ color: '#9aa0a6', metalness: 0.85, roughness: 0.35, map: brushedTex });
+  const bafMat = new THREE.MeshStandardMaterial({ color: '#6f757c', metalness: 0.8, roughness: 0.45 });
+  for (const side of [-1, 1]) {
+    const panel = new THREE.Group();
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(96, 1.2, 20), frameMat); panel.add(fr);
+    for (let i = 0; i < 17; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.2, 18.5), bafMat); b.position.set(-44 + i * 5.5, 1.2, 0); b.rotation.z = 0.5; panel.add(b); }
+    panel.position.set(0, 117, HOOD.cz - 4 + side * 10);
+    panel.rotation.x = side * -0.62;
+    filterInner.add(panel);
+  }
+}
+filterGroup.position.set(0, 0, 0);
+parts.filter = { obj: filterGroup, from: filterGroup.position.clone(), off: new THREE.Vector3(0, 40, 0) };
+// one baffle filter (48 × 20 cm) for the exploded view, scaled ×3
+const filterDetail = new THREE.Group();
+scene.add(filterDetail);
+{
+  const frameMat = new THREE.MeshStandardMaterial({ color: '#c8ccd1', metalness: 0.55, roughness: 0.34, map: brushedTex, envMapIntensity: 1.3 });
+  const bafMat = new THREE.MeshStandardMaterial({ color: '#a3a9b0', metalness: 0.55, roughness: 0.38, envMapIntensity: 1.3 });
+  const oilMat = new THREE.MeshPhysicalMaterial({ color: '#8a5418', roughness: 0.15, clearcoat: 1 });
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(48, 20, 1.2), frameMat); filterDetail.add(fr);
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(3.4, 18, 2.6), bafMat); b.position.set(-20 + i * 5, 0, 1.4); b.rotation.y = i % 2 ? 0.55 : -0.55; filterDetail.add(b);
+    const drop = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), oilMat); drop.position.set(-20 + i * 5, -8 + (i % 3) * 3, 2.6); filterDetail.add(drop);
+  }
+  filterDetail.position.set(80, 44, 48); filterDetail.rotation.y = -0.45;
+  filterDetail.visible = false;
+}
+const trough = new THREE.Group();      // 油受け
+scene.add(trough);
+{
+  const t = new THREE.Mesh(new THREE.BoxGeometry(104, 3, 5), new THREE.MeshStandardMaterial({ color: '#8d9197', metalness: 0.85, roughness: 0.35 }));
+  t.position.set(0, 100.5, HOOD.cz); trough.add(t);
+  const oil = new THREE.Mesh(new THREE.BoxGeometry(100, 0.6, 3.6), new THREE.MeshPhysicalMaterial({ color: '#7a4a14', roughness: 0.1, clearcoat: 1, transparent: true, opacity: 0.85 }));
+  oil.position.set(0, 102, HOOD.cz); trough.add(oil);
+}
+parts.trough = { obj: trough, from: trough.position.clone(), off: new THREE.Vector3(0, 4, 80) };
+const duct = new THREE.Group();
+scene.add(duct);
+{
+  const d = new THREE.Mesh(new THREE.BoxGeometry(30, 150, 30), steel);
+  d.position.set(0, 135 + 75, HOOD.cz - 8); duct.add(d);
+}
+parts.duct = { obj: duct, from: duct.position.clone(), off: new THREE.Vector3(0, 70, 0) };
+// exhaust fan on the roof (an illustrative image)
+const fan = new THREE.Group();
+scene.add(fan);
+const fanRotor = new THREE.Group();
+{
+  const housing = new THREE.Mesh(new THREE.CylinderGeometry(26, 26, 22, 32, 1, true), new THREE.MeshStandardMaterial({ color: '#8b9097', metalness: 0.85, roughness: 0.4, side: THREE.DoubleSide }));
+  fan.add(housing);
+  for (let i = 0; i < 6; i++) { const blade = new THREE.Mesh(new THREE.BoxGeometry(22, 1, 7), new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: 0.8, roughness: 0.35 })); blade.position.x = 11; blade.rotation.x = 0.4; const arm = new THREE.Group(); arm.add(blade); arm.rotation.y = (i / 6) * Math.PI * 2; fanRotor.add(arm); }
+  fan.add(fanRotor);
+  fan.position.set(0, 300, HOOD.cz - 8);
+  fan.visible = false;
+}
+parts.fan = { obj: fan, from: fan.position.clone(), off: new THREE.Vector3(0, -58, 0) };
+// supply-air inlet (給気口): louvred grille on the back wall
+const inlet = new THREE.Group();
+scene.add(inlet);
+const louvers = [];
+{
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(46, 30, 3, 2, 0.8), new THREE.MeshStandardMaterial({ color: '#d8d5cf', roughness: 0.5 }));
+  inlet.add(frame);
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshStandardMaterial({ color: '#0b0b0c', roughness: 1 }));
+  hole.position.z = 1.6; inlet.add(hole);
+  for (let i = 0; i < 6; i++) { const l = new THREE.Mesh(new THREE.BoxGeometry(40, 0.8, 4), new THREE.MeshStandardMaterial({ color: '#ecebe7', roughness: 0.45 })); l.position.set(0, -10 + i * 4, 2.6); inlet.add(l); louvers.push(l); }
+  inlet.position.set(120, 150, ROOM.back + 1.6);
+}
+parts.inlet = { obj: inlet, from: inlet.position.clone(), off: new THREE.Vector3(0, 0, 70) };
+// entrance door on the side wall of the dining room
+const door = new THREE.Group();
+scene.add(door);
+{
+  const leaf = new THREE.Mesh(new RoundedBoxGeometry(4, 200, 90, 2, 1), new THREE.MeshStandardMaterial({ color: '#4a3a2c', roughness: 0.6 }));
+  leaf.position.set(-219, 15, 170); door.add(leaf);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(60, 90), new THREE.MeshStandardMaterial({ color: '#15181c', roughness: 0.1, metalness: 0.3 }));
+  glass.rotation.y = Math.PI / 2; glass.position.set(-216.8, 55, 170); door.add(glass);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 40, 8), new THREE.MeshStandardMaterial({ color: '#b8b3ab', metalness: 0.9, roughness: 0.3 }));
+  handle.position.set(-215, 10, 134); door.add(handle);
+}
+
+// Rim of the mouth: a thin line that flashes white when capture is reached.
+const rimMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.75, 0.88, 1.0), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending });
+const rim = new THREE.Group();
+{
+  const seg2 = (w, d, x, z, ry) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, w, 6), rimMat); m.rotation.set(0, ry, Math.PI / 2); m.position.set(x, 89.8, z); rim.add(m); };
+  seg2(120, 0, 0, -60, 0); seg2(120, 0, 0, 0, 0); seg2(60, 0, -60, -30, Math.PI / 2); seg2(60, 0, 60, -30, Math.PI / 2);
+  hoodBody.add(rim);
+}
+// Airflow knob on the hood front (the drag handle)
+const knob = new THREE.Group();
+{
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(22, 6, 1.4, 2, 0.6), new THREE.MeshStandardMaterial({ color: '#1c1c1e', roughness: 0.4 }));
+  knob.add(plate);
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(18, 0.6, 0.4), new THREE.MeshBasicMaterial({ color: '#5b6068' }));
+  slot.position.z = 0.8; knob.add(slot);
+  const thumb = new THREE.Mesh(new RoundedBoxGeometry(3, 4.2, 2, 2, 0.6), new THREE.MeshStandardMaterial({ color: '#f2f2f0', emissive: '#bfe2ff', emissiveIntensity: 0.25 }));
+  thumb.position.z = 1.2; knob.add(thumb); knob.userData.thumb = thumb;
+  knob.position.set(34, 96, 1.2);
+  hoodBody.add(knob);
+}
+const knobPick = new THREE.Mesh(new THREE.BoxGeometry(34, 16, 10), new THREE.MeshBasicMaterial({ visible: false }));
+knobPick.position.copy(knob.position);
+hoodBody.add(knobPick);
+
+// =====================================================================================
+// Airflow streamlines toward the mouth (their shape does not depend on Q; brightness does)
+// =====================================================================================
+function traceSuction(p0) {
+  const pts = [p0.slice()];
+  let p = p0.slice();
+  const f = q => { const dx = HOOD.cx - q[0], dy = HOOD.y + 2 - q[1], dz = HOOD.cz - q[2], L = Math.hypot(dx, dy, dz) || 1; return [dx / L, dy / L, dz / L]; };
+  for (let i = 0; i < 400; i++) {
+    const h = 1.2;
+    const k1 = f(p), k2 = f(p.map((c, j) => c + (h / 2) * k1[j])), k3 = f(p.map((c, j) => c + (h / 2) * k2[j])), k4 = f(p.map((c, j) => c + h * k3[j]));
+    p = p.map((c, j) => c + (h / 6) * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
+    pts.push(p.slice());
+    if (p[1] >= HOOD.y - 0.5 && insideFootprint(p[0], p[2])) break;
+  }
+  return pts;
+}
+const flowMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uFlow: { value: 0 }, uGain: { value: 1 }, uColor: { value: new THREE.Color('#9fd2ff') } },
+  vertexShader: `attribute float aS; attribute float aB; varying float vS; varying float vB; void main(){ vS = aS; vB = aB; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uFlow; uniform float uGain; uniform vec3 uColor; varying float vS; varying float vB;
+    void main(){
+      float p = fract(vS * 0.05 - uFlow);
+      float grain = smoothstep(0.8, 0.97, p) * (1.0 - smoothstep(0.97, 1.0, p));
+      float I = (vB * 0.28 + grain * vB * 1.2) * uGain;
+      gl_FragColor = vec4(uColor * I, 1.0);
+    }`,
+});
+{
+  const seeds = [];
+  // ring of seeds outside and below the rim
+  for (let i = 0; i < 44; i++) {
+    const a = (i / 44) * Math.PI * 2;
+    const rx = 92 + 14 * hash(i), rz = 52 + 10 * hash(i + 9);
+    const x = HOOD.cx + Math.cos(a) * rx, z = HOOD.cz + Math.sin(a) * rz;
+    if (z < ROOM.back + 4) continue;
+    seeds.push([x, 40 + 34 * hash(i + 3), z]);
+  }
+  for (let i = 0; i < 10; i++) seeds.push([-50 + i * 11, 52 + 8 * hash(i + 21), 18 + 6 * hash(i + 5)]);
+  const positions = [], sAttr = [], bAttr = [], idx = [];
+  const SIDES = 5;
+  let base = 0;
+  for (const sd of seeds) {
+    const pts = traceSuction(sd);
+    const S = [0];
+    for (let i = 1; i < pts.length; i++) S.push(S[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
+    for (let i = 0; i < pts.length; i++) {
+      const [x, y, z] = pts[i];
+      const d = Math.hypot(HOOD.cx - x, HOOD.y - y, HOOD.cz - z);
+      const b = clamp(Math.pow(suctionSpeed(1, d) / suctionSpeed(1, 30), 0.45), 0.05, 1);   // brighter where the suction is strong
+      const j0 = Math.max(0, i - 1), j1 = Math.min(pts.length - 1, i + 1);
+      const t = new THREE.Vector3(pts[j1][0] - pts[j0][0], pts[j1][1] - pts[j0][1], pts[j1][2] - pts[j0][2]).normalize();
+      const n1 = new THREE.Vector3().crossVectors(t, Math.abs(t.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
+      const n2 = new THREE.Vector3().crossVectors(t, n1);
+      const r = 0.12 + 0.34 * b;
+      for (let k = 0; k < SIDES; k++) {
+        const a = (k / SIDES) * Math.PI * 2, cu = Math.cos(a) * r, su = Math.sin(a) * r;
+        positions.push(x + n1.x * cu + n2.x * su, y + n1.y * cu + n2.y * su, z + n1.z * cu + n2.z * su);
+        sAttr.push(S[i] + hash(base) * 40); bAttr.push(b);
+      }
+      if (i > 0) { const p0 = base + (i - 1) * SIDES, p1 = base + i * SIDES; for (let k = 0; k < SIDES; k++) { const k1 = (k + 1) % SIDES; idx.push(p0 + k, p1 + k, p1 + k1, p0 + k, p1 + k1, p0 + k1); } }
+    }
+    base += pts.length * SIDES;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute('aS', new THREE.Float32BufferAttribute(sAttr, 1));
+  g.setAttribute('aB', new THREE.Float32BufferAttribute(bAttr, 1));
+  g.setIndex(idx);
+  var flowMesh = new THREE.Mesh(g, flowMat);
+  flowMesh.frustumCulled = false; flowMesh.renderOrder = 5;
+  scene.add(flowMesh);
+}
+// Supply-air streams from the inlet into the kitchen
+const supplyMat = flowMat.clone();
+supplyMat.uniforms = { uFlow: { value: 0 }, uGain: { value: 1 }, uColor: { value: new THREE.Color('#bfe6ff') } };
+{
+  const positions = [], sAttr = [], bAttr = [], idx = [];
+  let base = 0; const SIDES = 5;
+  for (let i = 0; i < 9; i++) {
+    const p0 = new THREE.Vector3(106 + (i % 3) * 14, 140 + Math.floor(i / 3) * 8, ROOM.back + 4);
+    const c = new THREE.CatmullRomCurve3([p0, p0.clone().add(new THREE.Vector3(-8, -14, 40)), new THREE.Vector3(70 - i * 3, 70 + i * 2, 30 + i * 2), new THREE.Vector3(62 + i, 60, -2 + i)]);
+    const pts = c.getPoints(60);
+    for (let k = 0; k < pts.length; k++) {
+      const q = pts[k], t = c.getTangent(k / 60);
+      const n1 = new THREE.Vector3().crossVectors(t, new THREE.Vector3(0, 1, 0)).normalize(), n2 = new THREE.Vector3().crossVectors(t, n1);
+      const b = 0.75 * (1 - k / 60) + 0.1;
+      for (let j = 0; j < SIDES; j++) { const a = (j / SIDES) * Math.PI * 2, r = 0.3; positions.push(q.x + (n1.x * Math.cos(a) + n2.x * Math.sin(a)) * r, q.y + (n1.y * Math.cos(a) + n2.y * Math.sin(a)) * r, q.z + (n1.z * Math.cos(a) + n2.z * Math.sin(a)) * r); sAttr.push(k * 2.2 + i * 7); bAttr.push(b); }
+      if (k > 0) { const a0 = base + (k - 1) * SIDES, a1 = base + k * SIDES; for (let j = 0; j < SIDES; j++) { const j1 = (j + 1) % SIDES; idx.push(a0 + j, a1 + j, a1 + j1, a0 + j, a1 + j1, a0 + j1); } }
+    }
+    base += pts.length * SIDES;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute('aS', new THREE.Float32BufferAttribute(sAttr, 1));
+  g.setAttribute('aB', new THREE.Float32BufferAttribute(bAttr, 1));
+  g.setIndex(idx);
+  var supplyMesh = new THREE.Mesh(g, supplyMat);
+  supplyMesh.frustumCulled = false; supplyMesh.renderOrder = 5;
+  scene.add(supplyMesh);
+}
+// Draught through the door gaps (shown when the room is pulled negative)
+const draughtMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.9, 0.95, 1.0), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+const draught = new THREE.Group();
+{
+  for (let i = 0; i < 7; i++) {
+    const c = new THREE.CatmullRomCurve3([new THREE.Vector3(-224, -50 + i * 28, 126), new THREE.Vector3(-204, -46 + i * 28, 122), new THREE.Vector3(-170, -40 + i * 26, 104)]);
+    const m = new THREE.Mesh(new THREE.TubeGeometry(c, 24, 0.5, 5), draughtMat);
+    draught.add(m);
+  }
+  scene.add(draught);
+}
+
+// =====================================================================================
+// Smoke particles (advected by the field with RK4) and the marked parcel for the slow-motion
+// =====================================================================================
+const NP = 1800;
+const smokeGeo = new THREE.BufferGeometry();
+const smokePos = new Float32Array(NP * 3), smokeInfo = new Float32Array(NP * 2);
+smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+smokeGeo.setAttribute('aInfo', new THREE.BufferAttribute(smokeInfo, 2));
+const smokeMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false,
+  uniforms: { uTex: { value: smokeTex }, uScale: { value: 800 }, uFade: { value: 1 } },
+  vertexShader: `attribute vec2 aInfo; uniform float uScale; varying float vA; varying float vWarm; varying float vOut;
+    void main(){
+      float age = aInfo.x, st = aInfo.y;          // st: 0 rising, 1 captured, 2 escaped
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float k = clamp(age / 11.0, 0.0, 1.0);
+      vA = smoothstep(0.0, 0.06, k) * (1.0 - smoothstep(0.75, 1.0, k)) * (st > 0.5 && st < 1.5 ? 0.75 : 1.0);
+      vWarm = 1.0 - smoothstep(4.0, 45.0, position.y);
+      vOut = st > 1.5 ? 1.0 : 0.0;
+      gl_PointSize = (5.0 + 21.0 * sqrt(k) + vOut * 15.0) * uScale / max(1.0, -mv.z);
+    }`,
+  fragmentShader: `uniform sampler2D uTex; uniform float uFade; varying float vA; varying float vWarm; varying float vOut;
+    void main(){
+      float t = texture2D(uTex, gl_PointCoord).a;
+      vec3 grey = mix(vec3(0.86, 0.85, 0.84), vec3(0.88, 0.85, 0.8), vOut);
+      vec3 col = mix(grey, vec3(1.0, 0.62, 0.32), vWarm * 0.85);
+      gl_FragColor = vec4(col, t * vA * (0.036 + 0.03 * vOut) * uFade);
+    }`,
+});
+const smoke = new THREE.Points(smokeGeo, smokeMat);
+smoke.frustumCulled = false;
+smoke.renderOrder = 6;
+scene.add(smoke);
+// the marked parcel and its trail
+const heroSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1.6, 1.25, 0.9), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+heroSprite.scale.set(15, 15, 1);
+scene.add(heroSprite);
+const TRAIL_N = 90;
+const trailGeo = new THREE.BufferGeometry();
+const trailPos = new Float32Array(TRAIL_N * 3), trailA = new Float32Array(TRAIL_N);
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+trailGeo.setAttribute('aA', new THREE.BufferAttribute(trailA, 1));
+const trailMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: 'attribute float aA; varying float vA; void main(){ vA = aA; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'varying float vA; void main(){ gl_FragColor = vec4(vec3(1.0, 0.78, 0.5) * vA, 1.0); }',
+});
+const trail = new THREE.Line(trailGeo, trailMat);
+trail.frustumCulled = false;
+scene.add(trail);
+
+// =====================================================================================
+// UI plumbing
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const ui = {
+  title: $('title'), airval: $('airval'), qval: $('qval'), dpval: $('dpval'), capval: $('capval'), stateTag: $('stateTag'), meter: $('meter'),
+  fill: document.querySelector('#meter .fill'), thCap: $('thCap'),
+  steps: [...document.querySelectorAll('#steps li')], stepsEl: $('steps'), counter: $('counter'), stateText: $('stateText'),
+  realnote: $('realnote'), speedTag: $('speedTag'), range: $('range'), subtitle: $('subtitle'), bubble: $('bubble'),
+  imageTag: $('imageTag'), hint: $('hint'),
+};
+ui.thCap.style.left = `${CAP_TH * 100}%`;
+$('ticks').innerHTML = [0, 25, 50, 75, 100].map(v => `<span style="left:${v}%">${v}${v === 100 ? '%' : ''}</span>`).join('');
+const fontsReady = Promise.all([
+  document.fonts.load('900 60px "Noto Serif JP"'), document.fonts.load('600 20px "Noto Serif JP"'),
+  document.fonts.load('700 40px "Noto Sans JP"'), document.fonts.load('500 14px "Noto Sans JP"'),
+  document.fonts.load('400 12px "Noto Sans JP"'), document.fonts.load('500 16px "JetBrains Mono"'),
+]).catch(() => {});
+
+// =====================================================================================
+// State machine
+// =====================================================================================
+let prng = 1;
+const srand = n => hash(n * 1.618 + 0.37);
+function spawnParticle(st, i, n) {
+  st.pos[i * 3] = lerp(GRILL.x0 + 4, GRILL.x1 - 4, srand(i * 31 + n * 7)); st.pos[i * 3 + 1] = 1 + srand(i * 17 + n * 3) * 2;
+  st.pos[i * 3 + 2] = lerp(GRILL.z0 + 3, GRILL.z1 - 3, srand(i * 13 + n * 11));
+  st.age[i] = 0; st.flag[i] = 0; st.gen[i] = n;
+}
+function freshState() {
+  const st = {
+    dial: 0.32, supplyOpen: true, dp: 0, Qeff: 0, cap: 0, capDisp: 0,
+    pos: new Float32Array(NP * 3), age: new Float32Array(NP), flag: new Uint8Array(NP), gen: new Uint16Array(NP),
+    hero: null,                // { p:[x,y,z], age, trail:[] }
+    status: 'idle',            // idle | run | done | spill
+    phase: -1, heroReal: 0, spill: 0,
+    speed: 'slow', flash: 0, fanAngle: 0,
+    exploded: false, explode: 0,
+    camera: 'overview', t: 0, events: [], bubble: null, bubbleUntil: 0, interacted: false,
+    hist: [], histNext: 0, sealedFor: 0, tm: 0,
+  };
+  for (let i = 0; i < NP; i++) { spawnParticle(st, i, 0); st.age[i] = (i / NP) * LIFE; }
+  return st;
+}
+let S = freshState();
+function logEvent(type) { S.events.push({ type, t: +S.t.toFixed(4) }); }
+
+const vA = [0, 0, 0], vB = [0, 0, 0], vC = [0, 0, 0], vD = [0, 0, 0];
+function rk4(p, h, Q, spill, noSink = false) {
+  const [x, y, z] = p;
+  fieldVel(x, y, z, Q, spill, vA, noSink);
+  fieldVel(x + (h / 2) * vA[0], y + (h / 2) * vA[1], z + (h / 2) * vA[2], Q, spill, vB, noSink);
+  fieldVel(x + (h / 2) * vB[0], y + (h / 2) * vB[1], z + (h / 2) * vB[2], Q, spill, vC, noSink);
+  fieldVel(x + h * vC[0], y + h * vC[1], z + h * vC[2], Q, spill, vD, noSink);
+  p[0] = x + (h / 6) * (vA[0] + 2 * vB[0] + 2 * vC[0] + vD[0]);
+  p[1] = y + (h / 6) * (vA[1] + 2 * vB[1] + 2 * vC[1] + vD[1]);
+  p[2] = z + (h / 6) * (vA[2] + 2 * vB[2] + 2 * vC[2] + vD[2]);
+}
+function advectSmoke(h) {
+  const Q = S.Qeff, spill = S.spill;
+  TM = S.tm;
+  const p = [0, 0, 0];
+  // flags: 0 rising, 4 will be captured, 3 spilling over the rim, 1 inside the hood, 2 escaped into the room
+  for (let i = 0; i < NP; i++) {
+    p[0] = S.pos[i * 3]; p[1] = S.pos[i * 3 + 1]; p[2] = S.pos[i * 3 + 2];
+    const f = S.flag[i];
+    if (f === 3) {
+      // pushed out past the nearest open edge (the back edge is the wall), still rising with the plume
+      const dl = p[0] - HOOD.x0, dr = HOOD.x1 - p[0], df = HOOD.z1 - p[2];
+      const m = Math.min(dl, dr, df);
+      const ox = m === dl ? -1 : m === dr ? 1 : 0, oz = m === df ? 1 : 0;
+      rk4(p, h, Q, spill, true);
+      p[0] += ox * 34 * h; p[2] += oz * 34 * h; p[1] += 6 * h;
+    } else rk4(p, h, Q, spill, f === 2);
+    S.pos[i * 3] = p[0]; S.pos[i * 3 + 1] = clamp(p[1], -20, ROOM.ceil - 2); S.pos[i * 3 + 2] = Math.max(ROOM.back + 2, p[2]);
+    S.age[i] += h;
+    const inside = insideFootprint(p[0], p[2]);
+    if (f === 0 && p[1] > HOOD.y - 14) { S.flag[i] = srand(i * 97 + S.gen[i] * 13) > S.cap ? 3 : 4; if (S.flag[i] === 3) S.age[i] = Math.max(S.age[i], LIFE - 4.2); }
+    if ((f === 4 || f === 0) && p[1] >= HOOD.y && inside) S.flag[i] = 1;
+    if ((f === 3 || f === 4) && p[1] > HOOD.y + 4 && !inside) S.flag[i] = 2;
+    if ((S.flag[i] === 1 && p[1] > 150) || S.age[i] > LIFE || p[2] > 420 || Math.abs(p[0]) > 300) spawnParticle(S, i, S.gen[i] + 1);
+  }
+}
+/** Let the plume develop for a few model seconds before t = 0, so the first frame already shows rising smoke. */
+function prewarmSmoke(sec = 6) {
+  const bal = pressureBalance(Q_MAX * S.dial, S.supplyOpen);
+  S.dp = bal.dp; S.Qeff = bal.Q; S.cap = captureRatio(S.Qeff); S.spill = smooth01((0.9 - S.cap) / 0.4);
+  for (let i = 0; i < sec * 60; i++) { advectSmoke(1 / 60); S.tm += 1 / 60; }
+}
+function heroPhase(p) {
+  const [x, y, z] = p;
+  if (y < 12) return 0;
+  if (y < HOOD.y - 22) return 1;
+  if (y < HOOD.y) return 2;
+  if (y < 108) return 3;
+  if (y < 128) return 4;
+  return 5;
+}
+function startCapture() {
+  S.status = 'run'; S.flash = 1; S.phase = 0; S.heroReal = 0;
+  S.hero = { p: [2, 1.5, GRILL.cz + 1], trail: [] };
+  logEvent('capture');
+}
+function completeCapture() {
+  S.status = 'done'; S.phase = PHASES.length - 1;
+  showBubble('ok'); sound('ok'); logEvent('done');
+}
+function startSpill() {
+  S.status = 'spill'; showBubble('err'); sound('err'); logEvent('spill');
+  if (!DEMO_ACTIVE) setCamera('fail');
+}
+
+/** Advance by dt display-seconds. While the marked parcel travels, time runs slower (slow-motion). */
+function stepState(dt) {
+  S.t += dt;
+  const slow = S.status === 'run' && S.speed === 'slow' ? SLOW : 1;
+  const h = dt / slow;                                   // real seconds
+  // pressure balance relaxes toward the fan curve / opening
+  const target = pressureBalance(Q_MAX * S.dial, S.supplyOpen);
+  const kP = dt > 0 ? 1 - Math.exp(-h / 0.45) : 1;
+  S.dp += (target.dp - S.dp) * kP;
+  S.Qeff = Q_MAX * S.dial * (1 - S.dp / DP_FAN);
+  S.cap = captureRatio(S.Qeff);
+  S.spill = smooth01((0.9 - S.cap) / 0.4);
+  if (dt > 0) { advectSmoke(h); S.tm += h; }
+  // thresholds
+  if (S.status === 'idle' && S.cap >= CAP_TH && S.supplyOpen) startCapture();
+  if (S.status === 'run') {
+    const P = S.hero.p;
+    for (let k = 0; k < 2 && dt > 0; k++) rk4(P, h / 2, Math.max(S.Qeff, 0.2), 0);
+    S.heroReal += h;
+    S.hero.trail.push([P[0], P[1], P[2]]);
+    if (S.hero.trail.length > TRAIL_N) S.hero.trail.shift();
+    S.phase = Math.max(S.phase, heroPhase(P));
+    if (P[1] > 150 || S.heroReal > 6) completeCapture();
+  }
+  if ((S.status === 'done' || S.status === 'run' || S.status === 'idle') && !S.supplyOpen && S.cap < 0.7) startSpill();
+  if (S.status === 'spill') {
+    S.sealedFor = S.supplyOpen && S.cap >= CAP_TH ? S.sealedFor + dt : 0;
+    if (S.sealedFor > 0.6) { S.status = 'done'; logEvent('restore'); }
+  }
+  S.flash = Math.max(0, S.flash - dt * 1.1);
+  S.fanAngle += h * (S.dial * 22);
+  const et = S.exploded ? 1 : 0;
+  S.explode += clamp(et - S.explode, -dt * 1.25, dt * 1.25);
+  if (S.bubble && S.t > S.bubbleUntil) S.bubble = null;
+  if (S.t >= S.histNext) { S.hist.push([S.t, S.dial * 1400, -S.dp]); if (S.hist.length > 240) S.hist.shift(); S.histNext = S.t + 1 / 30; }
+}
+function showBubble(kind) { S.bubble = kind; S.bubbleUntil = S.t + (kind === 'err' ? 3.2 : 4.2); }
+
+// =====================================================================================
+// Sound (Web Audio, created on the first user gesture; the video gets its cues from the export events)
+// =====================================================================================
+let audio = null;
+function ensureAudio() { if (!audio) { try { audio = new AudioContext(); } catch { audio = null; } } if (audio && audio.state === 'suspended') audio.resume(); }
+window.addEventListener('pointerdown', ensureAudio);
+window.addEventListener('keydown', ensureAudio);
+function tone(freq, start, dur, gain = 0.16, type = 'sine') {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(gain, start + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(g).connect(audio.destination); o.start(start); o.stop(start + dur + 0.05);
+}
+function sound(kind) {
+  if (!audio || audio.state !== 'running' || DEMO_ACTIVE) return;
+  const t0 = audio.currentTime + 0.01;
+  if (kind === 'ok') { tone(196, t0, 0.6, 0.22); tone(392, t0, 0.42, 0.09); }
+  else for (let i = 0; i < 3; i++) tone(3000, t0 + i * 0.12, 0.08, 0.12);
+}
+
+// =====================================================================================
+// Camera presets
+// =====================================================================================
+const CAMS = {
+  overview: { pos: [-205, 160, 330], tgt: [0, 82, -12] },
+  grill: { pos: [-96, 40, 110], tgt: [0, 26, -28] },
+  mouth: { pos: [-118, 72, 118], tgt: [0, 82, -26] },
+  hoodIn: { pos: [-40, 18, 66], tgt: [0, 112, -32] },
+  seats: { pos: [60, 30, 250], tgt: [-10, 70, -30] },
+  hero: { pos: [-70, 20, 90], tgt: [0, 0, -30], follow: true },
+  fail: { pos: [150, 115, 470], tgt: [-125, 50, 60] },
+  exploded: { pos: [-235, 215, 370], tgt: [10, 118, 0] },
+};
+const camAnim = { from: null, to: null, t: 1, dur: 1.3 };
+function presetVectors(name) {
+  const p = CAMS[name];
+  if (p.follow && S.hero) {
+    const [x, y, z] = S.hero.p;
+    const ty = clamp(y, 10, 160);
+    return { pos: new THREE.Vector3(-118 + x * 0.3, Math.min(ty, 96) - 2, 132), tgt: new THREE.Vector3(x * 0.5, ty + 12, -30) };
+  }
+  if (p.follow) return { pos: new THREE.Vector3(...CAMS.mouth.pos), tgt: new THREE.Vector3(...CAMS.mouth.tgt) };
+  return { pos: new THREE.Vector3(...p.pos), tgt: new THREE.Vector3(...p.tgt) };
+}
+function setCamera(name, instant = false) {
+  if (!CAMS[name]) return;
+  S.camera = name;
+  const to = presetVectors(name);
+  if (instant) { camera.position.copy(to.pos); controls.target.copy(to.tgt); camAnim.t = 1; controls.update(); }
+  else { camAnim.from = { pos: camera.position.clone(), tgt: controls.target.clone() }; camAnim.to = name; camAnim.t = 0; }
+  document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === name));
+}
+function updateCameraAnim(dt) {
+  if (camAnim.t >= 1 || !camAnim.from) return;
+  camAnim.t = Math.min(1, camAnim.t + dt / camAnim.dur);
+  const k = ease(camAnim.t), to = presetVectors(camAnim.to);
+  camera.position.lerpVectors(camAnim.from.pos, to.pos, k);
+  controls.target.lerpVectors(camAnim.from.tgt, to.tgt, k);
+}
+
+// =====================================================================================
+// Scene update from state
+// =====================================================================================
+function applyScene(time) {
+  const e = ease(S.explode);
+  for (const p of Object.values(parts)) p.obj.position.copy(p.from).addScaledVector(p.off, e);
+  filterDetail.visible = e > 0.02;
+  filterDetail.scale.setScalar(Math.max(0.001, 3 * e));
+  fan.visible = e > 0.02;
+  showLight.intensity = 1.6 * e;
+  scene.environmentIntensity = 0.8 + 0.9 * e;
+  fanRotor.rotation.y = S.fanAngle;
+  // airflow: brightness follows the actual suction (Q_eff)
+  const qn = S.Qeff / Q_MAX;
+  flowMat.uniforms.uFlow.value = time * (0.4 + 1.8 * qn);
+  flowMat.uniforms.uGain.value = Math.pow(qn, 0.8) * 1.5 * (1 - 0.8 * e);
+  flowMesh.visible = e < 0.95;
+  supplyMat.uniforms.uFlow.value = time * 0.9;
+  supplyMat.uniforms.uGain.value = (S.supplyOpen ? 1 : 0) * (0.35 + 0.8 * S.dial) * (1 - e);
+  louvers.forEach((l, i) => { l.rotation.x = S.supplyOpen ? -0.9 : 0; });
+  draughtMat.opacity = smooth01((S.dp - 8) / 20) * 0.5 * (0.6 + 0.4 * Math.sin(time * 6));
+  rimMat.opacity = 0.18 + 0.5 * smooth01((S.cap - 0.85) / 0.1) + 0.9 * S.flash;
+  rimMat.color.setRGB(0.75 + 0.25 * S.flash, 0.88 + 0.12 * S.flash, 1.0);
+  flashLight.intensity = 9000 * S.flash * S.flash;
+  coalLight.intensity = 5200 + 600 * Math.sin(time * 1.7);
+  knob.userData.thumb.position.x = -8 + 16 * S.dial;
+  // smoke
+  for (let i = 0; i < NP; i++) {
+    smokePos[i * 3] = S.pos[i * 3]; smokePos[i * 3 + 1] = S.pos[i * 3 + 1]; smokePos[i * 3 + 2] = S.pos[i * 3 + 2];
+    const fl = S.flag[i]; smokeInfo[i * 2] = S.age[i]; smokeInfo[i * 2 + 1] = fl === 4 ? 0 : fl === 3 ? 2 : fl;
+  }
+  smokeGeo.attributes.position.needsUpdate = true; smokeGeo.attributes.aInfo.needsUpdate = true;
+  smokeMat.uniforms.uScale.value = (innerHeight * dpr) / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  smokeMat.uniforms.uFade.value = 1 - 0.7 * e;
+  // the marked parcel
+  const H = S.hero;
+  const heroOn = S.status === 'run' && H;
+  heroSprite.material.opacity = heroOn ? 1 : 0;
+  if (H) heroSprite.position.set(...H.p);
+  for (let i = 0; i < TRAIL_N; i++) {
+    const q = H && H.trail.length ? H.trail[Math.max(0, H.trail.length - TRAIL_N + i)] || H.trail[0] : [0, -999, 0];
+    trailPos[i * 3] = q[0]; trailPos[i * 3 + 1] = q[1]; trailPos[i * 3 + 2] = q[2];
+    trailA[i] = heroOn ? Math.pow(i / TRAIL_N, 1.5) * 0.9 : 0;
+  }
+  trailGeo.attributes.position.needsUpdate = true; trailGeo.attributes.aA.needsUpdate = true;
+  ui.imageTag.classList.toggle('show', S.camera === 'hoodIn' || S.explode > 0.3);
+}
+
+// =====================================================================================
+// Graph (distance → suction speed) and the fan / pressure record
+// =====================================================================================
+const graphCanvas = $('graph'), scopeCanvas = $('scope');
+const graphStatic = document.createElement('canvas');
+const X_MAX = 1.0, V_AX = 150;   // m, cm/s
+const RIM_D = RIM[Math.round(RIM.length * 0.62)].d / 100;   // front rim probe distance (m)
+const RISE_REF = Math.max(...RIM.map(r => r.w));             // fastest rising smoke at the rim (cm/s)
+function sizeCanvas(c) {
+  const r = c.getBoundingClientRect();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * s)), h = Math.max(1, Math.round(r.height * s));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
+  return false;
+}
+const graphGeom = (w, h) => ({ l: 34, r: w - 10, t: 12, b: h - 26 });
+function drawGraphStatic() {
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  graphStatic.width = graphCanvas.width; graphStatic.height = graphCanvas.height;
+  const x = graphStatic.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = d => g.l + (d / X_MAX) * (g.r - g.l), Y = v => g.b - (clamp(v, 0, V_AX) / V_AX) * (g.b - g.t);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(g.l, g.t); x.lineTo(g.l, g.b); x.lineTo(g.r, g.b); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '10px "JetBrains Mono"'; x.textAlign = 'center';
+  for (let d = 0; d <= 1.001; d += 0.25) x.fillText(`${d.toFixed(2).replace(/0$/, '')}`, X(d), g.b + 12);
+  x.textAlign = 'right';
+  for (let v = 0; v <= V_AX; v += 50) x.fillText(`${v}`, g.l - 5, Y(v) + 3);
+  x.textAlign = 'left'; x.font = '10px "Noto Sans JP"';
+  x.fillText('口の中心からの距離 m', g.r - 106, g.b + 23); x.fillText('cm/秒', g.l + 4, g.t + 2);
+  // rising speed of the smoke at the rim
+  x.setLineDash([4, 4]); x.strokeStyle = 'rgba(255,176,74,0.8)';
+  x.beginPath(); x.moveTo(g.l, Y(RISE_REF)); x.lineTo(g.r, Y(RISE_REF)); x.stroke();
+  x.strokeStyle = 'rgba(255,255,255,0.35)';
+  x.beginPath(); x.moveTo(X(RIM_D), g.t); x.lineTo(X(RIM_D), g.b); x.stroke();
+  x.setLineDash([]);
+  x.fillStyle = '#ffcf94'; x.fillText('縁での煙の上昇速度', g.r - 96, Y(RISE_REF) - 5);
+  x.fillStyle = '#c4c2bd'; x.fillText('縁', X(RIM_D) + 3, g.t + 9);
+}
+function drawGraph() {
+  if (!graphCanvas.offsetParent) return;
+  if (sizeCanvas(graphCanvas)) drawGraphStatic();
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = graphCanvas.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+  x.drawImage(graphStatic, 0, 0);
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = graphCanvas.width / s, h = graphCanvas.height / s, g = graphGeom(w, h);
+  const X = d => g.l + (d / X_MAX) * (g.r - g.l), Y = v => g.b - (clamp(v, 0, V_AX) / V_AX) * (g.b - g.t);
+  // curve for the current suction
+  x.strokeStyle = '#9fd2ff'; x.lineWidth = 1.8; x.beginPath();
+  for (let i = 0; i <= 100; i++) { const d = (i / 100) * X_MAX; const v = suctionSpeed(S.Qeff, d * 100); i ? x.lineTo(X(d), Y(v)) : x.moveTo(X(d), Y(v)); }
+  x.stroke();
+  const vr = suctionSpeed(S.Qeff, RIM_D * 100);
+  x.fillStyle = S.status === 'spill' ? '#ff5448' : vr >= RISE_REF ? '#ffffff' : '#9fd2ff';
+  x.beginPath(); x.arc(X(RIM_D), Y(vr), 4.5, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(X(RIM_D), Y(vr), 8, 0, Math.PI * 2); x.stroke();
+}
+function drawScope() {
+  if (!scopeCanvas.offsetParent) return;
+  sizeCanvas(scopeCanvas);
+  const s = Math.min(2, window.devicePixelRatio || 1);
+  const x = scopeCanvas.getContext('2d');
+  x.setTransform(s, 0, 0, s, 0, 0);
+  const w = scopeCanvas.width / s, h = scopeCanvas.height / s;
+  x.clearRect(0, 0, w, h);
+  const l = 30, r = w - 30, t = 6, b = h - 6, mid = (t + b) / 2;
+  x.strokeStyle = 'rgba(255,255,255,0.09)'; x.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(l + ((r - l) * i) / 8, t); x.lineTo(l + ((r - l) * i) / 8, b); x.stroke(); }
+  x.beginPath(); x.moveTo(l, mid); x.lineTo(r, mid); x.stroke();
+  x.fillStyle = '#8d8b86'; x.font = '9px "JetBrains Mono"'; x.textAlign = 'right';
+  x.fillText('1400', l - 3, t + 7); x.fillText('0', l - 3, b); x.textAlign = 'left';
+  x.fillText('0Pa', r + 3, t + 7); x.fillText('-60', r + 3, b);
+  const H = S.hist, N = 240;
+  if (H.length < 2) return;
+  const X = i => r - ((H.length - 1 - i) / (N - 1)) * (r - l);
+  x.strokeStyle = '#ffb04a'; x.lineWidth = 1.6; x.beginPath();
+  H.forEach((p, i) => { const y = b - (p[1] / 1400) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+  x.strokeStyle = '#bfe2ff'; x.beginPath();
+  H.forEach((p, i) => { const y = t + (-p[2] / 60) * (b - t); i ? x.lineTo(X(i), y) : x.moveTo(X(i), y); }); x.stroke();
+}
+
+// =====================================================================================
+// Labels with leader lines, greedy collision avoidance
+// =====================================================================================
+const labelLayer = $('labels'), svg = $('leaders');
+const tmpV = new THREE.Vector3();
+const LABELS = [
+  { id: 'grill', text: '焼き台', cls: 'key', pri: 98, mode: 'normal', anchor: () => new THREE.Vector3(-42, -8, -6) },
+  { id: 'hood', text: '排気フード', cls: 'key', pri: 100, mode: 'normal', anchor: () => new THREE.Vector3(-46, 108, -10) },
+  { id: 'smoke', text: '煙', cls: 'amber', pri: 94, mode: 'normal', anchor: () => new THREE.Vector3(20, 42, -24) },
+  { id: 'air', text: '気流（吸い込み）', cls: 'air', pri: 96, mode: 'normal', anchor: () => new THREE.Vector3(-64, 76, 12) },
+  { id: 'knob', text: '風量のつまみ', cls: '', pri: 72, mode: 'normal', anchor: () => new THREE.Vector3(34, 96, 2) },
+  { id: 'inlet', text: '給気口', cls: 'air', pri: 90, mode: 'normal', anchor: () => new THREE.Vector3(120, 150, ROOM.back + 3) },
+  { id: 'seats', text: '客席', cls: '', pri: 70, mode: 'normal', anchor: () => new THREE.Vector3(-120, 24, 76) },
+  { id: 'duct', text: 'ダクト', cls: '', pri: 60, mode: 'normal', anchor: () => new THREE.Vector3(12, 176, -38) },
+  { id: 'door', text: '', cls: 'warn', pri: 99, mode: 'normal', anchor: () => new THREE.Vector3(-217, 70, 170), dyn: () => (S.dp > 15 ? `入口の扉が開けにくい（扉にかかる力 約${Math.round((S.dp * DOOR_AREA) / 9.8)}kg）` : '') },
+  { id: 'draught', text: '', cls: 'air', pri: 97, mode: 'normal', anchor: () => new THREE.Vector3(-196, 20, 118), dyn: () => (S.dp > 15 ? '隙間風' : '') },
+  // exploded
+  { id: 'xnet', text: '焼き網', cls: '', pri: 82, mode: 'x', anchor: () => netGroup.localToWorld(tmpV.set(40, 0, GRILL.cz)).clone() },
+  { id: 'xbed', text: '炭床', cls: '', pri: 84, mode: 'x', anchor: () => grillBody.localToWorld(tmpV.set(-40, -10, -6)).clone() },
+  { id: 'xhood', text: 'フード（本体）', cls: 'key', pri: 92, mode: 'x', anchor: () => hoodBody.localToWorld(tmpV.set(-50, 105, -6)).clone() },
+  { id: 'xfilter', text: 'グリスフィルター（1枚を3倍に拡大）', cls: 'key', pri: 94, mode: 'x', anchor: () => filterDetail.localToWorld(tmpV.set(-20, 9, 1)).clone() },
+  { id: 'xtrough', text: '油受け', cls: '', pri: 80, mode: 'x', anchor: () => trough.localToWorld(tmpV.set(48, 100.5, HOOD.cz)).clone() },
+  { id: 'xduct', text: 'ダクト', cls: '', pri: 78, mode: 'x', anchor: () => duct.localToWorld(tmpV.set(15, 190, HOOD.cz - 8)).clone() },
+  { id: 'xfan', text: '排気ファン', cls: '', pri: 86, mode: 'x', anchor: () => fan.localToWorld(tmpV.set(26, 0, 0)).clone() },
+  { id: 'xinlet', text: '給気口', cls: 'air', pri: 88, mode: 'x', anchor: () => inlet.localToWorld(tmpV.set(-23, 0, 0)).clone() },
+];
+for (const L of LABELS) {
+  L.el = document.createElement('div');
+  L.el.className = `lbl ${L.cls}`;
+  L.el.textContent = L.text;
+  labelLayer.appendChild(L.el);
+  L.line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  L.line.setAttribute('stroke', 'rgba(255,255,255,0.55)');
+  L.line.setAttribute('stroke-width', '1');
+  L.dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  L.dot.setAttribute('r', '2.5'); L.dot.setAttribute('fill', '#fff');
+  svg.append(L.line, L.dot);
+}
+let blockRects = [];
+let blockFrame = 0;
+function refreshBlockRects() {
+  blockRects = ['left', 'right', 'title', 'notes', 'subtitle', 'moreBtn', 'more', 'mobileTop', 'hint', 'imageTag']
+    .map(id => $(id))
+    .filter(el => { if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02; })
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+}
+const overlaps = (a, b, pad = 4) => a.x0 < b.right + pad && a.x1 > b.left - pad && a.y0 < b.bottom + pad && a.y1 > b.top - pad;
+const overlapsBox = (a, b, pad = 4) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+function screenOf(v) {
+  const p = v.clone().project(camera);
+  const inFront = v.clone().applyMatrix4(camera.matrixWorldInverse).z < 0;
+  return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, ok: inFront && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05 };
+}
+function layoutLabels() {
+  if (blockFrame++ % 20 === 0) refreshBlockRects();
+  const mode = S.explode > 0.5 ? 'x' : 'normal';
+  const placed = [];
+  if (ui.bubble.classList.contains('show')) { const r = ui.bubble.getBoundingClientRect(); placed.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }); }
+  const sorted = [...LABELS].sort((a, b) => b.pri - a.pri);
+  for (const L of sorted) {
+    let show = false;
+    let text = L.text;
+    if (L.dyn) { text = L.dyn(); if (L.el.textContent !== text) { L.el.textContent = text; L.size = null; } }
+    if (L.mode === mode && text) {
+      const a = screenOf(L.anchor());
+      if (a.ok) {
+        if (!L.size) L.size = { w: L.el.offsetWidth || 80, h: L.el.offsetHeight || 24 };
+        const { w, h } = L.size;
+        const cands = [[40, -46], [-40 - w, -46], [46, 26], [-46 - w, 26], [-w / 2, -70], [-w / 2, 48]];
+        for (const [dx, dy] of cands) {
+          const box = { x0: a.x + dx, y0: a.y + dy - h / 2, x1: a.x + dx + w, y1: a.y + dy + h / 2 };
+          if (box.x0 < 6 || box.y0 < 6 || box.x1 > innerWidth - 6 || box.y1 > innerHeight - 6) continue;
+          if (placed.some(p => overlapsBox(box, p))) continue;
+          if (blockRects.some(r => overlaps(box, r))) continue;
+          placed.push(box);
+          L.el.style.transform = `translate(${box.x0.toFixed(1)}px, ${box.y0.toFixed(1)}px)`;
+          const ex = a.x < box.x0 ? box.x0 : a.x > box.x1 ? box.x1 : Math.max(box.x0, Math.min(box.x1, a.x));
+          const ey = a.y < box.y0 ? box.y0 : a.y > box.y1 ? box.y1 : (box.y0 + box.y1) / 2;
+          L.line.setAttribute('x1', a.x.toFixed(1)); L.line.setAttribute('y1', a.y.toFixed(1));
+          L.line.setAttribute('x2', ex.toFixed(1)); L.line.setAttribute('y2', ey.toFixed(1));
+          L.dot.setAttribute('cx', a.x.toFixed(1)); L.dot.setAttribute('cy', a.y.toFixed(1));
+          show = true;
+          break;
+        }
+      }
+    }
+    L.el.classList.toggle('show', show);
+    L.line.style.display = L.dot.style.display = show ? '' : 'none';
+  }
+}
+
+// =====================================================================================
+// UI update
+// =====================================================================================
+function updateUI() {
+  ui.airval.innerHTML = `${Math.round(S.dial * 100)}<span class="unit">%</span>`;
+  ui.qval.textContent = `${(S.Qeff * 60).toFixed(0)} m³/分`;
+  ui.dpval.textContent = `${S.dp < 0.5 ? '0' : '−' + S.dp.toFixed(0)} Pa`;
+  ui.dpval.classList.toggle('err', S.dp > 15);
+  const capPct = Math.round(S.cap * 100);
+  ui.capval.innerHTML = `${capPct}<span class="unit">%</span>`;
+  ui.capval.classList.toggle('on', S.cap >= CAP_TH && S.status !== 'spill');
+  ui.capval.classList.toggle('err', S.status === 'spill');
+  ui.fill.style.width = `${(S.cap * 100).toFixed(1)}%`;
+  ui.meter.classList.toggle('bad', S.status === 'spill');
+  const tag = S.status === 'spill' ? '煙が客席へ流れています' : S.cap >= CAP_TH ? 'すべて収まっている' : S.cap >= 0.75 ? '縁からあふれている' : 'あふれている';
+  if (ui.stateTag.textContent !== tag) ui.stateTag.textContent = tag;
+  ui.stateTag.className = `tag ${S.status === 'spill' ? 'err' : S.cap >= CAP_TH ? 'on' : ''}`;
+  if (document.activeElement !== ui.range) ui.range.value = S.dial.toFixed(3);
+  ui.stepsEl.classList.toggle('aborted', S.status === 'spill');
+  ui.steps.forEach((li, i) => {
+    const running = S.status === 'run';
+    li.classList.toggle('active', (running && i === S.phase) || (S.status === 'done' && i === PHASES.length - 1));
+    li.classList.toggle('done', (running && i < S.phase) || S.status === 'done');
+  });
+  ui.counter.textContent = `経過 ${S.heroReal.toFixed(1)}秒`;
+  ui.stateText.textContent =
+    S.status === 'run' ? `${PHASES[Math.max(0, S.phase)].label}：煙の粒を追っています`
+    : S.status === 'done' ? '煙は外へ出ました'
+    : S.status === 'spill' ? '給気不足　煙が客席へ流れています'
+    : S.cap >= 0.8 ? 'もう少しで煙がすべて収まります' : '風量を上げてください';
+  ui.realnote.classList.toggle('show', S.status === 'done');
+  ui.speedTag.textContent = S.speed === 'slow' ? `スロー表示（約${SLOW}倍）` : '実時間';
+  document.querySelectorAll('[data-act=speed]').forEach(b => (b.textContent = S.speed === 'slow' ? '実時間にする' : 'スローにする'));
+  document.querySelectorAll('[data-act=explode]').forEach(b => { b.classList.toggle('on', S.exploded); b.textContent = S.exploded ? '元に戻す' : '分解'; });
+  document.querySelectorAll('[data-act=supply]').forEach(b => { b.classList.toggle('on', !S.supplyOpen); b.textContent = S.supplyOpen ? '給気口を閉じる' : '給気口を開ける'; });
+  const b = ui.bubble;
+  if (S.bubble) {
+    const isErr = S.bubble === 'err';
+    const html = isErr ? '給気口が閉じています<small>店内の気圧が下がり、フードの吸い込みが弱まっています</small>' : `フォン　捕集率 ${capPct}%<small>煙がすべてフードに収まっています</small>`;
+    if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+    b.className = `show ${isErr ? 'err' : 'ok'}`;
+    const p = screenOf(new THREE.Vector3(30, 130, -10));
+    const r = b.getBoundingClientRect();
+    let x = p.x - 36, y = p.y - r.height - 24;
+    x = Math.max(12, Math.min(innerWidth - r.width - 12, x));
+    if (innerWidth > 600) {
+      const L = $('left').getBoundingClientRect(), R = $('right').getBoundingClientRect();
+      if (x < L.right + 12) x = L.right + 12;
+      if (x + r.width > R.left - 12) x = Math.max(L.right + 12, R.left - 12 - r.width);
+    }
+    const floor = innerWidth <= 600 ? $('left').getBoundingClientRect().top - r.height - 8 : innerHeight - r.height - 12;
+    y = Math.max(innerWidth <= 600 ? 84 : 12, Math.min(floor, y));
+    b.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+  } else b.className = '';
+}
+
+// =====================================================================================
+// Input: knob drag vs camera orbit, wheel, keys, slider, buttons
+// =====================================================================================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let dragging = null;
+let tapPlan = null;
+function markInteraction() { if (!S.interacted) { S.interacted = true; collapseTitle(); } }
+function setDialUser(v) { tapPlan = null; S.dial = clamp(v, 0, 1); stepState(0); }
+canvas.addEventListener('pointerdown', e => {
+  if (DEMO_ACTIVE) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(knobPick, false).length) {
+    dragging = { x: e.clientX, v: S.dial };
+    controls.enabled = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; markInteraction();
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging) { setDialUser(dragging.v + (e.clientX - dragging.x) / 240); return; }
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  canvas.style.cursor = raycaster.intersectObject(knobPick, false).length ? 'grab' : 'default';
+});
+const endDrag = () => { if (dragging) { dragging = null; controls.enabled = true; canvas.style.cursor = 'default'; } };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+controls.addEventListener('start', () => markInteraction());
+canvas.addEventListener('wheel', e => { if (DEMO_ACTIVE) return; e.preventDefault(); markInteraction(); setDialUser(S.dial - e.deltaY * 0.0006); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (DEMO_ACTIVE) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); markInteraction(); setDialUser(S.dial + 0.02); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); markInteraction(); setDialUser(S.dial - 0.02); }
+});
+ui.range.addEventListener('input', () => { markInteraction(); setDialUser(+ui.range.value); });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || DEMO_ACTIVE) return;
+  markInteraction();
+  if (btn.dataset.act === 'tap') tap();
+  else if (btn.dataset.act === 'explode') setExploded(!S.exploded);
+  else if (btn.dataset.act === 'speed') S.speed = S.speed === 'slow' ? 'real' : 'slow';
+  else if (btn.dataset.act === 'supply') setMakeupAir(!S.supplyOpen);
+  else if (btn.dataset.cam) setCamera(btn.dataset.cam);
+  else if (btn.dataset.toggle) { const box = $(btn.dataset.toggle); box.classList.toggle('open'); if (box.classList.contains('open')) box.scrollIntoView({ block: 'nearest' }); btn.textContent = box.classList.contains('open') ? btn.textContent.replace('開く', '閉じる') : btn.textContent.replace('閉じる', '開く'); }
+  else if (btn.id === 'moreBtn') { const m = $('more'); m.classList.toggle('open'); btn.setAttribute('aria-expanded', m.classList.contains('open')); refreshBlockRects(); }
+});
+/** 自動調整: raise the airflow smoothly until everything is captured, with a small margin. */
+function tap() {
+  if (S.status === 'done' || S.status === 'run') { S.status = 'idle'; S.hero = null; S.phase = -1; S.heroReal = 0; }
+  tapPlan = { from: S.dial, to: Math.min(1, DIAL_TH + 0.08), t: 0 };
+}
+function updateTap(dt) {
+  if (!tapPlan) return;
+  tapPlan.t += dt;
+  S.dial = lerp(tapPlan.from, tapPlan.to, ease(Math.min(1, tapPlan.t / 3.2)));
+  if (tapPlan.t >= 3.2) tapPlan = null;
+}
+function setMakeupAir(open) { S.supplyOpen = !!open; stepState(0); }
+function setExploded(on) { S.exploded = !!on; if (!DEMO_ACTIVE) setCamera(on ? 'exploded' : 'overview'); }
+function collapseTitle() {
+  if (ui.title.classList.contains('small')) return;
+  ui.title.classList.add('small'); document.body.classList.add('collapsed');
+  setTimeout(refreshBlockRects, 800);
+  if (!DEMO_ACTIVE) setTimeout(() => { ui.hint.style.opacity = '0'; refreshBlockRects(); }, 9000);
+}
+
+// =====================================================================================
+// Demo (?demo=1) — a 30-second script; renderDemoFrame(t) renders any time synchronously
+// =====================================================================================
+let DEMO_ACTIVE = DEMO;
+const DEMO_LEN = 30;
+const SUBS = [
+  [0, 3, '鰻を焼くと、煙と熱が勢いよく昇っていきます'],
+  [3, 7, 'フードは煙を吸い上げているのではなく、口の近くで受け止めています'],
+  [7, 12, '吸い込みは口から離れると、急に弱くなります'],
+  [12, 14, '縁の吸い込みが煙の勢いを上回った瞬間、煙はすべて収まります'],
+  [14, 18.5, '煙はフィルターで油を落としてから外へ出ていきます'],
+  [18.5, 23, 'この模型では、焼き台からダクトまで約2秒です'],
+  [23, 27, '空気の入り口をふさぐと、フードは力を出せなくなります'],
+  [27, 30, 'だから出店では、排気と給気を一緒に設計します'],
+];
+function demoDial(t) {
+  const a = 0.32, b = DIAL_TH + 0.004;
+  if (t < 7) return a;
+  if (t < 12.25) { const u = seg(t, 7, 12.25); return lerp(a, b, u * u * (1.8 - 0.8 * u)); }  // gentle start, steady finish
+  return lerp(b, 0.66, ease(seg(t, 12.25, 14)));
+}
+const demoSupply = t => !(t >= 23 && t < 25.7);
+const DEMO_CAMS = [[0, 'overview'], [3, 'mouth'], [7, 'overview'], [11.6, 'mouth'], [13.2, 'hero'], [18.5, 'seats'], [23, 'overview'], [23.9, 'fail'], [27, 'exploded']];
+function demoCamera(t) {
+  let i = 0;
+  while (i + 1 < DEMO_CAMS.length && t >= DEMO_CAMS[i + 1][0]) i++;
+  const [t0, name] = DEMO_CAMS[i];
+  const cur = presetVectors(name);
+  const prev = i > 0 ? presetVectors(DEMO_CAMS[i - 1][1]) : cur;
+  const k = ease(seg(t, t0, t0 + (name === 'fail' ? 1.1 : 1.4)));
+  const pos = prev.pos.clone().lerp(cur.pos, k), tgt = prev.tgt.clone().lerp(cur.tgt, k);
+  const ang = Math.sin(t * 0.21) * 0.04;
+  pos.sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(tgt);
+  camera.position.copy(pos); controls.target.copy(tgt);
+  camera.lookAt(tgt);
+  S.camera = name;
+}
+function demoSubtitle(t) {
+  const s = SUBS.find(([a, b]) => t >= a && t < b);
+  const text = s ? s[2] : t >= DEMO_LEN ? SUBS[SUBS.length - 1][2] : '';
+  if (ui.subtitle.textContent !== text) ui.subtitle.textContent = text;
+  ui.subtitle.classList.toggle('show', !!text);
+}
+const DEMO_DT = 1 / 120;
+let demoCache = null;
+function demoStep(tt, dt) {
+  S.dial = demoDial(tt + dt);
+  S.supplyOpen = demoSupply(tt + dt);
+  S.exploded = tt + dt >= 27;
+  stepState(dt);
+}
+function simulateDemoTo(t) {
+  const K = Math.floor(t / DEMO_DT + 1e-6);
+  let k0 = 0;
+  if (demoCache && demoCache.k <= K) { S = structuredClone(demoCache.S); k0 = demoCache.k; }
+  else { S = freshState(); S.speed = 'slow'; prewarmSmoke(); stepState(0); }
+  for (let k = k0; k < K; k++) demoStep(k * DEMO_DT, DEMO_DT);
+  demoCache = { k: K, S: structuredClone(S) };
+  const rest = t - K * DEMO_DT;
+  if (rest > 1e-9) demoStep(K * DEMO_DT, rest);
+}
+let demoExternal = false;
+function renderDemoFrame(t) {
+  t = clamp(t, 0, DEMO_LEN);
+  DEMO_ACTIVE = true;
+  document.body.classList.add('demo');
+  simulateDemoTo(t);
+  ui.title.classList.toggle('small', t >= 3);
+  document.body.classList.toggle('collapsed', t >= 3);
+  if (demoExternal) {
+    const fade = t < 3 ? Math.min(1, (3 - t) / 0.35) : Math.min(1, (t - 3) / 0.35);
+    ui.title.style.opacity = fade.toFixed(3);
+    for (const id of ['left', 'right', 'notes']) $(id).style.opacity = t < 3 ? '' : Math.min(1, (t - 3) / 0.5).toFixed(3);
+  }
+  demoCamera(t);
+  demoSubtitle(t);
+  camera.updateMatrixWorld();
+  refreshBlockRects();
+  renderFrame(t, 0);
+  return getState();
+}
+
+// =====================================================================================
+// Main loop with adaptive pixel ratio
+// =====================================================================================
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr);
+  composer.setSize(w, h);
+  bloom.resolution.set(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+  camera.aspect = w / h;
+  camera.fov = w / h < 0.8 ? 52 : 36;
+  gradePass.uniforms.uAspect.value = w / h;
+  viewShift = -1; updateViewShift();
+  camera.updateProjectionMatrix();
+  sizeCanvas(graphCanvas) && drawGraphStatic();
+  for (const L of LABELS) L.size = null;
+  refreshBlockRects();
+}
+window.addEventListener('resize', resize);
+let viewShift = 0;
+function updateViewShift() {
+  const w = innerWidth, h = innerHeight;
+  const shift = w / h < 0.8 && document.body.classList.contains('collapsed') ? Math.round(h * 0.2) : 0;
+  if (shift === viewShift) return;
+  viewShift = shift;
+  if (shift) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+}
+function renderFrame(time, dt) {
+  updateViewShift();
+  applyScene(time);
+  if (!DEMO_ACTIVE) controls.update();
+  camera.updateMatrixWorld();
+  updateUI();
+  layoutLabels();
+  drawGraph();
+  drawScope();
+  composer.render(dt);
+}
+const clock = new THREE.Timer();
+let costAvg = 8, costN = 0, demoStart = null, visualTime = 0, lastCost = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  clock.update();
+  const dt = Math.min(0.05, clock.getDelta());
+  visualTime += dt;
+  if (DEMO && demoStart !== null && !demoExternal) { renderDemoFrame(Math.min(DEMO_LEN, (performance.now() - demoStart) / 1000)); return; }
+  if (RENDER_PAUSED) return;
+  const t0 = performance.now();
+  updateTap(dt);
+  stepState(dt);
+  updateCameraAnim(dt);
+  if (S.camera === 'hero' && camAnim.t >= 1) { const v = presetVectors('hero'); controls.target.lerp(v.tgt, 0.1); camera.position.lerp(v.pos, 0.05); }
+  renderFrame(visualTime, dt);
+  lastCost = performance.now() - t0;
+  costAvg = costAvg * 0.95 + lastCost * 0.05;
+  if (++costN % 90 === 0) {
+    if (costAvg < 7 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+    else if (costAvg > 15 && dpr > 0.6) { dpr = Math.max(0.6, dpr - 0.2); resize(); }
+  }
+}
+let RENDER_PAUSED = false;
+
+// =====================================================================================
+// Hooks for verification and video export
+// =====================================================================================
+function getState() {
+  return {
+    ready: window.__lab.ready,
+    airflow: +S.dial.toFixed(4),
+    airflowActual: +(S.Qeff / Q_MAX).toFixed(4),
+    flowM3PerMin: +(S.Qeff * 60).toFixed(2),
+    captureRatio: +S.cap.toFixed(4),
+    captureLine: CAP_TH,
+    dialAtCaptureLine: +DIAL_TH.toFixed(3),
+    captured: S.cap >= CAP_TH,
+    roomPressurePa: +(-S.dp).toFixed(2),
+    doorForceKgf: +((S.dp * DOOR_AREA) / 9.8).toFixed(1),
+    supplyOpen: S.supplyOpen,
+    status: S.status,
+    success: S.status === 'done',
+    failure: S.status === 'spill',
+    phase: S.phase,
+    phaseLabel: S.phase >= 0 ? PHASES[S.phase].label : null,
+    parcelRealSeconds: +S.heroReal.toFixed(3),
+    smokeEscaped: S.flag.reduce((a, f) => a + (f === 2 || f === 3 ? 1 : 0), 0),
+    smokeInDining: (() => { let n = 0; for (let i = 0; i < NP; i++) if (S.pos[i * 3 + 2] > 40) n++; return n; })(),
+    exploded: S.exploded,
+    camera: S.camera,
+    speed: S.speed,
+    events: S.events.slice(),
+    time: +S.t.toFixed(3),
+  };
+}
+window.__lab = {
+  ready: false,
+  setAirflow(v) { DEMO_ACTIVE = false; markInteraction(); setDialUser(v); return getState(); },
+  getState,
+  tap() { DEMO_ACTIVE = false; markInteraction(); tap(); },
+  setExploded(on) { DEMO_ACTIVE = false; setExploded(on); },
+  setCamera(name, instant = false) { DEMO_ACTIVE = false; setCamera(name, instant); },
+  setSpeed(mode) { S.speed = mode === 'real' ? 'real' : 'slow'; },
+  setMakeupAir(open) { DEMO_ACTIVE = false; markInteraction(); setMakeupAir(open); return getState(); },
+  renderDemoFrame(t) { demoExternal = true; document.body.classList.add('frozen'); return renderDemoFrame(t); },
+  captureRatio: dial => captureRatio(pressureBalance(Q_MAX * dial, true).Q),
+  pause(on = true) { RENDER_PAUSED = on; },
+  advance(sec) {
+    DEMO_ACTIVE = false;
+    const n = Math.round(sec * 60);
+    for (let i = 0; i < n; i++) { updateTap(1 / 60); stepState(1 / 60); updateCameraAnim(1 / 60); visualTime += 1 / 60; }
+    renderFrame(visualTime, 1 / 60);
+    return getState();
+  },
+  perf: () => ({ costAvgMs: +costAvg.toFixed(2), lastCostMs: +lastCost.toFixed(2), dpr: +dpr.toFixed(2) }),
+};
+
+(async function init() {
+  resize();
+  setCamera('overview', true);
+  prewarmSmoke();
+  stepState(0);
+  await fontsReady;
+  drawGraphStatic();
+  renderFrame(0, 0);
+  window.__lab.ready = true;
+  if (DEMO) demoStart = performance.now();
+  else setTimeout(collapseTitle, 3000);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
