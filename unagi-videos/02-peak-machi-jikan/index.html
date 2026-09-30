@@ -1478,7 +1478,7 @@ function updateUI() {
     const kind = S.bubble;
     const html = kind === 'err'
       ? (Q.overflow ? '列が伸び続ける状態<small>稼働率が100%以上では、待ちの列は限りなく伸びます（表示は90分で頭打ち）</small>' : `平均の待ち時間 ${fmtWait(Q)}<small>焼き台が追いつかず、待ちの列が入口の外まで伸びています（模型の値）</small>`)
-      : kind === 'ok' ? `チン　平均の待ち時間 ${fmtWait(Q)}<small>焼き台に少し余裕を残すと、待ち時間は短く安定します（模型の値）</small>`
+      : kind === 'ok' ? `平均の待ち時間 ${fmtWait(Q)}<small>焼き台に少し余裕を残すと、待ち時間は短く安定します（模型の値）</small>`
       : `平均の待ち時間 ${fmtWait(Q)}<small>焼き台に余裕がなく、待ちの列が長くなっています（模型の値）</small>`;
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${kind}`;

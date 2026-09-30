@@ -1457,7 +1457,7 @@ function updateUI() {
   const b = ui.bubble;
   if (S.bubble) {
     const isErr = S.bubble === 'err';
-    const html = isErr ? '海流から外れました　たどり着けません<small>黒潮に乗れず、フィリピン沖で南へ向かう海流に運ばれていきます（模式図）</small>' : 'コーン　日本の沿岸にたどり着きました<small>海流に乗って数千kmの旅</small>';
+    const html = isErr ? '海流から外れました　たどり着けません<small>黒潮に乗れず、フィリピン沖で南へ向かう海流に運ばれていきます（模式図）</small>' : '日本の沿岸にたどり着きました<small>海流に乗って数千kmの旅</small>';
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const p = screenOf(llWorld(35.3, 141.2), true);

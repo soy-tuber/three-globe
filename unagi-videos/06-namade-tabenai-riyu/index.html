@@ -1128,7 +1128,7 @@ function updateUI() {
   const b = ui.bubble;
   if (S.bubble) {
     const isErr = S.bubble === 'err';
-    const html = isErr ? `生の血が目に入ると<small>${WARN_TEXT}（厚生労働省）</small>` : 'チン　毒として働く割合 0%<small>加熱済み。60℃、5分の加熱で、完全に毒性を失います</small>';
+    const html = isErr ? `生の血が目に入ると<small>${WARN_TEXT}（厚生労働省）</small>` : '毒として働く割合 0%<small>加熱済み。60℃、5分の加熱で、完全に毒性を失います</small>';
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const anchor = isErr ? EYE.clone().add(new THREE.Vector3(6, 10, 0)) : thermo.localToWorld(new THREE.Vector3(0, THERMO_H + 8, 0));

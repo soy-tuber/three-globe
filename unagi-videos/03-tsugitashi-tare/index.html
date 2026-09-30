@@ -1342,7 +1342,7 @@ function updateUI() {
   const b = ui.bubble;
   if (S.bubble) {
     const isErr = S.bubble === 'err';
-    const html = isErr ? '煮詰まりすぎ<small>継ぎ足しを止めると、この模型では水分が飛んで濃さが上がり続けます</small>' : `コトン　濃さは安定<small>創業時のタレの割合 ${fmtShare(dispO())}（模型の値）</small>`;
+    const html = isErr ? '煮詰まりすぎ<small>継ぎ足しを止めると、この模型では水分が飛んで濃さが上がり続けます</small>' : `濃さは安定<small>創業時のタレの割合 ${fmtShare(dispO())}（模型の値）</small>`;
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const p = screenOf(new THREE.Vector3(10, POT_Y + 44, 0));

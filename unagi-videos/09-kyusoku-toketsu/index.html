@@ -1444,7 +1444,7 @@ function updateUI() {
   if (S.bubble) {
     const isErr = S.bubble === 'err';
     const pm = Math.floor(S.passFinal / 60 + 1e-6);
-    const html = isErr ? `結晶が大きく育ちました<small>中心が温度帯を通り抜けた時間 ${pm}分。解凍すると、ドリップが流れ出しました（模型の値）</small>` : `カチッ　結晶 小さいまま　ドリップ わずか<small>中心が温度帯を通り抜けた時間 ${pm}分（模型の値）</small>`;
+    const html = isErr ? `結晶が大きく育ちました<small>中心が温度帯を通り抜けた時間 ${pm}分。解凍すると、ドリップが流れ出しました（模型の値）</small>` : `結晶 小さいまま　ドリップ わずか<small>中心が温度帯を通り抜けた時間 ${pm}分（模型の値）</small>`;
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const anchor = freezer.localToWorld(new THREE.Vector3(50, 71, 30));

@@ -1674,7 +1674,7 @@ function updateUI() {
     const isErr = S.bubble === 'err';
     const html = isErr ? '焦げ　高さを上げてください<small>皮の表面が焦げ始めるラインを越えました</small>'
       : S.bubble === 'short' ? '焼きが足りません<small>焼き色がつくまで高さを下げてください</small>'
-      : 'ジュッ　表面 焼き色　中 ふっくら<small>焼き上がりました</small>';
+      : '表面 焼き色　中 ふっくら<small>焼き上がりました</small>';
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const p = screenOf(eelFlip.localToWorld(new THREE.Vector3(6, 1.5, -2)));

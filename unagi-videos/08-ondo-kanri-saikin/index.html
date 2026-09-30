@@ -1443,7 +1443,7 @@ function updateUI() {
   const b = ui.bubble;
   if (S.bubble) {
     const isErr = S.bubble === 'err';
-    const html = isErr ? '置きっぱなし　すぐに冷蔵庫へ<small>肉や魚などの生鮮食品やお総菜などは、購入後、できるだけ早く冷蔵庫に入れましょう（政府広報オンライン）</small>' : 'ピッ　増える速さ 大きく低下　温度記録 済み<small>冷蔵庫に入れても、細菌はゆっくりと増えます（政府広報オンライン）</small>';
+    const html = isErr ? '置きっぱなし　すぐに冷蔵庫へ<small>肉や魚などの生鮮食品やお総菜などは、購入後、できるだけ早く冷蔵庫に入れましょう（政府広報オンライン）</small>' : '増える速さ 大きく低下　温度記録 済み<small>冷蔵庫に入れても、細菌はゆっくりと増えます（政府広報オンライン）</small>';
     if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
     b.className = `show ${isErr ? 'err' : 'ok'}`;
     const p = screenOf(new THREE.Vector3(FR.x0 + 8, FR.y1 - 30, FR.z1 + 4));
